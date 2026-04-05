@@ -24,8 +24,8 @@ module.exports = async function handler(req, res) {
     const phoneNumber = from.replace("whatsapp:", "");
 
     // Send to ElevenLabs as a text conversation
-    const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
-    const AGENT_ID = process.env.ELEVENLABS_AGENT_ID;
+    const ELEVENLABS_API_KEY = (process.env.ELEVENLABS_API_KEY || "").trim();
+    const AGENT_ID = (process.env.ELEVENLABS_AGENT_ID || "").trim();
 
     const conversationRes = await fetch(
       `https://api.elevenlabs.io/v1/convai/conversation`,
