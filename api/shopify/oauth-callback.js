@@ -75,20 +75,31 @@ module.exports = async function handler(req, res) {
       <html>
       <head><title>Shopify OAuth Success</title></head>
       <body style="font-family: system-ui; max-width: 700px; margin: 40px auto; padding: 20px;">
-        <h1 style="color: green;">✅ Access Token Obtained!</h1>
-        <p><strong>Access Token:</strong></p>
-        <code style="background: #f0f0f0; padding: 10px; display: block; word-break: break-all; font-size: 18px;">${tokenData.access_token}</code>
-        <p><strong>Scope:</strong> ${tokenData.scope || "(none)"}</p>
+        <h1 style="color: green;">&#10004; OAuth Successful</h1>
+        <p><strong>Scope:</strong> ${escapeHtml(tokenData.scope || "(none)")}</p>
         <p><strong>Expires in:</strong> ${tokenData.expires_in ? tokenData.expires_in + " seconds" : "Never (offline token)"}</p>
+        <p><strong>Token (first 8 chars):</strong> ${escapeHtml((tokenData.access_token || "").slice(0, 8))}...</p>
         <hr>
-        <p style="color: #666;">Copy the access token above and set it as SHOPIFY_ACCESS_TOKEN in your Vercel environment variables.</p>
+        <p style="color: #666;">The full access token has been logged server-side. Set it as SHOPIFY_ACCESS_TOKEN in your Vercel environment variables. <strong>Do not share this page.</strong></p>
       </body>
       </html>
     `);
+
+    // Log token server-side only (visible in Vercel function logs)
+    console.log("[OAuth] Access token obtained:", tokenData.access_token);
   } catch (err) {
     return res.status(500).send(`
       <h1>Error</h1>
-      <pre>${err.message}</pre>
+      <p>OAuth token exchange failed. Check server logs for details.</p>
     `);
   }
 };
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}

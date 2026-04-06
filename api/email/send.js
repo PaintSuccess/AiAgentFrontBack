@@ -1,8 +1,9 @@
-const { shopifyFetch, verifyAuth, corsHeaders } = require("../../lib/shopify");
+const { shopifyFetch, verifyAuth, corsHeaders, rateLimit, sanitizeInput } = require("../../lib/shopify");
 
 module.exports = async function handler(req, res) {
-  corsHeaders(res);
+  corsHeaders(res, req);
   if (req.method === "OPTIONS") return res.status(200).end();
+  if (rateLimit(req, res)) return;
 
   if (!verifyAuth(req)) {
     return res.status(401).json({ error: "Unauthorized" });
@@ -13,7 +14,10 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { to, subject, message, type } = req.body;
+    const to = sanitizeInput(req.body.to, 320);
+    const subject = sanitizeInput(req.body.subject, 200);
+    const message = sanitizeInput(req.body.message, 2000);
+    const type = sanitizeInput(req.body.type || "general", 50);
 
     if (!to || !subject || !message) {
       return res.status(400).json({

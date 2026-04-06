@@ -1,4 +1,4 @@
-const { shopifyGraphQL, verifyAuth, corsHeaders } = require("../../lib/shopify");
+const { shopifyGraphQL, verifyAuth, corsHeaders, rateLimit, sanitizeInput } = require("../../lib/shopify");
 
 const PRODUCT_SEARCH_QUERY = `
   query searchProducts($query: String!) {
@@ -62,15 +62,18 @@ const COLLECTION_SEARCH_QUERY = `
 `;
 
 module.exports = async function handler(req, res) {
-  corsHeaders(res);
+  corsHeaders(res, req);
   if (req.method === "OPTIONS") return res.status(200).end();
+  if (rateLimit(req, res)) return;
 
   if (!verifyAuth(req)) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
   try {
-    const { query, collection } = req.method === "POST" ? req.body : req.query;
+    const params = req.method === "POST" ? req.body : req.query;
+    const query = sanitizeInput(params.query);
+    const collection = sanitizeInput(params.collection, 100);
 
     if (!query && !collection) {
       return res.status(400).json({

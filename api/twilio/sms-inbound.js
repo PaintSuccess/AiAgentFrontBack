@@ -1,20 +1,53 @@
-const { corsHeaders } = require("../../lib/shopify");
+const crypto = require("crypto");
+const { corsHeaders, rateLimit } = require("../../lib/shopify");
+
+// Validate Twilio webhook signature to prevent spoofed requests
+function verifyTwilioSignature(req) {
+  const authToken = (process.env.TWILIO_AUTH_TOKEN || "").trim();
+  if (!authToken) return true; // Skip if not configured (dev mode)
+
+  const signature = req.headers["x-twilio-signature"];
+  if (!signature) return false;
+
+  // Build the full URL Twilio used to sign
+  const proto = req.headers["x-forwarded-proto"] || "https";
+  const host = req.headers["x-forwarded-host"] || req.headers.host;
+  const url = `${proto}://${host}${req.url}`;
+
+  // Sort POST params and append to URL
+  const params = req.body || {};
+  const sortedKeys = Object.keys(params).sort();
+  const paramStr = sortedKeys.map((k) => k + params[k]).join("");
+  const data = url + paramStr;
+
+  const expected = crypto
+    .createHmac("sha1", authToken)
+    .update(data)
+    .digest("base64");
+
+  // Timing-safe comparison
+  if (expected.length !== signature.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+}
 
 module.exports = async function handler(req, res) {
-  corsHeaders(res);
+  corsHeaders(res, req);
   if (req.method === "OPTIONS") return res.status(200).end();
+  if (rateLimit(req, res)) return;
 
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  try {
-    // Twilio sends form-urlencoded by default
-    const from = req.body.From;
-    const body = req.body.Body;
-    const messageSid = req.body.MessageSid;
+  if (!verifyTwilioSignature(req)) {
+    return res.status(403).send("<Response><Message>Forbidden</Message></Response>");
+  }
 
-    console.log(`[SMS] From: ${from}, Message: ${body}`);
+  try {
+    const from = (req.body.From || "").slice(0, 30);
+    const body = (req.body.Body || "").slice(0, 1600);
+
+    console.log(`[SMS] From: ${from}`);
 
     if (!from || !body) {
       return res.status(400).send("<Response><Message>Invalid request</Message></Response>");

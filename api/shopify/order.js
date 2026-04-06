@@ -1,16 +1,19 @@
-const { shopifyFetch, verifyAuth, corsHeaders } = require("../../lib/shopify");
+const { shopifyFetch, verifyAuth, corsHeaders, rateLimit, sanitizeInput } = require("../../lib/shopify");
 
 module.exports = async function handler(req, res) {
-  corsHeaders(res);
+  corsHeaders(res, req);
   if (req.method === "OPTIONS") return res.status(200).end();
+  if (rateLimit(req, res)) return;
 
   if (!verifyAuth(req)) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
   try {
-    const { order_number, email, customer_email } =
-      req.method === "POST" ? req.body : req.query;
+    const params = req.method === "POST" ? req.body : req.query;
+    const order_number = sanitizeInput(params.order_number, 20);
+    const email = sanitizeInput(params.email, 320);
+    const customer_email = sanitizeInput(params.customer_email, 320);
 
     // customer_email = the verified email from the logged-in customer's session
     // (passed via dynamic variables from Shopify Liquid — cannot be spoofed by the user)
@@ -54,14 +57,16 @@ module.exports = async function handler(req, res) {
       }
     } else if (email) {
       // SECURITY: Logged-in customers can only look up their own orders.
-      // Guests can look up by email they provide (standard storefront behavior).
-      const lookupEmail = customer_email || email;
-      // If logged in and the requested email doesn't match their account, block it.
-      if (
-        customer_email &&
-        email &&
-        customer_email.toLowerCase() !== email.toLowerCase()
-      ) {
+      // Guests cannot browse orders by email alone — they need order# + email.
+      if (!customer_email) {
+        return res.status(200).json({
+          found: false,
+          message:
+            "For security, please provide both your order number and email. You can find your order number in the confirmation email you received.",
+        });
+      }
+      // Logged in — only look up their own orders
+      if (email && customer_email.toLowerCase() !== email.toLowerCase()) {
         return res.status(200).json({
           found: false,
           message:
@@ -69,7 +74,7 @@ module.exports = async function handler(req, res) {
         });
       }
       const data = await shopifyFetch(
-        `orders.json?email=${encodeURIComponent(lookupEmail)}&status=any&limit=5`
+        `orders.json?email=${encodeURIComponent(customer_email)}&status=any&limit=5`
       );
       orders = data.orders || [];
     }

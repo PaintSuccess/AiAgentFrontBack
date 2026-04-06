@@ -1,20 +1,50 @@
-const { corsHeaders } = require("../../lib/shopify");
+const crypto = require("crypto");
+const { corsHeaders, rateLimit } = require("../../lib/shopify");
+
+function verifyTwilioSignature(req) {
+  const authToken = (process.env.TWILIO_AUTH_TOKEN || "").trim();
+  if (!authToken) return true;
+
+  const signature = req.headers["x-twilio-signature"];
+  if (!signature) return false;
+
+  const proto = req.headers["x-forwarded-proto"] || "https";
+  const host = req.headers["x-forwarded-host"] || req.headers.host;
+  const url = `${proto}://${host}${req.url}`;
+
+  const params = req.body || {};
+  const sortedKeys = Object.keys(params).sort();
+  const paramStr = sortedKeys.map((k) => k + params[k]).join("");
+  const data = url + paramStr;
+
+  const expected = crypto
+    .createHmac("sha1", authToken)
+    .update(data)
+    .digest("base64");
+
+  if (expected.length !== signature.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+}
 
 module.exports = async function handler(req, res) {
-  corsHeaders(res);
+  corsHeaders(res, req);
   if (req.method === "OPTIONS") return res.status(200).end();
+  if (rateLimit(req, res)) return;
 
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  try {
-    // Twilio WhatsApp sends form-urlencoded
-    const from = req.body.From; // e.g., whatsapp:+61412345678
-    const body = req.body.Body;
-    const profileName = req.body.ProfileName;
+  if (!verifyTwilioSignature(req)) {
+    return res.status(403).send("<Response><Message>Forbidden</Message></Response>");
+  }
 
-    console.log(`[WhatsApp] From: ${from}, Name: ${profileName}, Message: ${body}`);
+  try {
+    const from = (req.body.From || "").slice(0, 50);
+    const body = (req.body.Body || "").slice(0, 1600);
+    const profileName = (req.body.ProfileName || "").slice(0, 100);
+
+    console.log(`[WhatsApp] From: ${from}`);
 
     if (!from || !body) {
       res.setHeader("Content-Type", "text/xml");
