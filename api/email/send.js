@@ -48,12 +48,39 @@ module.exports = async function handler(req, res) {
     });
 
     if (draftOrder.draft_order) {
-      console.log("Draft order created:", draftOrder.draft_order.id);
-      return res.status(200).json({
-        sent: true,
-        message: `Your request has been logged and the Paint Access team will follow up via email to ${to}.`,
-        draft_order_id: draftOrder.draft_order.id,
-      });
+      const draftId = draftOrder.draft_order.id;
+      console.log("Draft order created:", draftId);
+
+      // Actually send the invoice email via Shopify
+      try {
+        const invoiceResult = await shopifyFetch(
+          `draft_orders/${draftId}/send_invoice.json`,
+          {
+            method: "POST",
+            body: JSON.stringify({
+              draft_order_invoice: {
+                to: to,
+                subject: subject,
+                custom_message: message,
+              },
+            }),
+          }
+        );
+        console.log("Invoice sent to:", to);
+        return res.status(200).json({
+          sent: true,
+          message: `Email sent to ${to} successfully.`,
+          draft_order_id: draftId,
+        });
+      } catch (invoiceErr) {
+        console.error("Failed to send invoice:", invoiceErr);
+        // Draft was created but email failed — still report partial success
+        return res.status(200).json({
+          sent: false,
+          message: `Request logged (draft #${draftId}) but email delivery failed. The team will follow up manually.`,
+          draft_order_id: draftId,
+        });
+      }
     }
 
     return res.status(200).json({
