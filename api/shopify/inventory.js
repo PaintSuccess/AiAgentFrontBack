@@ -1,4 +1,27 @@
-const { shopifyFetch, verifyAuth, corsHeaders } = require("../../lib/shopify");
+const { shopifyGraphQL, verifyAuth, corsHeaders } = require("../../lib/shopify");
+
+const INVENTORY_QUERY = `
+  query inventorySearch($query: String!) {
+    products(first: 10, query: $query) {
+      edges {
+        node {
+          title
+          handle
+          variants(first: 10) {
+            edges {
+              node {
+                title
+                sku
+                price
+                inventoryQuantity
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
 
 module.exports = async function handler(req, res) {
   corsHeaders(res);
@@ -17,28 +40,26 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // Get products to check inventory
-    const data = await shopifyFetch(`products.json?limit=50&status=active`);
-    const allProducts = data.products || [];
+    // Build search query — GraphQL searches across title, SKU, vendor, tags, etc.
+    const searchTerm = sku || product_name;
+    const searchQuery = `status:active ${searchTerm}`;
+    const data = await shopifyGraphQL(INVENTORY_QUERY, { query: searchQuery });
+    const productNodes = (data.products?.edges || []).map((e) => e.node);
 
     let matchedVariants = [];
 
-    for (const product of allProducts) {
-      for (const variant of product.variants || []) {
-        const matchesSku = sku && variant.sku && variant.sku.toLowerCase() === sku.toLowerCase();
-        const matchesName = product_name && product.title.toLowerCase().includes(product_name.toLowerCase());
-
-        if (matchesSku || matchesName) {
-          matchedVariants.push({
-            product_title: product.title,
-            variant_title: variant.title,
-            sku: variant.sku,
-            price: variant.price,
-            inventory_quantity: variant.inventory_quantity,
-            available: variant.inventory_quantity > 0,
-            url: `https://paintaccess.com.au/products/${product.handle}`,
-          });
-        }
+    for (const product of productNodes) {
+      for (const edge of product.variants?.edges || []) {
+        const variant = edge.node;
+        matchedVariants.push({
+          product_title: product.title,
+          variant_title: variant.title,
+          sku: variant.sku,
+          price: variant.price,
+          inventory_quantity: variant.inventoryQuantity,
+          available: variant.inventoryQuantity > 0,
+          url: `https://paintaccess.com.au/products/${product.handle}`,
+        });
       }
     }
 

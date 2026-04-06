@@ -1,4 +1,65 @@
-const { shopifyFetch, verifyAuth, corsHeaders } = require("../../lib/shopify");
+const { shopifyGraphQL, verifyAuth, corsHeaders } = require("../../lib/shopify");
+
+const PRODUCT_SEARCH_QUERY = `
+  query searchProducts($query: String!) {
+    products(first: 10, query: $query) {
+      edges {
+        node {
+          title
+          handle
+          vendor
+          productType
+          tags
+          status
+          variants(first: 10) {
+            edges {
+              node {
+                title
+                price
+                sku
+                inventoryQuantity
+              }
+            }
+          }
+          featuredImage {
+            url
+          }
+        }
+      }
+    }
+  }
+`;
+
+const COLLECTION_SEARCH_QUERY = `
+  query collectionProducts($handle: String!) {
+    collectionByHandle(handle: $handle) {
+      products(first: 10) {
+        edges {
+          node {
+            title
+            handle
+            vendor
+            productType
+            tags
+            variants(first: 10) {
+              edges {
+                node {
+                  title
+                  price
+                  sku
+                  inventoryQuantity
+                }
+              }
+            }
+            featuredImage {
+              url
+            }
+          }
+        }
+      }
+    }
+  }
+`;
 
 module.exports = async function handler(req, res) {
   corsHeaders(res);
@@ -17,48 +78,19 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    let products = [];
+    let productNodes = [];
 
     if (query) {
-      // Search products by title/vendor/product_type
-      const data = await shopifyFetch(
-        `products.json?title=${encodeURIComponent(query)}&limit=5&status=active`
-      );
-      products = data.products || [];
-
-      // If no results by title, try general search
-      if (products.length === 0) {
-        const searchData = await shopifyFetch(
-          `products.json?limit=20&status=active`
-        );
-        const allProducts = searchData.products || [];
-        const q = query.toLowerCase();
-        products = allProducts.filter(
-          (p) =>
-            p.title.toLowerCase().includes(q) ||
-            (p.vendor && p.vendor.toLowerCase().includes(q)) ||
-            (p.product_type && p.product_type.toLowerCase().includes(q)) ||
-            (p.tags && p.tags.toLowerCase().includes(q))
-        ).slice(0, 5);
-      }
+      // Full-text search via GraphQL — searches title, description, vendor, tags, etc.
+      const searchQuery = `status:active ${query}`;
+      const data = await shopifyGraphQL(PRODUCT_SEARCH_QUERY, { query: searchQuery });
+      productNodes = (data.products?.edges || []).map((e) => e.node);
     } else if (collection) {
-      // Get products from a specific collection
-      // First find the collection
-      const colData = await shopifyFetch(
-        `custom_collections.json?handle=${encodeURIComponent(collection)}&limit=1`
-      );
-      const collections = colData.custom_collections || [];
-
-      if (collections.length > 0) {
-        const colId = collections[0].id;
-        const prodData = await shopifyFetch(
-          `collections/${colId}/products.json?limit=10`
-        );
-        products = prodData.products || [];
-      }
+      const data = await shopifyGraphQL(COLLECTION_SEARCH_QUERY, { handle: collection });
+      productNodes = (data.collectionByHandle?.products?.edges || []).map((e) => e.node);
     }
 
-    if (products.length === 0) {
+    if (productNodes.length === 0) {
       return res.status(200).json({
         found: false,
         message: `No products found matching "${query || collection}". Try a different search term.`,
@@ -67,28 +99,29 @@ module.exports = async function handler(req, res) {
 
     const storeUrl = "https://paintaccess.com.au";
 
-    const results = products.map((p) => {
-      const variants = (p.variants || []).map((v) => ({
-        title: v.title,
-        price: v.price,
-        sku: v.sku,
-        available: v.inventory_quantity > 0,
-        inventory_quantity: v.inventory_quantity,
+    const results = productNodes.map((p) => {
+      const variants = (p.variants?.edges || []).map((e) => ({
+        title: e.node.title,
+        price: e.node.price,
+        sku: e.node.sku,
+        available: e.node.inventoryQuantity > 0,
+        inventory_quantity: e.node.inventoryQuantity,
       }));
+
+      const prices = variants.map((v) => parseFloat(v.price)).filter((n) => !isNaN(n));
 
       return {
         title: p.title,
         url: `${storeUrl}/products/${p.handle}`,
         vendor: p.vendor,
-        product_type: p.product_type,
+        product_type: p.productType,
         price_range: {
-          min: Math.min(...(p.variants || []).map((v) => parseFloat(v.price))),
-          max: Math.max(...(p.variants || []).map((v) => parseFloat(v.price))),
+          min: prices.length > 0 ? Math.min(...prices) : 0,
+          max: prices.length > 0 ? Math.max(...prices) : 0,
         },
-        available:
-          p.variants && p.variants.some((v) => v.inventory_quantity > 0),
+        available: variants.some((v) => v.available),
         variants,
-        image: p.image ? p.image.src : null,
+        image: p.featuredImage?.url || null,
       };
     });
 
