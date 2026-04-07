@@ -1,19 +1,21 @@
 /**
  * Fetch wrapper for dashboard API calls.
- * When running inside Shopify Admin, uses App Bridge session tokens.
- * Falls back to a simple cookie/header-based auth for development.
+ * Uses Shopify App Bridge session tokens when inside Shopify Admin.
+ * Falls back to unauthenticated for direct access (dev mode).
  */
 export async function dashboardFetch(path, options = {}) {
   const headers = { "Content-Type": "application/json", ...options.headers };
 
-  // If running inside Shopify Admin iframe, App Bridge is available
-  if (window.shopify?.idToken) {
-    try {
+  // App Bridge v4: window.shopify is injected by the CDN script + meta tag
+  try {
+    if (window.shopify && typeof window.shopify.idToken === "function") {
       const token = await window.shopify.idToken();
-      headers["Authorization"] = `Bearer ${token}`;
-    } catch (e) {
-      console.warn("App Bridge token not available:", e.message);
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
     }
+  } catch (e) {
+    // Not inside Shopify Admin — continue without token
   }
 
   const res = await fetch(path, { ...options, headers });
