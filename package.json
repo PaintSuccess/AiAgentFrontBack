@@ -3,8 +3,18 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "vercel dev",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "deploy": "vercel --prod"
   },
-  "dependencies": {}
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "@shopify/polaris": "^13.9.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0",
+    "@vitejs/plugin-react": "^4.3.0"
+  }
 }
