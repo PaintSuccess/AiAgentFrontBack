@@ -66,20 +66,19 @@ module.exports = async function handler(req, res) {
       }
 
       // 1. Create the document
-      const formData = new URLSearchParams();
-      formData.append("name", name.slice(0, 200));
-      formData.append("text", content.slice(0, 100000));
-
       const createRes = await fetch(`${BASE}/convai/knowledge-base/text`, {
         method: "POST",
-        headers: { ...headers, "Content-Type": "application/x-www-form-urlencoded" },
-        body: formData.toString(),
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.slice(0, 200),
+          text: content.slice(0, 100000),
+        }),
       });
 
       if (!createRes.ok) {
         const text = await createRes.text();
         console.error("KB create error:", createRes.status, text);
-        return res.status(502).json({ error: "Failed to create document" });
+        return res.status(502).json({ error: `Failed to create document: ${text.slice(0, 200)}` });
       }
 
       const created = await createRes.json();
@@ -125,18 +124,19 @@ module.exports = async function handler(req, res) {
         });
 
         // Create new doc
-        const formData = new URLSearchParams();
-        formData.append("name", finalName);
-        formData.append("text", finalContent);
-
         const createRes = await fetch(`${BASE}/convai/knowledge-base/text`, {
           method: "POST",
-          headers: { ...headers, "Content-Type": "application/x-www-form-urlencoded" },
-          body: formData.toString(),
+          headers: { ...headers, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: finalName,
+            text: finalContent,
+          }),
         });
 
         if (!createRes.ok) {
-          return res.status(502).json({ error: "Failed to recreate document" });
+          const errText = await createRes.text();
+          console.error("KB recreate error:", createRes.status, errText);
+          return res.status(502).json({ error: `Failed to recreate document: ${errText.slice(0, 200)}` });
         }
 
         const created = await createRes.json();
