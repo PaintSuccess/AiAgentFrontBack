@@ -14,6 +14,10 @@ const INVENTORY_QUERY = `
                 sku
                 price
                 inventoryQuantity
+                inventoryPolicy
+                inventoryItem {
+                  tracked
+                }
               }
             }
           }
@@ -54,13 +58,29 @@ module.exports = async function handler(req, res) {
     for (const product of productNodes) {
       for (const edge of product.variants?.edges || []) {
         const variant = edge.node;
+        const tracked = variant.inventoryItem?.tracked !== false;
+        const policy = variant.inventoryPolicy || "DENY";
+        const qty = variant.inventoryQuantity ?? 0;
+        // Available if: inventory not tracked, OR sell-when-out-of-stock is ON, OR qty > 0
+        const available = !tracked || policy === "CONTINUE" || qty > 0;
+
         matchedVariants.push({
           product_title: product.title,
           variant_title: variant.title,
           sku: variant.sku,
           price: variant.price,
-          inventory_quantity: variant.inventoryQuantity,
-          available: variant.inventoryQuantity > 0,
+          inventory_quantity: qty,
+          inventory_policy: policy,
+          inventory_tracked: tracked,
+          sell_when_out_of_stock: policy === "CONTINUE",
+          available,
+          availability_reason: !tracked
+            ? "not_tracked"
+            : policy === "CONTINUE"
+            ? "sell_when_out_of_stock_enabled"
+            : qty > 0
+            ? "in_stock"
+            : "out_of_stock",
           url: `https://paintaccess.com.au/products/${product.handle}`,
         });
       }

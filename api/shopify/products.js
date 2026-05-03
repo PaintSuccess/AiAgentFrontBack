@@ -18,6 +18,10 @@ const PRODUCT_SEARCH_QUERY = `
                 price
                 sku
                 inventoryQuantity
+                inventoryPolicy
+                inventoryItem {
+                  tracked
+                }
               }
             }
           }
@@ -48,6 +52,10 @@ const COLLECTION_SEARCH_QUERY = `
                   price
                   sku
                   inventoryQuantity
+                  inventoryPolicy
+                  inventoryItem {
+                    tracked
+                  }
                 }
               }
             }
@@ -103,13 +111,21 @@ module.exports = async function handler(req, res) {
     const storeUrl = "https://paintaccess.com.au";
 
     const results = productNodes.map((p) => {
-      const variants = (p.variants?.edges || []).map((e) => ({
-        title: e.node.title,
-        price: e.node.price,
-        sku: e.node.sku,
-        available: e.node.inventoryQuantity > 0,
-        inventory_quantity: e.node.inventoryQuantity,
-      }));
+      const variants = (p.variants?.edges || []).map((e) => {
+        const tracked = e.node.inventoryItem?.tracked !== false;
+        const policy = e.node.inventoryPolicy || "DENY";
+        const qty = e.node.inventoryQuantity ?? 0;
+        const available = !tracked || policy === "CONTINUE" || qty > 0;
+        return {
+          title: e.node.title,
+          price: e.node.price,
+          sku: e.node.sku,
+          available,
+          inventory_quantity: qty,
+          inventory_policy: policy,
+          sell_when_out_of_stock: policy === "CONTINUE",
+        };
+      });
 
       const prices = variants.map((v) => parseFloat(v.price)).filter((n) => !isNaN(n));
 
