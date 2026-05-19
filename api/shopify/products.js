@@ -1,8 +1,12 @@
 const { shopifyGraphQL, verifyAuth, corsHeaders, rateLimit, sanitizeInput } = require("../../lib/shopify");
 
+// Brands that are currently visible on the site but NOT purchasable
+// (per kb/excluded_products_restrictions__prompt.md — supplier arrangements pending)
+const UNAVAILABLE_BRANDS = ["uni-pro", "unipro", "rust-oleum", "rustoleum"];
+
 const PRODUCT_SEARCH_QUERY = `
   query searchProducts($query: String!) {
-    products(first: 10, query: $query) {
+    products(first: 20, query: $query) {
       edges {
         node {
           title
@@ -92,13 +96,52 @@ module.exports = async function handler(req, res) {
     let productNodes = [];
 
     if (query) {
-      // Full-text search via GraphQL — searches title, description, vendor, tags, etc.
-      const searchQuery = `status:active ${query}`;
-      const data = await shopifyGraphQL(PRODUCT_SEARCH_QUERY, { query: searchQuery });
-      productNodes = (data.products?.edges || []).map((e) => e.node);
+      // Two-pass search for better relevance:
+      // 1. Title/vendor/product_type/tag focused query (high precision)
+      // 2. Fall back to broad query (description + everything) if too few results
+      const tokens = query.split(/\s+/).filter((t) => t.length > 1);
+      const fieldClauses = tokens.flatMap((t) => [
+        `title:*${t}*`,
+        `vendor:*${t}*`,
+        `product_type:*${t}*`,
+        `tag:${t}`,
+      ]);
+      const focusedQuery = `status:active AND (${fieldClauses.join(" OR ")})`;
+      const broadQuery = `status:active ${query}`;
+
+      try {
+        const data = await shopifyGraphQL(PRODUCT_SEARCH_QUERY, { query: focusedQuery });
+        productNodes = (data.products?.edges || []).map((e) => e.node);
+      } catch (err) {
+        // If the focused query syntax fails, fall through to broad
+        console.warn("Focused search failed, falling back to broad:", err.message);
+      }
+
+      if (productNodes.length < 3) {
+        const data = await shopifyGraphQL(PRODUCT_SEARCH_QUERY, { query: broadQuery });
+        const broadNodes = (data.products?.edges || []).map((e) => e.node);
+        // Merge, dedupe by handle, keep focused-query order first
+        const seen = new Set(productNodes.map((p) => p.handle));
+        for (const n of broadNodes) {
+          if (!seen.has(n.handle)) {
+            productNodes.push(n);
+            seen.add(n.handle);
+          }
+        }
+      }
+
+      // Drop products from currently-unavailable brands
+      productNodes = productNodes.filter((p) => {
+        const vendor = (p.vendor || "").toLowerCase().replace(/[\s-]/g, "");
+        return !UNAVAILABLE_BRANDS.some((b) => vendor.includes(b.replace(/[\s-]/g, "")));
+      });
     } else if (collection) {
       const data = await shopifyGraphQL(COLLECTION_SEARCH_QUERY, { handle: collection });
       productNodes = (data.collectionByHandle?.products?.edges || []).map((e) => e.node);
+      productNodes = productNodes.filter((p) => {
+        const vendor = (p.vendor || "").toLowerCase().replace(/[\s-]/g, "");
+        return !UNAVAILABLE_BRANDS.some((b) => vendor.includes(b.replace(/[\s-]/g, "")));
+      });
     }
 
     if (productNodes.length === 0) {
@@ -152,7 +195,12 @@ module.exports = async function handler(req, res) {
 
     return res.status(200).json({
       found: true,
-      products: results,
+      summary: {
+        total: results.length,
+        in_stock: results.filter((p) => p.available).length,
+        out_of_stock: results.filter((p) => !p.available).length,
+      },
+      products: results.slice(0, 15),
     });
   } catch (err) {
     console.error("Product search error:", err);
