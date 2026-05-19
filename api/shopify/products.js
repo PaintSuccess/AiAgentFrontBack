@@ -130,6 +130,7 @@ module.exports = async function handler(req, res) {
       const prices = variants.map((v) => parseFloat(v.price)).filter((n) => !isNaN(n));
 
       return {
+        name: p.title,
         title: p.title,
         url: `${storeUrl}/products/${p.handle}`,
         vendor: p.vendor,
@@ -138,6 +139,11 @@ module.exports = async function handler(req, res) {
           min: prices.length > 0 ? Math.min(...prices) : 0,
           max: prices.length > 0 ? Math.max(...prices) : 0,
         },
+        price: prices.length > 0
+          ? (Math.min(...prices) === Math.max(...prices)
+              ? `$${Math.min(...prices).toFixed(2)} AUD`
+              : `$${Math.min(...prices).toFixed(2)}–$${Math.max(...prices).toFixed(2)} AUD`)
+          : null,
         available: variants.some((v) => v.available),
         variants,
         image: p.featuredImage?.url || null,
