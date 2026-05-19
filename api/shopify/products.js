@@ -43,7 +43,8 @@ const PRODUCT_SEARCH_QUERY = `
                 price
                 sku
                 availableForSale
-                inventoryQuantity                inventoryManagement                inventoryManagement
+                inventoryQuantity
+                inventoryManagement
               }
             }
           }
@@ -73,6 +74,7 @@ const COLLECTION_SEARCH_QUERY = `
                   sku
                   availableForSale
                   inventoryQuantity
+                  inventoryManagement
                 }
               }
             }
