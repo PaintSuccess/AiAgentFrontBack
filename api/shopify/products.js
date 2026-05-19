@@ -44,7 +44,8 @@ const PRODUCT_SEARCH_QUERY = `
                 sku
                 availableForSale
                 inventoryQuantity
-                inventoryManagement
+                inventoryPolicy
+                inventoryItem { tracked }
               }
             }
           }
@@ -74,7 +75,8 @@ const COLLECTION_SEARCH_QUERY = `
                   sku
                   availableForSale
                   inventoryQuantity
-                  inventoryManagement
+                  inventoryPolicy
+                  inventoryItem { tracked }
                 }
               }
             }
@@ -147,9 +149,9 @@ function scoreProduct(product, tokens, fullPhrase) {
   // In-stock tiebreaker
   const anyAvailable = (product.variants?.edges || []).some((e) => {
     const v = e.node;
-    const untracked = v.inventoryManagement === 'NOT_MANAGED' || v.inventoryManagement == null;
+    const tracked = v.inventoryItem?.tracked === true;
     return v.availableForSale === true &&
-      (untracked || v.inventoryQuantity == null || v.inventoryQuantity > 0);
+      (!tracked || v.inventoryQuantity == null || v.inventoryQuantity > 0);
   });
   if (anyAvailable) score += 1;
 
@@ -159,13 +161,14 @@ function scoreProduct(product, tokens, fullPhrase) {
 function shapeProduct(p) {
   const variants = (p.variants?.edges || []).map((e) => {
     const v = e.node;
-    // NOT_MANAGED means Shopify doesn't track stock — trust availableForSale.
-    // SHOPIFY-tracked variants with qty=0 and inventoryPolicy=CONTINUE still
-    // have availableForSale=true but the storefront shows "Notify me when available".
-    // Checking inventoryQuantity>0 aligns the agent with what customers see.
-    const untracked = v.inventoryManagement === 'NOT_MANAGED' || v.inventoryManagement == null;
+    // inventoryItem.tracked=false means Shopify doesn't track stock for this variant
+    // → always trust availableForSale (item has no finite qty).
+    // tracked=true AND inventoryQuantity=0 with inventoryPolicy=CONTINUE means Shopify
+    // accepts oversell orders (availableForSale=true) but the storefront shows
+    // "Notify me when available" because it checks actual qty.
+    const tracked = v.inventoryItem?.tracked === true;
     const available = v.availableForSale === true &&
-      (untracked || v.inventoryQuantity == null || v.inventoryQuantity > 0);
+      (!tracked || v.inventoryQuantity == null || v.inventoryQuantity > 0);
     return {
       title: v.title,
       price: v.price,
