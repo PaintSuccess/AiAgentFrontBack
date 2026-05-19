@@ -7,8 +7,11 @@ const {
 } = require("../../lib/shopify");
 
 // ── Tunables ─────────────────────────────────────────────────────────────────
-const CANDIDATE_POOL = 50;   // products fetched from Shopify per search call
+// Smaller pool = faster Shopify response (and smaller GraphQL payload).
+// 25 still leaves enough headroom for client-side scoring on broad queries.
+const CANDIDATE_POOL = 25;   // products fetched from Shopify per search call
 const RESULT_LIMIT = 15;     // products returned to the caller
+const MAX_FALLBACK_TOKENS = 3; // cap parallel per-token fallback fan-out
 const STORE_URL = "https://paintaccess.com.au";
 
 // Words to drop from natural-language input ("I need a brush" → "brush")
@@ -36,7 +39,7 @@ const PRODUCT_SEARCH_QUERY = `
           productType
           tags
           status
-          variants(first: 10) {
+          variants(first: 5) {
             edges {
               node {
                 title
@@ -67,7 +70,7 @@ const COLLECTION_SEARCH_QUERY = `
             vendor
             productType
             tags
-            variants(first: 10) {
+            variants(first: 5) {
               edges {
                 node {
                   title
@@ -241,27 +244,25 @@ async function searchProducts(rawQuery) {
       if (!seen.has(n.handle)) seen.set(n.handle, n);
     }
   };
+  const safeFetch = (q) => fetchPool(q).catch(() => []);
 
-  // 1. SKU shortcut
+  // 1+2. Run SKU lookup (if applicable) and the primary broad search in
+  // parallel. The SKU shortcut is independent of the broad query, so there's
+  // no benefit to chaining them — fire both at once and merge.
+  const primaryQ = `status:active ${usableQuery || normalized || rawQuery}`;
+  const initial = [safeFetch(primaryQ)];
   if (looksLikeSku(rawQuery)) {
-    const skuToken = String(rawQuery).trim();
-    try { add(await fetchPool(`status:active sku:${skuToken}`)); }
-    catch (_) { /* fall through */ }
+    initial.unshift(safeFetch(`status:active sku:${String(rawQuery).trim()}`));
   }
+  for (const nodes of await Promise.all(initial)) add(nodes);
 
-  // 2. Primary broad search
-  if (seen.size < CANDIDATE_POOL) {
-    try { add(await fetchPool(`status:active ${usableQuery || normalized || rawQuery}`)); }
-    catch (_) { /* fall through */ }
-  }
-
-  // 3. Token-by-token fallback
+  // 3. Per-token fallback: only when the primary search returned almost
+  // nothing. Fire up to MAX_FALLBACK_TOKENS in parallel rather than one at a
+  // time — this is the strategy that previously dominated tail latency.
   if (seen.size < 5 && tokens.length > 1) {
-    for (const tok of tokens) {
-      if (seen.size >= CANDIDATE_POOL) break;
-      try { add(await fetchPool(`status:active ${tok}`)); }
-      catch (_) { /* keep going */ }
-    }
+    const picks = tokens.slice(0, MAX_FALLBACK_TOKENS);
+    const results = await Promise.all(picks.map((tok) => safeFetch(`status:active ${tok}`)));
+    for (const nodes of results) add(nodes);
   }
 
   const pool = Array.from(seen.values());
