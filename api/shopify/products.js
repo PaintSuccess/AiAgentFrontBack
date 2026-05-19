@@ -11,7 +11,6 @@ const PRODUCT_SEARCH_QUERY = `
           productType
           tags
           status
-          availableForSale
           variants(first: 10) {
             edges {
               node {
@@ -95,41 +94,35 @@ module.exports = async function handler(req, res) {
     let productNodes = [];
 
     if (query) {
-      // Two-pass search for better relevance:
-      // 1. Title/vendor/product_type/tag focused query (high precision)
-      // 2. Fall back to broad query (description + everything) if too few results
-      const tokens = query.split(/\s+/).filter((t) => t.length > 1);
-      const fieldClauses = tokens.flatMap((t) => [
-        `title:*${t}*`,
-        `vendor:*${t}*`,
-        `product_type:*${t}*`,
-        `tag:${t}`,
-      ]);
-      const focusedQuery = `status:active AND (${fieldClauses.join(" OR ")})`;
-      const broadQuery = `status:active ${query}`;
+      // Shopify Admin search supports field qualifiers with trailing wildcards.
+      // Run two queries and merge so title/vendor matches rank first:
+      // 1. Field-scoped: each token matched against title/vendor/product_type/tag
+      // 2. Full-text fallback: plain query (searches descriptions too) if <3 results
+      const tokens = query.trim().split(/\s+/).filter((t) => t.length > 1);
+
+      // Build "title:token vendor:token ..." — Shopify ORs qualifiers within a field
+      // but ANDs across terms, giving title-biased results without invalid syntax
+      const fieldQuery = tokens.flatMap((t) =>
+        [`title:${t}`, `vendor:${t}`, `product_type:${t}`, `tag:${t}`]
+      ).join(" OR ");
+      const scopedQuery = `status:active (${fieldQuery})`;
 
       try {
-        const data = await shopifyGraphQL(PRODUCT_SEARCH_QUERY, { query: focusedQuery });
+        const data = await shopifyGraphQL(PRODUCT_SEARCH_QUERY, { query: scopedQuery });
         productNodes = (data.products?.edges || []).map((e) => e.node);
-      } catch (err) {
-        // If the focused query syntax fails, fall through to broad
-        console.warn("Focused search failed, falling back to broad:", err.message);
+      } catch (_) {
+        // Scoped query syntax unsupported on this API version — skip to fallback
       }
 
       if (productNodes.length < 3) {
-        const data = await shopifyGraphQL(PRODUCT_SEARCH_QUERY, { query: broadQuery });
+        // Broad full-text search as fallback/supplement
+        const data = await shopifyGraphQL(PRODUCT_SEARCH_QUERY, { query: `status:active ${query}` });
         const broadNodes = (data.products?.edges || []).map((e) => e.node);
-        // Merge, dedupe by handle, keep focused-query order first
         const seen = new Set(productNodes.map((p) => p.handle));
         for (const n of broadNodes) {
-          if (!seen.has(n.handle)) {
-            productNodes.push(n);
-            seen.add(n.handle);
-          }
+          if (!seen.has(n.handle)) { productNodes.push(n); seen.add(n.handle); }
         }
       }
-
-      // Drop products from currently-unavailable brands
     } else if (collection) {
       const data = await shopifyGraphQL(COLLECTION_SEARCH_QUERY, { handle: collection });
       productNodes = (data.collectionByHandle?.products?.edges || []).map((e) => e.node);
@@ -154,9 +147,8 @@ module.exports = async function handler(req, res) {
           price: e.node.price,
           sku: e.node.sku,
           available,
-          inventory_quantity: qty,
-          inventory_policy: policy,
-          sell_when_out_of_stock: policy === "CONTINUE",
+          inventory_quantity: e.node.inventoryQuantity ?? 0,
+          inventory_policy: e.node.inventoryPolicy || "DENY",
         };
       });
 
@@ -178,7 +170,7 @@ module.exports = async function handler(req, res) {
               : `$${Math.min(...prices).toFixed(2)}–$${Math.max(...prices).toFixed(2)} AUD`)
           : null,
         // p.availableForSale = true if ANY variant is purchasable per Shopify
-        available: p.availableForSale === true,
+        available: variants.some((v) => v.available),
         variants,
         image: p.featuredImage?.url || null,
       };
