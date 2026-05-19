@@ -11,9 +11,10 @@
  *   start_before   — unix timestamp (seconds)
  */
 const { requireDashboardAuth } = require("../../lib/dashboard-auth");
+const { cleanEnv } = require("../../lib/shopify");
 
-const ELEVENLABS_API_KEY = (process.env.ELEVENLABS_API_KEY || "").trim();
-const ELEVENLABS_AGENT_ID = (process.env.ELEVENLABS_AGENT_ID || "").trim();
+const ELEVENLABS_API_KEY = cleanEnv("ELEVENLABS_API_KEY");
+const ELEVENLABS_AGENT_ID = cleanEnv("ELEVENLABS_AGENT_ID");
 
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");

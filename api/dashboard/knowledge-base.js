@@ -8,9 +8,10 @@
  * DELETE — delete a document (query: ?id=xxx)
  */
 const { requireDashboardAuth } = require("../../lib/dashboard-auth");
+const { cleanEnv } = require("../../lib/shopify");
 
-const ELEVENLABS_API_KEY = (process.env.ELEVENLABS_API_KEY || "").trim();
-const ELEVENLABS_AGENT_ID = (process.env.ELEVENLABS_AGENT_ID || "").trim();
+const ELEVENLABS_API_KEY = cleanEnv("ELEVENLABS_API_KEY");
+const ELEVENLABS_AGENT_ID = cleanEnv("ELEVENLABS_AGENT_ID");
 const BASE = "https://api.elevenlabs.io/v1";
 
 module.exports = async function handler(req, res) {

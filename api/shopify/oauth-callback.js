@@ -3,6 +3,7 @@
  * GET /api/shopify/oauth-callback?code=XXX&shop=XXX&hmac=XXX
  */
 const crypto = require("crypto");
+const { cleanEnv } = require("../../lib/shopify");
 
 module.exports = async function handler(req, res) {
   res.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -20,8 +21,8 @@ module.exports = async function handler(req, res) {
     `);
   }
 
-  const clientId = (process.env.SHOPIFY_APP_CLIENT_ID || process.env.SHOPIFY_CLIENT_ID || "").trim();
-  const clientSecret = (process.env.SHOPIFY_APP_CLIENT_SECRET || "").trim();
+  const clientId = cleanEnv("SHOPIFY_APP_CLIENT_ID") || cleanEnv("SHOPIFY_CLIENT_ID");
+  const clientSecret = cleanEnv("SHOPIFY_APP_CLIENT_SECRET");
 
   if (!clientId || !clientSecret) {
     return res.status(500).send(`

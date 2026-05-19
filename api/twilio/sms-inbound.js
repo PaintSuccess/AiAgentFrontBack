@@ -1,9 +1,9 @@
 const crypto = require("crypto");
-const { corsHeaders, rateLimit } = require("../../lib/shopify");
+const { corsHeaders, rateLimit, cleanEnv } = require("../../lib/shopify");
 
 // Validate Twilio webhook signature to prevent spoofed requests
 function verifyTwilioSignature(req) {
-  const authToken = (process.env.TWILIO_AUTH_TOKEN || "").trim();
+  const authToken = cleanEnv("TWILIO_AUTH_TOKEN");
   if (!authToken) return true; // Skip if not configured (dev mode)
 
   const signature = req.headers["x-twilio-signature"];
@@ -54,8 +54,8 @@ module.exports = async function handler(req, res) {
     }
 
     // Send to ElevenLabs as a text conversation
-    const ELEVENLABS_API_KEY = (process.env.ELEVENLABS_API_KEY || "").trim();
-    const AGENT_ID = (process.env.ELEVENLABS_AGENT_ID || "").trim();
+    const ELEVENLABS_API_KEY = cleanEnv("ELEVENLABS_API_KEY");
+    const AGENT_ID = cleanEnv("ELEVENLABS_AGENT_ID");
 
     // Start a text conversation with ElevenLabs
     const conversationRes = await fetch(

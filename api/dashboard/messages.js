@@ -10,9 +10,10 @@
  *   date_before — ISO date string
  */
 const { requireDashboardAuth } = require("../../lib/dashboard-auth");
+const { cleanEnv } = require("../../lib/shopify");
 
-const TWILIO_ACCOUNT_SID = (process.env.TWILIO_ACCOUNT_SID || "").trim();
-const TWILIO_AUTH_TOKEN = (process.env.TWILIO_AUTH_TOKEN || "").trim();
+const TWILIO_ACCOUNT_SID = cleanEnv("TWILIO_ACCOUNT_SID");
+const TWILIO_AUTH_TOKEN = cleanEnv("TWILIO_AUTH_TOKEN");
 
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");

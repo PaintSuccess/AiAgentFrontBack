@@ -3,8 +3,9 @@
  * Fetches a single conversation detail from ElevenLabs (full transcript + analysis).
  */
 const { requireDashboardAuth } = require("../../lib/dashboard-auth");
+const { cleanEnv } = require("../../lib/shopify");
 
-const ELEVENLABS_API_KEY = (process.env.ELEVENLABS_API_KEY || "").trim();
+const ELEVENLABS_API_KEY = cleanEnv("ELEVENLABS_API_KEY");
 
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
