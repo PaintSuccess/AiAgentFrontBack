@@ -58,11 +58,15 @@ module.exports = async function handler(req, res) {
     for (const product of productNodes) {
       for (const edge of product.variants?.edges || []) {
         const variant = edge.node;
-        const tracked = variant.inventoryItem?.tracked !== false;
+        const tracked = variant.inventoryItem?.tracked === true;
         const policy = variant.inventoryPolicy || "DENY";
         const qty = variant.inventoryQuantity ?? 0;
-        // Available if: inventory not tracked, OR sell-when-out-of-stock is ON, OR qty > 0
-        const available = !tracked || policy === "CONTINUE" || qty > 0;
+        // This store's online fulfillment location always has 0 qty.
+        // For tracked variants, inventoryPolicy is the correct availability signal:
+        //   CONTINUE → oversell allowed, customer CAN order
+        //   DENY     → storefront shows "Out of stock" (online location always 0)
+        // Untracked variants: trust availableForSale (no location-specific issue).
+        const available = tracked ? policy === "CONTINUE" : true;
 
         matchedVariants.push({
           product_title: product.title,
@@ -78,8 +82,6 @@ module.exports = async function handler(req, res) {
             ? "not_tracked"
             : policy === "CONTINUE"
             ? "sell_when_out_of_stock_enabled"
-            : qty > 0
-            ? "in_stock"
             : "out_of_stock",
           url: `https://paintaccess.com.au/products/${product.handle}`,
         });
