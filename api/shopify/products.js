@@ -147,11 +147,18 @@ function scoreProduct(product, tokens, fullPhrase) {
   if (fullPhrase && title.includes(fullPhrase)) score += 10;
 
   // In-stock tiebreaker
+  // This store's online fulfillment location always has 0 qty for ALL products —
+  // stock lives in a warehouse location not linked to the online store channel.
+  // For tracked variants the only reliable availability signal is inventoryPolicy:
+  //   CONTINUE = oversell allowed → customer can add to cart regardless of qty
+  //   DENY     = out of stock on storefront (online location is always 0)
+  // Untracked variants have no location-specific stock, so trust Admin API.
   const anyAvailable = (product.variants?.edges || []).some((e) => {
     const v = e.node;
     const tracked = v.inventoryItem?.tracked === true;
-    return v.availableForSale === true &&
-      (!tracked || v.inventoryQuantity == null || v.inventoryQuantity > 0);
+    return tracked
+      ? v.inventoryPolicy === 'CONTINUE'
+      : v.availableForSale === true;
   });
   if (anyAvailable) score += 1;
 
@@ -161,14 +168,17 @@ function scoreProduct(product, tokens, fullPhrase) {
 function shapeProduct(p) {
   const variants = (p.variants?.edges || []).map((e) => {
     const v = e.node;
-    // inventoryItem.tracked=false means Shopify doesn't track stock for this variant
-    // → always trust availableForSale (item has no finite qty).
-    // tracked=true AND inventoryQuantity=0 with inventoryPolicy=CONTINUE means Shopify
-    // accepts oversell orders (availableForSale=true) but the storefront shows
-    // "Notify me when available" because it checks actual qty.
+    // Availability: this store's online fulfillment location always carries 0 qty —
+    // warehouse stock (at a separate location) is NOT linked to the online channel.
+    // Admin API availableForSale aggregates ALL locations and is unreliable for
+    // DENY-policy products.  inventoryPolicy is the correct discriminator:
+    //   CONTINUE = customer CAN order regardless of qty (Add to cart on storefront)
+    //   DENY     = storefront shows "Out of stock" / "Notify me" (online qty always 0)
+    // For untracked variants there is no location-specific stock, so trust Admin API.
     const tracked = v.inventoryItem?.tracked === true;
-    const available = v.availableForSale === true &&
-      (!tracked || v.inventoryQuantity == null || v.inventoryQuantity > 0);
+    const available = tracked
+      ? v.inventoryPolicy === 'CONTINUE'
+      : v.availableForSale === true;
     return {
       title: v.title,
       price: v.price,
