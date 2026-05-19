@@ -43,7 +43,7 @@ const PRODUCT_SEARCH_QUERY = `
                 price
                 sku
                 availableForSale
-                inventoryQuantity
+                inventoryQuantity                inventoryManagement                inventoryManagement
               }
             }
           }
@@ -143,22 +143,35 @@ function scoreProduct(product, tokens, fullPhrase) {
   if (fullPhrase && title.includes(fullPhrase)) score += 10;
 
   // In-stock tiebreaker
-  const anyAvailable = (product.variants?.edges || []).some(
-    (e) => e.node.availableForSale === true,
-  );
+  const anyAvailable = (product.variants?.edges || []).some((e) => {
+    const v = e.node;
+    const untracked = v.inventoryManagement === 'NOT_MANAGED' || v.inventoryManagement == null;
+    return v.availableForSale === true &&
+      (untracked || v.inventoryQuantity == null || v.inventoryQuantity > 0);
+  });
   if (anyAvailable) score += 1;
 
   return score;
 }
 
 function shapeProduct(p) {
-  const variants = (p.variants?.edges || []).map((e) => ({
-    title: e.node.title,
-    price: e.node.price,
-    sku: e.node.sku,
-    available: e.node.availableForSale === true,
-    inventory_quantity: e.node.inventoryQuantity ?? null,
-  }));
+  const variants = (p.variants?.edges || []).map((e) => {
+    const v = e.node;
+    // NOT_MANAGED means Shopify doesn't track stock — trust availableForSale.
+    // SHOPIFY-tracked variants with qty=0 and inventoryPolicy=CONTINUE still
+    // have availableForSale=true but the storefront shows "Notify me when available".
+    // Checking inventoryQuantity>0 aligns the agent with what customers see.
+    const untracked = v.inventoryManagement === 'NOT_MANAGED' || v.inventoryManagement == null;
+    const available = v.availableForSale === true &&
+      (untracked || v.inventoryQuantity == null || v.inventoryQuantity > 0);
+    return {
+      title: v.title,
+      price: v.price,
+      sku: v.sku,
+      available,
+      inventory_quantity: v.inventoryQuantity ?? null,
+    };
+  });
 
   const prices = variants
     .map((v) => parseFloat(v.price))
