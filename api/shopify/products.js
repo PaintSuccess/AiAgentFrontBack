@@ -1,9 +1,5 @@
 const { shopifyGraphQL, verifyAuth, corsHeaders, rateLimit, sanitizeInput } = require("../../lib/shopify");
 
-// Brands that are currently visible on the site but NOT purchasable
-// (per kb/excluded_products_restrictions__prompt.md — supplier arrangements pending)
-const UNAVAILABLE_BRANDS = ["uni-pro", "unipro", "rust-oleum", "rustoleum"];
-
 const PRODUCT_SEARCH_QUERY = `
   query searchProducts($query: String!) {
     products(first: 20, query: $query) {
@@ -15,12 +11,14 @@ const PRODUCT_SEARCH_QUERY = `
           productType
           tags
           status
+          availableForSale
           variants(first: 10) {
             edges {
               node {
                 title
                 price
                 sku
+                availableForSale
                 inventoryQuantity
                 inventoryPolicy
                 inventoryItem {
@@ -55,6 +53,7 @@ const COLLECTION_SEARCH_QUERY = `
                   title
                   price
                   sku
+                  availableForSale
                   inventoryQuantity
                   inventoryPolicy
                   inventoryItem {
@@ -131,17 +130,9 @@ module.exports = async function handler(req, res) {
       }
 
       // Drop products from currently-unavailable brands
-      productNodes = productNodes.filter((p) => {
-        const vendor = (p.vendor || "").toLowerCase().replace(/[\s-]/g, "");
-        return !UNAVAILABLE_BRANDS.some((b) => vendor.includes(b.replace(/[\s-]/g, "")));
-      });
     } else if (collection) {
       const data = await shopifyGraphQL(COLLECTION_SEARCH_QUERY, { handle: collection });
       productNodes = (data.collectionByHandle?.products?.edges || []).map((e) => e.node);
-      productNodes = productNodes.filter((p) => {
-        const vendor = (p.vendor || "").toLowerCase().replace(/[\s-]/g, "");
-        return !UNAVAILABLE_BRANDS.some((b) => vendor.includes(b.replace(/[\s-]/g, "")));
-      });
     }
 
     if (productNodes.length === 0) {
@@ -155,10 +146,9 @@ module.exports = async function handler(req, res) {
 
     const results = productNodes.map((p) => {
       const variants = (p.variants?.edges || []).map((e) => {
-        const tracked = e.node.inventoryItem?.tracked !== false;
-        const policy = e.node.inventoryPolicy || "DENY";
-        const qty = e.node.inventoryQuantity ?? 0;
-        const available = !tracked || policy === "CONTINUE" || qty > 0;
+        // availableForSale is Shopify's authoritative signal — it reflects inventory
+        // policy, draft status, purchase option enabled/disabled, etc.
+        const available = e.node.availableForSale === true;
         return {
           title: e.node.title,
           price: e.node.price,
@@ -187,7 +177,8 @@ module.exports = async function handler(req, res) {
               ? `$${Math.min(...prices).toFixed(2)} AUD`
               : `$${Math.min(...prices).toFixed(2)}–$${Math.max(...prices).toFixed(2)} AUD`)
           : null,
-        available: variants.some((v) => v.available),
+        // p.availableForSale = true if ANY variant is purchasable per Shopify
+        available: p.availableForSale === true,
         variants,
         image: p.featuredImage?.url || null,
       };
