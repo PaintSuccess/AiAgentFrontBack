@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AI Automation for Operations & Pricing — Implementation Plan</title>
+<style>
+  body { font-family: Calibri, Arial, sans-serif; max-width: 900px; margin: 2em auto; color: #222; line-height: 1.5; padding: 0 1em; }
+  h1 { color: #1a1a1a; border-bottom: 3px solid #d9534f; padding-bottom: 0.3em; }
+  h2 { color: #d9534f; margin-top: 1.8em; border-bottom: 1px solid #ccc; padding-bottom: 0.2em; }
+  h3 { color: #333; margin-top: 1.2em; }
+  code { background: #f4f4f4; padding: 0.1em 0.4em; border-radius: 3px; font-family: Consolas, monospace; font-size: 0.92em; }
+  pre { background: #1e1e1e; color: #e0e0e0; padding: 1em; border-radius: 5px; overflow-x: auto; font-family: Consolas, monospace; font-size: 0.85em; line-height: 1.35; }
+  table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+  th, td { border: 1px solid #bbb; padding: 0.5em 0.8em; text-align: left; vertical-align: top; }
+  th { background: #f0f0f0; }
+  .warn { background: #fff3cd; border-left: 4px solid #f0ad4e; padding: 0.8em 1em; margin: 1em 0; }
+  .ok { background: #d4edda; border-left: 4px solid #28a745; padding: 0.8em 1em; margin: 1em 0; }
+  .danger { background: #f8d7da; border-left: 4px solid #dc3545; padding: 0.8em 1em; margin: 1em 0; }
+  .note { background: #e7f3ff; border-left: 4px solid #0d6efd; padding: 0.8em 1em; margin: 1em 0; }
+  ul, ol { padding-left: 1.5em; }
+  li { margin-bottom: 0.3em; }
+  .tag { display: inline-block; background: #d9534f; color: white; padding: 0.1em 0.6em; border-radius: 3px; font-size: 0.8em; margin-right: 0.4em; }
+  .tag-blue { background: #0d6efd; }
+  .tag-green { background: #28a745; }
+  .tag-gray { background: #6c757d; }
+</style>
+</head>
+<body>
+
+<h1>AI Automation for Operations &amp; Pricing — Implementation Plan</h1>
+<p><em>Paint Access — Future Feature #3 — Planning Document v1.0</em></p>
+
+<div class="note">
+<strong>Reading order:</strong> This is the third plan in the series.
+Plan #1 = <code>LEAD_CAPTURE_PLAN.html</code> (customer-facing AI funnel).
+Plan #2 = <code>WHATSAPP_META_PLAN.html</code> (WhatsApp channel).
+This plan #3 is <strong>internal/back-office</strong> — it shares no user-facing surface with #1 or #2, but it does share the same Shopify store, the same Vercel backend, and the same data pipeline.
+</div>
+
+<h2>1. What Was Asked</h2>
+
+<p>Two distinct but related back-office automation blocks:</p>
+
+<h3>Block A — Operations</h3>
+<ul>
+  <li>AI handling of <strong>orders</strong> (status sync, exceptions, supplier dispatch).</li>
+  <li>AI handling of <strong>suppliers</strong> (Oldfields, Uni-Pro, Equi, Pulse, etc.).</li>
+  <li><strong>Inventory management</strong> — central truth of stock across own warehouse + suppliers.</li>
+  <li><strong>Available-stock sync</strong> on the website (Shopify) — what customers see must reflect what can actually ship.</li>
+  <li>Connecting <strong>supplier feeds / APIs</strong> — pulling product catalogues, stock levels, prices, lead times.</li>
+</ul>
+
+<h3>Block B — Pricing Intelligence</h3>
+<ul>
+  <li>Parsing <strong>competitor prices</strong> (web scraping or feeds).</li>
+  <li><strong>Price analytics</strong> — historical trends, margin impact, elasticity hints.</li>
+  <li><strong>Pricing recommendations</strong> — AI suggests when to raise/lower.</li>
+  <li>Automatic <strong>tables &amp; dashboards</strong>.</li>
+  <li>AI <strong>hints on price changes &amp; margin</strong> — explanations, not just numbers.</li>
+</ul>
+
+<h2>2. What We Already Have</h2>
+
+<table>
+<tr><th>Component</th><th>Status</th><th>Reusable for this plan?</th></tr>
+<tr><td>Shopify Admin API integration (read_products, read_inventory, write_draft_orders)</td><td>Working</td><td><span class="tag tag-green">Yes</span> — base for inventory writes &amp; price updates</td></tr>
+<tr><td>Vercel backend (Node serverless)</td><td>Working</td><td><span class="tag tag-green">Yes</span> — hosts cron jobs &amp; supplier connectors</td></tr>
+<tr><td>ElevenLabs agent + tools framework</td><td>Working</td><td><span class="tag tag-gray">No</span> — this is back-office, not voice/chat</td></tr>
+<tr><td>API_SECRET_TOKEN bearer auth pattern</td><td>Working</td><td><span class="tag tag-green">Yes</span> — protect internal endpoints</td></tr>
+<tr><td>Shopify store <code>zgmzge-0d.myshopify.com</code></td><td>Active</td><td><span class="tag tag-green">Yes</span></td></tr>
+</table>
+
+<h2>3. What Is Missing</h2>
+
+<h3>3.1 Shopify Permissions</h3>
+<p>Current scopes are read-only for inventory and products. We need:</p>
+<ul>
+  <li><code>write_inventory</code> — push supplier stock into Shopify</li>
+  <li><code>write_products</code> — update prices &amp; cost of goods</li>
+  <li><code>write_orders</code> — mark fulfillments, attach supplier reference</li>
+  <li><code>read_locations</code> + <code>write_locations</code> — if we model each supplier as a virtual location</li>
+  <li><code>read_price_rules</code> + <code>write_price_rules</code> — automated promo creation (optional)</li>
+</ul>
+
+<h3>3.2 Supplier Connectivity</h3>
+<div class="warn">
+<strong>This is the single biggest unknown.</strong> Each supplier exposes data differently. Possible formats per supplier:
+<ul>
+  <li>REST API with auth (best case)</li>
+  <li>Daily FTP/SFTP CSV drop</li>
+  <li>Emailed Excel file (worst case — needs parsing)</li>
+  <li>EDI feed (rare for paint trade)</li>
+  <li>No feed at all — only PDF price lists (requires OCR or manual upload)</li>
+</ul>
+We must inventory each supplier individually before architecture is final.
+</div>
+
+<table>
+<tr><th>Supplier</th><th>Likely format</th><th>What we need from you</th></tr>
+<tr><td>Oldfields</td><td>Unknown — likely SFTP CSV or rep-emailed Excel</td><td>Contact for B2B portal / feed access</td></tr>
+<tr><td>Uni-Pro</td><td>Unknown</td><td>Same</td></tr>
+<tr><td>Equi</td><td>Unknown</td><td>Same</td></tr>
+<tr><td>Pulse</td><td>Unknown</td><td>Same</td></tr>
+<tr><td>Others?</td><td>—</td><td>Full list of suppliers in scope</td></tr>
+</table>
+
+<h3>3.3 Backend Endpoints &amp; Jobs (none exist yet)</h3>
+<pre>
+POST   /api/ops/supplier/sync                — pull one supplier feed
+GET    /api/ops/inventory/snapshot           — current merged stock state
+POST   /api/ops/inventory/push-to-shopify    — write reconciled stock
+POST   /api/ops/orders/dispatch              — route order line to supplier
+GET    /api/ops/orders/exceptions            — orders stuck / missing stock
+POST   /api/pricing/competitor/scrape        — trigger competitor scrape
+GET    /api/pricing/recommendations          — list AI suggestions
+POST   /api/pricing/apply                    — apply approved price change
+GET    /api/pricing/dashboard-data           — feeds Looker / Sheet / web UI
+POST   /api/ops/webhook/shopify-order-paid   — Shopify → us, trigger dispatch
+</pre>
+
+<h3>3.4 Data Store</h3>
+<p>Shopify alone is not enough for this plan. We need a database for:</p>
+<ul>
+  <li>Supplier catalogues (SKU mapping, cost, lead time, MOQ)</li>
+  <li>Competitor price history (time-series — Shopify can't store this)</li>
+  <li>Price-change audit log (who/what/when/why)</li>
+  <li>Job run history (which sync ran when, what changed, errors)</li>
+</ul>
+<p><strong>Recommended:</strong> Supabase Postgres (free tier sufficient for start; same project can host plan #1 data too).</p>
+
+<h3>3.5 AI Layer</h3>
+<ul>
+  <li><strong>Operations AI</strong> — uses GPT-4o-mini or Claude Haiku to classify supplier emails, normalise product names across catalogues, match SKUs to Shopify variants. Cheap, batched.</li>
+  <li><strong>Pricing AI</strong> — uses GPT-4o or Claude Sonnet to produce reasoned recommendations ("raise SKU X by 4% — competitor Y dropped, our margin is 38%, demand stable last 30 days").</li>
+</ul>
+
+<h3>3.6 Internal UI / Dashboard</h3>
+<p>This work needs a place for you to <strong>review and approve</strong> AI suggestions — autopilot on prices is too risky early on.</p>
+<ul>
+  <li><strong>Option A (fastest):</strong> Google Sheets synced via cron — simple, you already know it.</li>
+  <li><strong>Option B (mid):</strong> Retool / Appsmith — drag-and-drop admin UI, ~$10/user/month.</li>
+  <li><strong>Option C (custom):</strong> Lightweight React dashboard on Vercel — most flexible, more dev time.</li>
+</ul>
+
+<h3>3.7 Competitor Price Scraping Infrastructure</h3>
+<ul>
+  <li>List of competitor URLs to monitor (per-SKU mapping).</li>
+  <li>Scraping engine — <strong>Playwright on Vercel cron</strong> (works for ~80% of sites) or <strong>ScrapingBee/Bright Data</strong> proxy ($30–$100/mo for sites with anti-bot).</li>
+  <li>Legal review — scraping prices is broadly OK in AU, but ToS violations can lead to IP bans. Robots.txt should be respected.</li>
+</ul>
+
+<h2>4. Edge Cases &amp; Failure Modes</h2>
+
+<ol>
+  <li><strong>Supplier feed late/missing</strong> — keep last-known-good stock for X hours, then mark items as "stock TBC" rather than zero out.</li>
+  <li><strong>Supplier renames SKU</strong> — fuzzy match on product name + size + colour, surface for manual approval.</li>
+  <li><strong>Same product, multiple suppliers</strong> — which one wins? Rule: lowest landed cost, or fastest lead time, or per-product preference.</li>
+  <li><strong>Supplier oversells</strong> — they report stock, we sell, they're actually out. Need exception queue + email/SMS alert to you.</li>
+  <li><strong>Customer order arrives during supplier sync</strong> — race condition. Use Shopify's atomic <code>InventoryAdjustQuantity</code>, never set absolute values.</li>
+  <li><strong>Shopify variant doesn't exist for a supplier SKU</strong> — auto-create draft product for your review (never auto-publish).</li>
+  <li><strong>Bulk price update accidentally tanks margin</strong> — every price change goes through a "guard rail" check: max ±15% from current, never below cost × 1.10.</li>
+  <li><strong>Competitor scraping breaks (DOM changed)</strong> — graceful fail, alert you, don't feed bad data into recommendations.</li>
+  <li><strong>Competitor shows "Call for price"</strong> — don't treat as $0. Mark as unknown, skip in calculations.</li>
+  <li><strong>Currency mismatch</strong> — supplier feed in USD/EUR, store in AUD. Need FX rate + buffer.</li>
+  <li><strong>GST handling</strong> — supplier costs ex-GST, retail inc-GST. Pricing engine must keep these straight or margins look wrong by 10%.</li>
+  <li><strong>Discontinued line</strong> — supplier drops product. Don't just delete — mark as "supplier-discontinued", keep selling existing stock, then archive.</li>
+  <li><strong>Backorders</strong> — supplier has 3-week lead time. Should the product be hidden, marked "pre-order", or kept normal? Per-product rule needed.</li>
+  <li><strong>Manual override stomped by next sync</strong> — if you manually set a price, the sync must respect a "locked" flag.</li>
+  <li><strong>Shopify rate limits</strong> — bulk updates can hit 40 req/sec ceiling. Need queue with backoff.</li>
+  <li><strong>Pricing rec creates a loop</strong> — we lower price, competitor lowers, we lower again. Damping rule: max 1 change per SKU per 7 days.</li>
+  <li><strong>Promo periods</strong> — Black Friday, EOFY. AI must know to suspend normal pricing logic during marked windows.</li>
+  <li><strong>B2B vs retail pricing</strong> — Shopify B2B is separate. Plan must decide if it's in scope.</li>
+  <li><strong>Cost change without retail change</strong> — supplier raises cost 8%. Do we absorb or pass on? Per-category rule.</li>
+  <li><strong>Audit / compliance</strong> — ACCC rules on misleading pricing (e.g. "was $X" claims). Logged history is mandatory if we ever display strikethrough.</li>
+  <li><strong>Multi-location stock</strong> — if PaintAccess has more than one Shopify location, sync must target the right one.</li>
+  <li><strong>Supplier credentials leak</strong> — all in Vercel env vars, never logged, never echoed in errors.</li>
+</ol>
+
+<h2>5. Architecture (Target State)</h2>
+
+<pre>
+                          ┌──────────────────────────┐
+                          │  Suppliers               │
+                          │  Oldfields / Uni-Pro /   │
+                          │  Equi / Pulse / ...      │
+                          └────────────┬─────────────┘
+                                       │ API / SFTP / Email-attachment
+                                       ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                  VERCEL BACKEND  (Node serverless)                  │
+│                                                                     │
+│  Cron Jobs (vercel.json schedule)                                   │
+│   • supplier-sync       (hourly)                                    │
+│   • competitor-scrape   (4× daily)                                  │
+│   • inventory-reconcile (every 15 min)                              │
+│   • pricing-recommend   (daily 6am)                                 │
+│                                                                     │
+│  API routes  ── /api/ops/* , /api/pricing/*                         │
+│                                                                     │
+│  AI layer ──── OpenAI / Anthropic (classify, normalise, recommend)  │
+└──────┬───────────────────────┬──────────────────────┬───────────────┘
+       │                       │                      │
+       ▼                       ▼                      ▼
+┌──────────────┐       ┌──────────────┐       ┌────────────────────┐
+│  Supabase    │       │  Shopify     │       │  Internal Dashboard│
+│  Postgres    │       │  Admin API   │       │  (Sheets / Retool /│
+│              │       │              │       │   React on Vercel) │
+│ • suppliers  │       │ • inventory  │       │                    │
+│ • competitor │       │ • prices     │       │ • approve changes  │
+│   price hist │       │ • orders     │       │ • view exceptions  │
+│ • audit log  │       │              │       │ • view dashboards  │
+│ • job runs   │       │              │       │                    │
+└──────────────┘       └──────────────┘       └────────────────────┘
+                              ▲
+                              │ webhooks (order/paid, fulfillment)
+                              │
+                       ┌──────┴──────┐
+                       │  Storefront │
+                       │  customers  │
+                       └─────────────┘
+</pre>
+
+<h2>6. Phased Rollout</h2>
+
+<h3>Phase 0 — Discovery (no code)</h3>
+<ul>
+  <li>Inventory all suppliers, document feed format for each.</li>
+  <li>Inventory all competitors to monitor, get URL list.</li>
+  <li>Decide dashboard route (Sheets / Retool / custom).</li>
+  <li>Decide Supabase vs alternative (Neon, Planetscale).</li>
+  <li>Add required Shopify scopes; rotate token.</li>
+</ul>
+
+<h3>Phase 1 — Foundation</h3>
+<ul>
+  <li>Set up Supabase project + schema (suppliers, products_map, price_history, audit_log, job_runs).</li>
+  <li>Build supplier connector framework — one adapter per format (API/CSV/Excel).</li>
+  <li>Build first supplier integration end-to-end (pick easiest one as proof).</li>
+  <li>Manual review UI — Sheets with daily export.</li>
+</ul>
+
+<h3>Phase 2 — Inventory Sync Live</h3>
+<ul>
+  <li>All suppliers connected.</li>
+  <li>Hourly merge + push to Shopify with guard rails.</li>
+  <li>Exception queue with Slack/email alerts.</li>
+  <li>You operate in <strong>monitor mode</strong> — system suggests, you approve, system writes.</li>
+</ul>
+
+<h3>Phase 3 — Order Routing</h3>
+<ul>
+  <li>Shopify webhook → backend → choose supplier → email/API to supplier → mark fulfilled.</li>
+  <li>Customer-facing tracking unchanged (Shopify shows progress).</li>
+</ul>
+
+<h3>Phase 4 — Competitor Pricing</h3>
+<ul>
+  <li>Scraper running on cron.</li>
+  <li>Daily AI report: "12 SKUs flagged, 3 strong raise, 5 hold, 4 watch".</li>
+  <li>One-click approve/reject in dashboard.</li>
+</ul>
+
+<h3>Phase 5 — Pricing Autopilot (optional)</h3>
+<ul>
+  <li>Once trust is established, enable auto-apply for low-risk categories (e.g. ±3% within guard rails).</li>
+  <li>High-margin or strategic SKUs stay manual forever.</li>
+</ul>
+
+<h3>Phase 6 — Analytics</h3>
+<ul>
+  <li>Margin trend dashboards.</li>
+  <li>Supplier scorecard (fill rate, lead time, accuracy).</li>
+  <li>Price elasticity hints from sales data.</li>
+</ul>
+
+<h2>7. Open Questions for You</h2>
+
+<ol>
+  <li><strong>Supplier list confirmed?</strong> Oldfields, Uni-Pro, Equi, Pulse — anyone else? Any to exclude?</li>
+  <li><strong>Do you already have B2B accounts</strong> with each supplier giving you access to a portal / feed / API? Or do we need to request access?</li>
+  <li><strong>Who is the contact person</strong> at each supplier for integration?</li>
+  <li><strong>Same SKU, multiple suppliers</strong> — what's the tie-breaker rule? Lowest cost? Fastest? Preferred relationship?</li>
+  <li><strong>Should the website hide out-of-stock items</strong>, or show them as "available to order, 5-day lead"?</li>
+  <li><strong>Pricing autonomy</strong> — do you want full auto-apply eventually, or always approval-gated?</li>
+  <li><strong>Price-change frequency cap</strong> — at most how often per SKU? (Suggest: weekly.)</li>
+  <li><strong>Margin floor</strong> — what's the lowest gross margin % the system is allowed to set? (e.g. never below 18%.)</li>
+  <li><strong>Competitor list</strong> — who are the top 3–5 competitors you actually care about?</li>
+  <li><strong>Dashboard preference</strong> — Google Sheets (free, simple), Retool (~$10/user/mo, slick), or custom web (more dev, fully ours)?</li>
+  <li><strong>Notifications</strong> — where do alerts go? Email? SMS? Slack? WhatsApp (if plan #2 is live)?</li>
+  <li><strong>Database hosting</strong> — Supabase OK, or you prefer something else (Azure, AWS RDS)?</li>
+  <li><strong>B2B prices</strong> — separate channel in scope?</li>
+  <li><strong>GST handling</strong> — confirm: all internal numbers ex-GST, customer-facing inc-GST?</li>
+  <li><strong>Existing PIM / ERP</strong> — is there any current system that already holds supplier data we should pull from instead of starting fresh?</li>
+  <li><strong>How many SKUs total?</strong> 500? 5,000? 50,000? Affects DB size + sync time.</li>
+  <li><strong>Currency</strong> — any supplier billing in USD/EUR?</li>
+</ol>
+
+<h2>8. What You Must Provide Before Phase 1</h2>
+
+<table>
+<tr><th>Item</th><th>Why</th><th>Who provides</th></tr>
+<tr><td>Updated Shopify token with write scopes</td><td>To push inventory &amp; prices</td><td>You (Shopify admin)</td></tr>
+<tr><td>Supplier feed access (credentials/URLs/portals)</td><td>To pull catalogues &amp; stock</td><td>You — request from each supplier rep</td></tr>
+<tr><td>Sample feed file per supplier (CSV/Excel/JSON)</td><td>To build the adapter</td><td>You — forward to dev</td></tr>
+<tr><td>Competitor URL list (per category)</td><td>To configure scraper</td><td>You</td></tr>
+<tr><td>Supabase account (free tier OK)</td><td>Data store</td><td>You — 5 min signup</td></tr>
+<tr><td>OpenAI / Anthropic API key</td><td>AI classification &amp; recommendations</td><td>You</td></tr>
+<tr><td>Decision on dashboard route</td><td>Determines UI dev scope</td><td>You</td></tr>
+<tr><td>Margin floor &amp; price-change rules in writing</td><td>Guard rails</td><td>You</td></tr>
+<tr><td>Notification channel + recipients</td><td>Where alerts go</td><td>You</td></tr>
+</table>
+
+<h2>9. Cost Estimate (monthly, ongoing)</h2>
+
+<table>
+<tr><th>Item</th><th>Low</th><th>High</th><th>Notes</th></tr>
+<tr><td>Vercel</td><td>$0</td><td>$20</td><td>Free until traffic grows; cron jobs need Pro for &gt;1/day cadence</td></tr>
+<tr><td>Supabase</td><td>$0</td><td>$25</td><td>Free until 500MB / 50k MAU</td></tr>
+<tr><td>OpenAI / Anthropic API</td><td>$10</td><td>$80</td><td>Depends on SKU count &amp; recommendation frequency</td></tr>
+<tr><td>Scraping proxy (if needed)</td><td>$0</td><td>$100</td><td>Free if Playwright direct works; paid if anti-bot</td></tr>
+<tr><td>Retool (if chosen)</td><td>$0</td><td>$20</td><td>Free for 1 user, ~$10/user after</td></tr>
+<tr><td><strong>Total</strong></td><td><strong>~$10</strong></td><td><strong>~$250</strong></td><td>For a fully-loaded automated back-office</td></tr>
+</table>
+
+<h2>10. Dependencies on Earlier Plans</h2>
+
+<ul>
+  <li><strong>Independent of Plan #1 (Lead Capture)</strong> — different surface, can ship in parallel.</li>
+  <li><strong>Independent of Plan #2 (WhatsApp)</strong> — different channel.</li>
+  <li><strong>Shared:</strong> Supabase project, Shopify token (extended scopes), notification preferences.</li>
+  <li>This plan can ship <strong>before</strong> #1 and #2 if back-office pain is greater than customer-acquisition pain — your call.</li>
+</ul>
+
+<h2>11. Recommendation</h2>
+
+<div class="ok">
+<strong>Best sequencing:</strong>
+<ol>
+  <li>Spend 1 week on <strong>Phase 0 discovery</strong> — supplier audit. This unblocks everything.</li>
+  <li>Build <strong>Phase 1 + Phase 2 (inventory sync only)</strong> as proof. Pricing comes later.</li>
+  <li>Keep humans in the loop for <strong>all price writes</strong> for at least 60 days.</li>
+  <li>Add <strong>Phase 4 (competitor pricing)</strong> in parallel with Phase 2 — it's read-only and won't break anything if it fails.</li>
+</ol>
+This plan has the highest <strong>ROI of the three</strong> because it touches every order and every margin dollar. But it also has the highest <strong>integration risk</strong> because of supplier variability. Phase 0 is non-negotiable.
+</div>
+
+<div class="danger">
+<strong>Hard "do not start" checklist:</strong>
+<ul>
+  <li>Do not start Phase 1 without sample supplier feeds in hand.</li>
+  <li>Do not enable any auto-write to Shopify without guard rails coded and tested.</li>
+  <li>Do not scrape competitors without robots.txt check + rate limiting.</li>
+  <li>Do not store supplier credentials anywhere outside Vercel env vars.</li>
+</ul>
+</div>
+
+<hr>
+<p style="color:#888; font-size:0.85em;">Document generated 2026-05-18 for Paint Access — Plan #3 of 3.</p>
+
+</body>
+</html>

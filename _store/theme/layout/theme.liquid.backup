@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="{{ request.locale.iso_code }}" class="page no-js overflow-y-scroll">
+  <head>
+
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-MGSPQK5');</script>
+<!-- End Google Tag Manager -->    
+
+    {% include 'shop-sheriff-amp' %}
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta
+      name="viewport"
+      content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+    >
+    <meta name="theme-color" content="{{ settings.accent_color }}">
+
+    <link
+      rel="preconnect"
+      href="https://cdn.shopify.com"
+      crossorigin
+    >
+    {% render 'fonts' %}
+    <link
+      rel="stylesheet"
+      href="{{ 'bundle.css' | asset_url }}"
+      as="style"
+    >
+    <title>{{ page_title | escape }}</title>
+
+    {% if page_description %}
+      <meta name="description" content="{{ page_description | escape }}">
+    {% endif %}
+
+    <meta name="facebook-domain-verification" content="82fwker8iatg1s43c57ndt0fz4bqwq">
+
+    {% if canonical_url != blank %}
+      <link rel="canonical" href="{{ canonical_url }}">
+    {% endif %}
+
+    {% if settings.favicon %}
+      <link
+        rel="shortcut icon"
+        href="{{ settings.favicon | img_url: '32x32' }}"
+        type="image/png"
+      >
+    {% endif %}
+
+    {% if page.handle == 'graco-sprayers' %}
+      {{ 'page-graco-sprayers.static.css' | asset_url | stylesheet_tag }}
+    {% endif %}
+
+    {{ content_for_header }}
+
+    {% include 'hulk_po_vd.liquid' %}
+    {% render 'gtag-script.liquid' %}
+
+    {% if settings.disable_add_to_cart_btns %}
+      <style>
+        .js-add-to-cart,
+        .shopify-payment-button,
+        [href='/checkout'],
+        .header__mob-btn--phone,
+        .header__mob-btn--location,
+        .nav__mobile-menu-contact {
+          opacity: 0.5 !important;
+          pointer-events: none !important;
+        }
+      </style>
+    {% endif %}
+  </head>
+
+  <body class="template-{{ template.name }} {% if customer.tags contains 'VIP' or customer.tags contains 'VIPCOM' %}vip-customer{% endif %}">
+
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-MGSPQK5"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+
+    {% section 'top-bar' %}
+    {% section 'header' %}
+    {% section 'nav' %}
+    {% render 'recover-modal' %}
+
+    {% if template.name == 'article' and article.metafields.custom.activate_modal_window %}
+      {% section 'article-popup' %}
+    {% endif %}
+
+    <main role="main">
+      {{ content_for_layout }}
+      {% section 'brands' %}
+    </main>
+
+    {% comment %}
+      {% if localization.market.handle == 'au' %}
+      {% section 'session-popup' %}
+      {% endif %}
+    {% endcomment %}
+
+    {% if settings.disable_add_to_cart_btns %}
+      {% render 'sticky-banner' %}
+    {% endif %}
+
+    {% section 'footer' %}
+
+    {% comment %}
+      {% if template.suffix == 'vip-painters-community'
+      or template.suffix == 'vip-painters-lp'
+      or template.suffix == 'vip-painters-lp-v2'
+      or template.suffix == 'vip-painters-community-v3'
+      or template.suffix == 'vip-painters-club'
+      %}
+      {% render 'modal', modal_content: '<div id="borisdoes-get-started"></div>', class: 'painters-community-modal' %}
+      <script src="https://borisdoes.com.au/api/widget/get-started.js?checkout=popup" defer="defer"></script>
+      {% endif %}
+
+      {% if template.suffix == 'vip-painters-community-v2' %}
+      {% render 'modal', modal_content: '<div id="borisdoes-get-started"></div>', class: 'painters-community-modal' %}
+      <script src="https://borisdoes.com.au/api/widget/get-started.js?yearly&checkout=popup" defer="defer"></script>
+      {% endif %}
+
+      {% if template.suffix == 'vip-painters-community-v4' %}
+      {% render 'modal', modal_content: '<div id="borisdoes-get-started"></div>', class: 'painters-community-modal' %}
+      <script src="https://borisdoes.com.au/api/widget/get-started.js?checkout=redirect" defer="defer"></script>
+      {% endif %}
+
+      {% if template.suffix == 'vip-painters-community-v5' %}
+      {% render 'modal', modal_content: '<div id="borisdoes-get-started"></div>', class: 'painters-community-modal' %}
+      <script src="https://borisdoes.com.au/api/widget/get-started.js?yearly&checkout=redirect" defer="defer"></script>
+      {% endif %}
+    {% endcomment %}
+
+    {% if template.suffix == 'sell-your-paint-sprayer' or template.suffix == 'trade-in' %}
+      {% render 'modal',
+        modal_content: '<script src="https://www.cognitoforms.com/f/seamless.js" data-key="ZkuVzs_Ea0eOGOTdthGU8w" data-form="4"></script>',
+        class: 'sell-your-paint-sprayer-modal'
+      %}
+    {% endif %}
+
+    {% if template.suffix == 'free-personal-painting' %}
+      {% render 'modal',
+        modal_content: '<script src="https://www.cognitoforms.com/f/seamless.js" data-key="ZkuVzs_Ea0eOGOTdthGU8w" data-form="7"></script>',
+        class: 'free-personal-painting-confirmed-modal'
+      %}
+    {% endif %}
+
+    {% if template.suffix == 'vip-painters-book-a-call' %}
+      <!-- Calendly badge widget begin -->
+      <link href="https://assets.calendly.com/assets/external/widget.css" rel="stylesheet">
+      <script
+        src="https://assets.calendly.com/assets/external/widget.js"
+        type="text/javascript"
+        async
+      ></script>
+      <a
+        href=""
+        onclick="Calendly.initPopupWidget({url: 'https://calendly.com/mariia-paintaccess/30min'}); return false;"
+        >Schedule time with me</a
+      >
+    {% endif %}
+
+    <div class="ui-overlay"></div>
+
+    {% render 'languages' %}
+    <script src="{{ 'bundle.js' | asset_url }}" defer="defer"></script>
+
+    {% render 'gtm.liquid' %}
+  </body>
+</html>

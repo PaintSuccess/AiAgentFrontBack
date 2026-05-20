@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>WhatsApp + Meta + Shopify Integration — Plan</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; max-width: 900px; margin: 40px auto; padding: 0 24px; color: #222; }
+  h1 { font-size: 22px; border-bottom: 2px solid #333; padding-bottom: 8px; }
+  h2 { font-size: 17px; margin-top: 32px; border-left: 4px solid #25D366; padding-left: 10px; }
+  h3 { font-size: 14px; margin-top: 20px; color: #444; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  th { background: #f0f0f0; text-align: left; padding: 8px 10px; border: 1px solid #ccc; font-size: 13px; }
+  td { padding: 7px 10px; border: 1px solid #ccc; font-size: 13px; vertical-align: top; }
+  tr:nth-child(even) td { background: #fafafa; }
+  code, pre { background: #f4f4f4; border-radius: 4px; font-family: "Courier New", monospace; font-size: 12px; }
+  pre { padding: 14px 16px; overflow-x: auto; border: 1px solid #ddd; line-height: 1.5; }
+  code { padding: 1px 4px; }
+  ul, ol { margin: 6px 0 6px 20px; }
+  li { margin-bottom: 4px; }
+  .status-ok  { color: #1a7f37; font-weight: bold; }
+  .status-partial { color: #d4a017; font-weight: bold; }
+  .status-no  { color: #cf222e; font-weight: bold; }
+  .warn { background: #fff8c5; border-left: 4px solid #d4a017; padding: 10px 14px; margin: 12px 0; }
+  .info { background: #dbeafe; border-left: 4px solid #2563eb; padding: 10px 14px; margin: 12px 0; }
+  .phase { background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 10px 16px; margin: 10px 0; }
+  .phase strong { color: #15803d; }
+  .q { background: #fef9c3; border: 1px solid #fde047; border-radius: 4px; padding: 8px 12px; margin: 6px 0; }
+  .provide { background: #fce7f3; border: 1px solid #f9a8d4; border-radius: 4px; padding: 8px 12px; margin: 6px 0; }
+  .compare { background: #ede9fe; border: 1px solid #c4b5fd; border-radius: 4px; padding: 10px 14px; margin: 10px 0; }
+  h1 { color: #1a1a1a; }
+  .meta { color: #666; font-size: 12px; margin-bottom: 24px; }
+</style>
+</head>
+<body>
+
+<h1>WhatsApp + Meta + Shopify Integration — Full Plan</h1>
+<p class="meta">Paint Access AI Agent — Generated 18 May 2026</p>
+
+<h2>🎯 What You're Asking For</h2>
+<p>Full integration of WhatsApp Business with Meta and our AI bot:</p>
+<ol>
+  <li><strong>AI-driven sales funnel</strong> over WhatsApp.</li>
+  <li><strong>Automated replies + multi-step scenarios</strong> (greeting → qualifying → product recommendation → cart → checkout link).</li>
+  <li><strong>Lead + customer data capture</strong>.</li>
+  <li><strong>Push back to Shopify</strong> as customers/orders/draft orders.</li>
+  <li><strong>Tagging + source analytics</strong> (so we know WhatsApp is the lead source).</li>
+  <li><strong>Downstream automation</strong> via Omnisend / email / SMS / Meta retargeting (Facebook + Instagram Custom Audiences).</li>
+</ol>
+
+<hr>
+
+<h2>✅ What We Already Have</h2>
+<table>
+  <tr><th>Component</th><th>Status</th></tr>
+  <tr><td>Twilio WhatsApp <strong>sandbox</strong> number</td><td class="status-partial">Sandbox only — recipients must opt in via a code first. Not usable for real customers.</td></tr>
+  <tr><td>Inbound webhook handler</td><td class="status-ok">Working — <code>/api/twilio/whatsapp-inbound</code> exists</td></tr>
+  <tr><td>ElevenLabs agent (Jessica) — can already handle text turns</td><td class="status-ok">Working — already used by voice + chat widget</td></tr>
+  <tr><td>Shopify backend (products, orders, inventory)</td><td class="status-ok">Working</td></tr>
+  <tr><td>Vercel serverless infrastructure</td><td class="status-ok">Working — easy to add more endpoints</td></tr>
+  <tr><td>Meta Pixel on the store</td><td class="status-no">Need to verify. Required for Facebook/Instagram retargeting.</td></tr>
+</table>
+
+<hr>
+
+<h2>❌ What's Missing</h2>
+
+<h3>1. Meta / WhatsApp Business Setup</h3>
+<table>
+  <tr><th>Missing</th><th>Why It Matters</th></tr>
+  <tr><td><strong>Meta Business Account</strong> (Business Manager)</td><td>Container for WhatsApp Business Account, Pixel, Ad accounts. Free.</td></tr>
+  <tr><td><strong>Meta Business Verification</strong> (document upload: ABN, business address, utility bill)</td><td>Required for sending more than 250 conversations/day and for high-tier messaging.</td></tr>
+  <tr><td><strong>WhatsApp Business Account (WABA)</strong></td><td>The "account" inside which the phone number lives.</td></tr>
+  <tr><td><strong>Dedicated phone number</strong> for WhatsApp</td><td>Must NOT be currently registered with a personal WhatsApp account. Can be mobile or landline (with SMS/voice verification).</td></tr>
+  <tr><td><strong>Display name approval</strong></td><td>The name customers see ("Paint Access"). Meta reviews and can reject. Takes 1–3 days.</td></tr>
+  <tr><td><strong>Message template approvals</strong></td><td>For all outbound messages outside the 24-hour customer service window. Each template is reviewed by Meta.</td></tr>
+  <tr><td><strong>Meta Pixel + Conversion API</strong> on the storefront</td><td>For retargeting WhatsApp leads on Facebook/Instagram.</td></tr>
+</table>
+
+<h3>2. Provider Decision (Big Architectural Choice)</h3>
+<div class="compare">
+<strong>Path A: Twilio production WhatsApp</strong>
+<ul>
+  <li>✅ We already have a Twilio account + working webhook code.</li>
+  <li>✅ Twilio handles Meta liaison, template submission, error handling.</li>
+  <li>❌ Higher per-message cost (~AUD $0.07–$0.12 per conversation vs Meta's ~$0.04).</li>
+  <li>❌ Limited control over advanced WhatsApp features (catalogue, flows).</li>
+</ul>
+</div>
+<div class="compare">
+<strong>Path B: Direct Meta Cloud API</strong>
+<ul>
+  <li>✅ Cheapest at scale.</li>
+  <li>✅ Full access to WhatsApp Flows, Catalogue, Interactive messages, Click-to-WhatsApp ads.</li>
+  <li>❌ More setup work — we manage tokens, webhooks, template submissions ourselves.</li>
+  <li>❌ Stricter rate limits early on (1,000 conversations/day until verified).</li>
+</ul>
+</div>
+<div class="compare">
+<strong>Path C: 360dialog / MessageBird (BSP)</strong>
+<ul>
+  <li>✅ Good middle ground — flat monthly fee, no per-message markup.</li>
+  <li>❌ Yet another vendor + contract.</li>
+</ul>
+</div>
+
+<h3>3. Backend (Vercel)</h3>
+<table>
+  <tr><th>Missing Endpoint / Component</th><th>Purpose</th></tr>
+  <tr><td><code>POST /api/whatsapp/inbound</code> (new, replacing the Twilio sandbox handler)</td><td>Receive customer messages from Meta Cloud API or Twilio production webhook.</td></tr>
+  <tr><td><code>POST /api/whatsapp/send</code></td><td>Server-side function for outbound messages (Jessica's replies, templates).</td></tr>
+  <tr><td><strong>Conversation state store</strong> (KV / Redis / Vercel KV / Shopify metafields)</td><td>WhatsApp is stateless from Meta's side. We must remember which funnel step each customer is on between messages.</td></tr>
+  <tr><td><strong>Agent text bridge</strong></td><td>Route inbound WhatsApp messages into ElevenLabs agent's text mode (the agent's <code>conversation</code> API endpoint) instead of voice.</td></tr>
+  <tr><td><code>POST /api/meta/capi-event</code></td><td>Server-side Meta Conversion API — fires events like <code>Lead</code>, <code>InitiateCheckout</code>, <code>Purchase</code> with customer email/phone hashed for matching.</td></tr>
+  <tr><td><strong>Media handler</strong></td><td>Customers send paint photos / voice notes. Need to download from Meta, store, and optionally run vision/STT.</td></tr>
+  <tr><td><strong>24-hour window tracker</strong></td><td>Per-customer timer that decides "free reply" vs "must use a paid template".</td></tr>
+</table>
+
+<h3>4. ElevenLabs Agent</h3>
+<table>
+  <tr><th>Missing</th><th>Purpose</th></tr>
+  <tr><td><strong>Text-channel system prompt variant</strong></td><td>WhatsApp is async — Jessica's voice prompt ("keep replies to 1–3 sentences") is wrong here. Need a separate flow with shorter, formatted-for-mobile messages.</td></tr>
+  <tr><td><strong>Funnel steps as agent "states"</strong></td><td>Greeting → Qualification → Recommendation → Quote → Checkout link. Either modelled in the prompt or as separate sub-prompts.</td></tr>
+  <tr><td><strong>Tool: <code>send_whatsapp_template</code></strong></td><td>For agent to proactively re-engage outside the 24h window.</td></tr>
+  <tr><td><strong>Tool: <code>create_draft_order</code></strong></td><td>Generate a Shopify draft order + payment link to send via WhatsApp.</td></tr>
+  <tr><td><strong>Tool: <code>send_catalog_item</code></strong></td><td>If using WhatsApp Catalogue — send a product card directly.</td></tr>
+</table>
+
+<h3>5. Shopify Side</h3>
+<table>
+  <tr><th>Missing</th><th>Why It Matters</th></tr>
+  <tr><td><code>write_customers</code> + <code>read_customers</code> scopes</td><td>Same as lead-capture plan — required for upsert.</td></tr>
+  <tr><td><code>write_draft_orders</code></td><td>Already present.</td></tr>
+  <tr><td><strong>Tags taxonomy</strong>: <code>WhatsApp</code>, <code>WhatsApp Lead</code>, <code>WhatsApp Customer</code></td><td>Distinguish leads from completed buyers; enable filtered exports.</td></tr>
+  <tr><td><strong>Metafield: <code>whatsapp_phone</code></strong></td><td>Reliable join key between Shopify customer and Meta phone-number-id.</td></tr>
+  <tr><td><strong>Click-to-WhatsApp link on product pages</strong></td><td>Single CTA driving traffic into the WhatsApp funnel.</td></tr>
+</table>
+
+<h3>6. Omnisend / Marketing Automation</h3>
+<table>
+  <tr><th>Missing</th><th>Purpose</th></tr>
+  <tr><td>Decision: <strong>Omnisend WhatsApp channel</strong> vs custom outbound via Meta API</td><td>Omnisend has native WhatsApp but with extra cost; using our own keeps everything in-house.</td></tr>
+  <tr><td>Omnisend segments matching <code>WhatsApp Lead</code> tag</td><td>For cross-channel follow-ups (email after no response on WhatsApp).</td></tr>
+  <tr><td><strong>Meta Custom Audience</strong> from WhatsApp leads</td><td>For Facebook + Instagram retargeting. Built by uploading hashed emails/phones or via CAPI events.</td></tr>
+</table>
+
+<hr>
+
+<h2>⚠️ Edge Cases, Bottlenecks &amp; Complications</h2>
+<ol>
+  <li><strong>The 24-hour customer service window.</strong> Once a customer messages you, you can reply freely for 24h. After that, every outbound message MUST be a pre-approved template. Forgetting this kills automation flows.</li>
+  <li><strong>Template approval delays.</strong> Each template needs Meta approval, usually 24–72 hours. New product launches / sales need templates submitted well in advance. Rejection reasons can be vague ("too promotional"). Plan a template library.</li>
+  <li><strong>Template categories &amp; pricing.</strong> Marketing > Utility > Authentication in cost. Mis-categorising leads to rejection or higher bills. Australia is a Tier-1 market = highest pricing tier.</li>
+  <li><strong>Quality rating.</strong> Meta tracks user complaints. Too many "report spam" / blocks drops your number to Medium → Low → Flagged → permanent ban. Always offer easy opt-out.</li>
+  <li><strong>Number portability is painful.</strong> Choose the WhatsApp number carefully — switching providers later (Twilio ↔ Meta direct) is multi-day downtime.</li>
+  <li><strong>One number = one WABA.</strong> Cannot share a number across Twilio + Meta direct. If we ever want to migrate, must "release" then "re-register".</li>
+  <li><strong>Voice notes from customers.</strong> Customers love sending voice notes. Need STT pipeline (ElevenLabs scribe or OpenAI Whisper) to feed text into the agent.</li>
+  <li><strong>Image messages.</strong> Customers send paint colour photos or pictures of damaged walls. Need a vision model (GPT-4o, Claude) to interpret. Adds cost per image.</li>
+  <li><strong>Latency.</strong> WhatsApp users expect responses within seconds. Each message hop is: Meta → Vercel webhook → ElevenLabs API → Vercel → Meta. Cold starts on Vercel can push this to 5–10s. May need warm functions or edge runtime.</li>
+  <li><strong>Concurrent conversations.</strong> 50 customers messaging at once. Need a session store keyed by their phone number, not a single global state.</li>
+  <li><strong>Out-of-hours scenarios.</strong> When a human handoff is needed but the team is asleep. Define an explicit "we're closed, leave a message" template + Shopify flag.</li>
+  <li><strong>Misdirected messages.</strong> People send "hi" / "test" / wrong number. Need an idle/noise filter so you don't burn template credits replying to noise.</li>
+  <li><strong>Phone-only customers.</strong> Many WhatsApp leads will never give email. Shopify customer record will be phone-only — but Shopify customers historically need email or phone (now either works). Decide what's the minimum to count as a "lead".</li>
+  <li><strong>Meta business verification rejections.</strong> Common reasons: business address mismatch, ABN not visible on documents, website not linked. Plan time for re-submissions.</li>
+  <li><strong>Opt-in compliance.</strong> Australian Spam Act + Meta policy: outbound to a number requires explicit opt-in (e.g., checkbox at checkout, or the customer messaged us first). Cannot import contact lists and blast.</li>
+  <li><strong>Meta API versioning.</strong> Cloud API breaks at version bumps (~yearly). Need to monitor deprecation notices.</li>
+  <li><strong>Pixel + CAPI dual-tracking deduplication.</strong> When firing events both client-side (Pixel) and server-side (CAPI), missing the <code>event_id</code> on both sides causes double-counting in Ads Manager.</li>
+  <li><strong>iOS/Android quirks.</strong> Interactive buttons render differently. Test on both. Long messages get clipped on older Androids.</li>
+  <li><strong>Catalogue sync (if used).</strong> Meta Catalogue must be kept in sync with Shopify products. Either via Meta's Shopify integration app or a custom feed. Stale prices = customer complaints.</li>
+  <li><strong>Cost spiral.</strong> Each conversation triggers: WhatsApp API charge + ElevenLabs text API + Shopify API + (optional) vision/STT. Easy to hit $0.20–$0.50 per conversation if not careful.</li>
+  <li><strong>Privacy / GDPR / Australian Privacy Act.</strong> Storing transcripts of WhatsApp conversations needs a clear privacy policy update.</li>
+</ol>
+
+<hr>
+
+<h2>📐 Proposed Architecture</h2>
+<pre>
+                        ┌──────────────────────┐
+                        │  Customer's phone    │
+                        │  WhatsApp app        │
+                        └──────────┬───────────┘
+                                   │
+                                   │ inbound (text/voice/image)
+                                   ▼
+                        ┌──────────────────────┐
+                        │  Meta Cloud API      │   ◄────── outbound replies
+                        │  (or Twilio prod)    │
+                        └──────────┬───────────┘
+                                   │ webhook
+                                   ▼
+            ┌──────────────────────────────────────────────────┐
+            │  Vercel: /api/whatsapp/inbound                   │
+            │   ├─ Identify customer by phone                  │
+            │   ├─ Load session state (KV store)               │
+            │   ├─ If media: STT / vision pre-process          │
+            │   ├─ Send text to ElevenLabs agent (text mode)   │
+            │   ├─ Receive reply + tool calls                  │
+            │   ├─ Persist updated session state               │
+            │   └─ POST reply back via Meta API                │
+            └──────────────────────┬───────────────────────────┘
+                                   │
+              ┌────────────────────┼────────────────────┬─────────────────────┐
+              ▼                    ▼                    ▼                     ▼
+   ┌────────────────────┐  ┌─────────────────┐  ┌──────────────────┐  ┌────────────────────┐
+   │ Shopify customer   │  │ Shopify draft   │  │ Meta CAPI: Lead, │  │ Conversation log  │
+   │  upsert + tags     │  │ order (if quote)│  │ AddToCart, etc.  │  │  (Shopify metafld)│
+   │  "WhatsApp Lead"   │  │                 │  │                  │  │                    │
+   └─────────┬──────────┘  └────────┬────────┘  └────────┬─────────┘  └────────────────────┘
+             │                       │                    │
+             ▼                       ▼                    ▼
+   ┌────────────────────┐  ┌─────────────────┐  ┌──────────────────┐
+   │ Native sync →      │  │ Payment link    │  │ Facebook +       │
+   │ Omnisend segments  │  │ sent via        │  │ Instagram        │
+   │ + email/SMS flows  │  │ WhatsApp        │  │ Custom Audience  │
+   │                    │  │                 │  │ → retargeting    │
+   └────────────────────┘  └─────────────────┘  └──────────────────┘
+</pre>
+
+<hr>
+
+<h2>📋 Phased Implementation Plan</h2>
+
+<div class="phase">
+  <strong>Phase 0 — Meta Business Foundation (you-driven)</strong>
+  <ul>
+    <li>Create / verify Meta Business Account.</li>
+    <li>Submit business verification documents (ABN, address).</li>
+    <li>Choose &amp; reserve the WhatsApp phone number.</li>
+    <li>Decide provider: Twilio (recommended for fastest start) vs Meta direct (cheapest long-term).</li>
+    <li>Submit WhatsApp Business display name for approval.</li>
+  </ul>
+</div>
+
+<div class="phase">
+  <strong>Phase 1 — Backend Plumbing</strong>
+  <ul>
+    <li>Replace sandbox handler with production-ready <code>/api/whatsapp/inbound</code>.</li>
+    <li>Add <code>/api/whatsapp/send</code> with Meta/Twilio credentials in Vercel env.</li>
+    <li>Add a KV-backed session store (Vercel KV or Upstash Redis).</li>
+    <li>Add inbound media download + storage (Vercel Blob or S3).</li>
+  </ul>
+</div>
+
+<div class="phase">
+  <strong>Phase 2 — Agent + Funnel Logic</strong>
+  <ul>
+    <li>Create a WhatsApp-flavoured system prompt variant for Jessica.</li>
+    <li>Add tools: <code>create_draft_order</code>, <code>send_whatsapp_template</code>, <code>save_lead</code>.</li>
+    <li>Define funnel: greet → qualify → recommend → quote → checkout link → follow-up.</li>
+    <li>Approve initial templates: welcome, reminder, abandoned-cart, order confirmation.</li>
+  </ul>
+</div>
+
+<div class="phase">
+  <strong>Phase 3 — Shopify CRM Integration</strong>
+  <ul>
+    <li>Reuse <code>customer/upsert</code> endpoint from the lead-capture plan, but with source-tag <code>WhatsApp</code>.</li>
+    <li>Store WhatsApp phone number in a Shopify metafield.</li>
+    <li>Add tags: <code>WhatsApp</code>, <code>WhatsApp Lead</code>, <code>WhatsApp Customer</code>.</li>
+  </ul>
+</div>
+
+<div class="phase">
+  <strong>Phase 4 — Retargeting + Marketing</strong>
+  <ul>
+    <li>Install / verify Meta Pixel on Shopify (theme).</li>
+    <li>Add <code>/api/meta/capi-event</code> for server-side <code>Lead</code>, <code>AddToCart</code>, <code>Purchase</code> events with hashed PII.</li>
+    <li>Build Custom Audience in Meta Ads Manager from WhatsApp leads.</li>
+    <li>Wire Omnisend segments off the <code>WhatsApp Lead</code> tag for email/SMS cross-channel follow-up.</li>
+  </ul>
+</div>
+
+<div class="phase">
+  <strong>Phase 5 — Polish &amp; Compliance</strong>
+  <ul>
+    <li>Opt-out keyword handling (<code>STOP</code> / <code>UNSUBSCRIBE</code>).</li>
+    <li>Privacy policy update mentioning WhatsApp transcript storage.</li>
+    <li>Out-of-hours template + human handoff flow.</li>
+    <li>Dashboard / weekly report: leads, conversion rate, cost per conversation.</li>
+  </ul>
+</div>
+
+<hr>
+
+<h2>❓ Questions to Clarify Before Building</h2>
+
+<div class="q"><strong>Q1. Provider.</strong> Twilio (faster start, more expensive), Meta Cloud API direct (cheapest, more work), or 360dialog/MessageBird (BSP middle ground)? My recommendation: <strong>Meta Cloud API direct</strong> for long-term cost + feature access.</div>
+<div class="q"><strong>Q2. WhatsApp phone number.</strong> New dedicated number, or one of your existing numbers? Important: it cannot have a personal WhatsApp registered. The existing Twilio sandbox number won't carry over to production.</div>
+<div class="q"><strong>Q3. Meta Business verification.</strong> Has Paint Access already done Meta Business verification (the document upload step)? If not, this is the longest blocker — can take a week.</div>
+<div class="q"><strong>Q4. Funnel scope.</strong> Pure support + Q&amp;A, or full sales (recommend → quote → payment link → close)? Recommendation: start with support + lead-capture, add the payment-link funnel in Phase 2 once approved.</div>
+<div class="q"><strong>Q5. Voice notes / images.</strong> Should the bot understand voice notes and product photos? Adds STT + vision-model cost (~$0.01–$0.05 each).</div>
+<div class="q"><strong>Q6. Inbound entry points.</strong> Where do customers find the WhatsApp number? Storefront widget? Click-to-WhatsApp ads on Facebook/Instagram? Both? Each requires different setup.</div>
+<div class="q"><strong>Q7. Languages.</strong> English only, or also Russian / other? WhatsApp templates need to be approved per language.</div>
+<div class="q"><strong>Q8. Out-of-hours behaviour.</strong> Should the bot pretend to be 24/7, or honest ("we're closed, I'll log this and someone will respond tomorrow")?</div>
+<div class="q"><strong>Q9. Human handoff trigger.</strong> When the bot can't help, do you want a Slack/email notification to the team? Or a "request a human" template button?</div>
+<div class="q"><strong>Q10. Marketing opt-in.</strong> When someone first messages, do we auto-add them to Omnisend marketing list, or only after explicit "yes, send me deals"?</div>
+<div class="q"><strong>Q11. Conversation log retention.</strong> How long to keep WhatsApp transcripts? 90 days? 2 years? Forever?</div>
+<div class="q"><strong>Q12. Meta Pixel.</strong> Is the Pixel currently installed on paintaccess.com.au? Is it firing correctly? Need to audit before CAPI work.</div>
+<div class="q"><strong>Q13. Catalogue.</strong> Use Meta Commerce Catalogue (lets WhatsApp show rich product cards), or just text + links?</div>
+<div class="q"><strong>Q14. Test plan.</strong> Who tests during sandbox/staging? I'll need at least 2 test phone numbers added to the WABA early on.</div>
+<div class="q"><strong>Q15. Budget ceiling.</strong> What's the monthly WhatsApp messaging budget? Helps decide template strategy and provider.</div>
+
+<hr>
+
+<h2>📋 What You Need to Provide</h2>
+
+<div class="provide"><strong>Meta Business Manager access</strong> — admin role on the Paint Access business account, or create one and add me as a partner.</div>
+<div class="provide"><strong>A dedicated phone number</strong> for WhatsApp that is NOT already in personal WhatsApp use.</div>
+<div class="provide"><strong>Business verification documents</strong> — ABN registration, business address proof, utility bill. Meta will need these.</div>
+<div class="provide"><strong>Provider decision</strong> — answer Q1 above.</div>
+<div class="provide"><strong>Answers to Q2–Q15</strong> — to finalise scope before building.</div>
+<div class="provide"><strong>Confirmation that we can add Meta Pixel + Conversion API</strong> code to the storefront theme.</div>
+<div class="provide"><strong>Omnisend admin access</strong> (if not already shared) — to define WhatsApp-source segments.</div>
+<div class="provide"><strong>Privacy policy update authority</strong> — adding WhatsApp transcript storage to the existing privacy page.</div>
+<div class="provide"><strong>Initial template copy</strong> for: welcome message, abandoned-cart reminder, order confirmation, opt-out confirmation. (I can draft, you approve.)</div>
+<div class="provide"><strong>A monthly budget ceiling</strong> for WhatsApp messaging so we don't burn through credits during testing.</div>
+
+<hr>
+
+<h2>🔗 Dependencies on the Previous Plan</h2>
+<div class="info">
+This task <strong>directly reuses</strong> several pieces from the Lead Capture + Shopify CRM plan:
+<ul>
+  <li>Shopify <code>write_customers</code> + <code>read_customers</code> scopes — same requirement.</li>
+  <li>The <code>/api/shopify/customer/upsert</code> endpoint — same code, different <code>source</code> tag.</li>
+  <li>System prompt rules for lead capture (name, email, opt-in) — same rules, applied to a different channel.</li>
+  <li>Consent &amp; PII handling — same legal framework.</li>
+</ul>
+Recommendation: build the Lead Capture plan first (it's smaller, no Meta dependencies), then this plan extends it to the WhatsApp channel.
+</div>
+
+</body>
+</html>

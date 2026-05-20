@@ -1,0 +1,9 @@
+{% comment %}
+  Paint Access — ElevenLabs AI Support Widget
+  Add this to layout/theme.liquid just before </body>
+  FREE: Uses existing ElevenLabs subscription, no Shopify app needed
+{% endcomment %}
+
+<!-- ElevenLabs AI Support Widget -->
+<elevenlabs-convai agent-id="{{ settings.elevenlabs_agent_id | default: 'REPLACE_WITH_AGENT_ID' }}"></elevenlabs-convai>
+<script src="https://unpkg.com/@elevenlabs/convai-widget-embed" async type="text/javascript"></script>

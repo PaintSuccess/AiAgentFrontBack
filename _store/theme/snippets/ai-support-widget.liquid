@@ -1,0 +1,786 @@
+{%- comment -%}
+  Paint Access — Support Widget
+  Floating contact launcher with vertical action panel + callback form.
+
+  Renders only for testers OR when ?ai-widget=1 has been used in this session.
+  Same gating logic as before, so we don't expose to all customers yet.
+{%- endcomment -%}
+
+<script>
+  (function () {
+    var testerEmails = ['gluked@gmail.com', 'trade@paintaccess.com.au'];
+    var customerEmail = "{% if customer %}{{ customer.email | escape }}{% endif %}";
+    var isTester = customerEmail && testerEmails.indexOf(customerEmail.toLowerCase()) !== -1;
+
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('ai-widget') === '1') {
+      sessionStorage.setItem('pa-ai-widget', '1');
+    }
+    if (!(isTester || sessionStorage.getItem('pa-ai-widget') === '1')) return;
+
+    // ---- Configuration ----------------------------------------------------
+    var CFG = {
+      phone:          '+61480846611',
+      phoneDisplay:   '04 8084 6611',
+      email:          'trade@paintaccess.com.au',
+      whatsapp:       '61480846611',
+      callbackApi:    'https://ai-agent-front-back.vercel.app/api/callback',
+      elevenAgentId:  'agent_1001kn99pk1xefprh4gb665f6j3p',
+      customerName:   "{% if customer %}{{ customer.first_name | escape }}{% endif %}",
+      customerEmail:  customerEmail,
+      customerId:     "{% if customer %}{{ customer.id }}{% endif %}"
+    };
+
+    // ---- Styles -----------------------------------------------------------
+    // Ring sizes: button is 56px; ring SVG is 64px (4px padding all around).
+    // r=30, circumference = 2*pi*30 ≈ 188.5 → use 190 for stroke-dasharray.
+    var css = ''
+      + '.pa-sw-root{position:fixed;right:20px;bottom:100px;z-index:2147483600;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}'
+      + '.pa-sw-root *{box-sizing:border-box;}'
+      // Launcher (closed state)
+      + '.pa-sw-launcher{width:60px;height:60px;border-radius:50%;background:#E63946;color:#fff;border:none;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;position:relative;transition:transform .2s ease;}'
+      + '.pa-sw-launcher:hover{transform:scale(1.06);}'
+      + '.pa-sw-launcher svg{width:30px;height:30px;}'
+      + '.pa-sw-launcher::before,.pa-sw-launcher::after{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid #E63946;animation:pa-sw-pulse 2.4s infinite;pointer-events:none;}'
+      + '.pa-sw-launcher::after{animation-delay:1.2s;}'
+      + '@keyframes pa-sw-pulse{0%{transform:scale(1);opacity:.7;}80%,100%{transform:scale(1.7);opacity:0;}}'
+      + '.pa-sw-root[data-open="1"] .pa-sw-launcher{display:none;}'
+      // Panel — transparent background, just a vertical stack of buttons
+      + '.pa-sw-panel{display:none;background:transparent;box-shadow:none;padding:0;flex-direction:column;align-items:center;gap:18px;}'
+      + '.pa-sw-root[data-open="1"] .pa-sw-panel{display:flex;animation:pa-sw-fold-in .25s ease both;}'
+      + '@keyframes pa-sw-fold-in{from{opacity:0;transform:translateY(10px) scale(.92);}to{opacity:1;transform:none;}}'
+      // Row wraps button + ring + tooltip
+      + '.pa-sw-row{position:relative;width:56px;height:56px;display:flex;align-items:center;justify-content:center;}'
+      // Action buttons
+      + '.pa-sw-action{width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 4px 14px rgba(0,0,0,0.22);text-decoration:none;position:relative;z-index:1;}'
+      + '.pa-sw-action svg{width:24px;height:24px;}'
+      + '.pa-sw-action.ai{background:linear-gradient(135deg,#6E48F5,#2A6BFF);}'
+      + '.pa-sw-action.call{background:#46AB54;}'
+      + '.pa-sw-action.email{background:#2C7BE5;}'
+      + '.pa-sw-action.sms{background:#E63946;}'
+      + '.pa-sw-action.whatsapp{background:#25D366;}'
+      + '.pa-sw-action.close{background:#FFFFFF;color:#666;box-shadow:0 4px 14px rgba(0,0,0,0.18);}'
+      + '.pa-sw-action.close svg{width:20px;height:20px;}'
+      // Hover ring — SVG circle that draws around the button
+      + '.pa-sw-ring{position:absolute;top:-5px;left:-5px;width:66px;height:66px;pointer-events:none;overflow:visible;transform:rotate(-90deg);z-index:0;}'
+      + '.pa-sw-ring circle{fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-dasharray:190;stroke-dashoffset:190;transition:stroke-dashoffset .9s cubic-bezier(.65,.05,.36,1);}'
+      + '.pa-sw-row:hover .pa-sw-ring circle{stroke-dashoffset:0;}'
+      + '.pa-sw-row.ai{color:#6E48F5;}'
+      + '.pa-sw-row.call{color:#46AB54;}'
+      + '.pa-sw-row.email{color:#2C7BE5;}'
+      + '.pa-sw-row.sms{color:#E63946;}'
+      + '.pa-sw-row.whatsapp{color:#25D366;}'
+      + '.pa-sw-row.close{color:#FFFFFF;}'
+      // Tooltip
+      + '.pa-sw-tooltip{position:absolute;right:78px;top:50%;transform:translateY(-50%);background:#1a1a1a;color:#fff;font-size:13px;padding:7px 11px;border-radius:8px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;box-shadow:0 4px 14px rgba(0,0,0,0.18);}'
+      + '.pa-sw-tooltip::after{content:"";position:absolute;left:100%;top:50%;transform:translateY(-50%);border:6px solid transparent;border-left-color:#1a1a1a;}'
+      + '.pa-sw-row:hover .pa-sw-tooltip{opacity:1;}'
+      // Callback form
+      + '.pa-sw-form{display:none;position:absolute;right:0;bottom:0;width:320px;max-width:calc(100vw - 32px);background:#fff;border-radius:14px;box-shadow:0 12px 36px rgba(0,0,0,0.22);padding:20px;}'
+      + '.pa-sw-root[data-form="1"] .pa-sw-panel{display:none;}'
+      + '.pa-sw-root[data-form="1"] .pa-sw-form{display:block;}'
+      + '.pa-sw-form-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;}'
+      + '.pa-sw-form-head h3{margin:0;font-size:17px;color:#1a1a1a;font-weight:600;}'
+      + '.pa-sw-form-head p{margin:4px 0 0;font-size:13px;color:#666;}'
+      + '.pa-sw-form-close{background:none;border:none;cursor:pointer;color:#888;padding:6px;line-height:0;border-radius:6px;flex-shrink:0;}'
+      + '.pa-sw-form-close:hover{background:#f3f3f3;color:#222;}'
+      + '.pa-sw-form-close svg{width:18px;height:18px;}'
+      + '.pa-sw-field{display:block;margin-bottom:10px;}'
+      + '.pa-sw-field label{display:block;font-size:12px;color:#555;margin-bottom:4px;font-weight:500;}'
+      + '.pa-sw-field input,.pa-sw-field textarea,.pa-sw-field select{width:100%;padding:9px 12px;border:1px solid #d9d9d9;border-radius:8px;font:inherit;font-size:14px;background:#fff;color:#1a1a1a;}'
+      + '.pa-sw-field input:focus,.pa-sw-field textarea:focus,.pa-sw-field select:focus{outline:none;border-color:#E63946;}'
+      + '.pa-sw-field textarea{min-height:64px;resize:vertical;}'
+      + '.pa-sw-submit{width:100%;background:#E63946;color:#fff;border:none;border-radius:8px;padding:11px 14px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;margin-top:4px;}'
+      + '.pa-sw-submit:hover{background:#cf2f3c;}'
+      + '.pa-sw-submit:disabled{opacity:.6;cursor:not-allowed;}'
+      + '.pa-sw-status{font-size:13px;margin-top:10px;padding:8px 10px;border-radius:6px;display:none;}'
+      + '.pa-sw-status.error{display:block;background:#fdecea;color:#a4181f;}'
+      + '.pa-sw-status.success{display:block;background:#e6f7ec;color:#1d6b3a;}'
+      + '.pa-sw-eleven-close{position:fixed;width:36px;height:36px;border-radius:50%;border:2px solid #e0e0e0;background:#fff;color:#444;box-shadow:0 2px 8px rgba(0,0,0,0.18);cursor:pointer;z-index:2147483700;display:none;align-items:center;justify-content:center;}'
+      + '.pa-sw-eleven-close svg{width:16px;height:16px;}'
+      + '.pa-sw-eleven-close:hover{background:#f3f3f3;}'
+      // Voice → chat product results overlay (rendered when the agent
+      // calls the display_products_in_chat client tool). Positioned to
+      // the LEFT of the ElevenLabs widget panel so it sits beside the
+      // call view instead of covering it.
+      + '.pa-sw-results{position:fixed;z-index:2147483650;width:340px;max-width:calc(100vw - 32px);max-height:70vh;overflow-y:auto;background:#fff;border-radius:14px;box-shadow:0 12px 36px rgba(0,0,0,0.28);padding:14px 14px 18px;display:none;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}'
+      + '.pa-sw-results[data-open="1"]{display:block;animation:pa-sw-fold-in .22s ease both;}'
+      + '.pa-sw-results-head{display:flex;align-items:center;justify-content:space-between;margin:0 0 10px;}'
+      + '.pa-sw-results-head h4{margin:0;font-size:14px;font-weight:600;color:#1a1a1a;}'
+      + '.pa-sw-results-close{background:none;border:none;cursor:pointer;color:#888;padding:4px;border-radius:6px;line-height:0;}'
+      + '.pa-sw-results-close:hover{background:#f3f3f3;color:#222;}'
+      + '.pa-sw-results-close svg{width:16px;height:16px;}'
+      + '.pa-sw-results-intro{margin:0 0 10px;font-size:13px;color:#444;line-height:1.45;}'
+      + '.pa-sw-card{display:block;border:1px solid #ececec;border-radius:10px;padding:10px 12px;margin-bottom:8px;text-decoration:none;color:#1a1a1a;transition:border-color .15s,background .15s;}'
+      + '.pa-sw-card:hover{border-color:#E63946;background:#fafafa;}'
+      + '.pa-sw-card-name{font-size:14px;font-weight:600;color:#1a1a1a;margin:0 0 3px;line-height:1.3;}'
+      + '.pa-sw-card-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:#666;margin:0;}'
+      + '.pa-sw-card-price{color:#E63946;font-weight:600;}'
+      + '.pa-sw-badge{display:inline-block;font-size:11px;font-weight:600;border-radius:4px;padding:1px 6px;line-height:1.6;}'
+      + '.pa-sw-badge--green{background:#d4edda;color:#1a6130;}'
+      + '.pa-sw-badge--amber{background:#fff3cd;color:#7a5700;}'
+      + '.pa-sw-card-note{font-size:12px;color:#555;margin:4px 0 0;line-height:1.4;}'
+      // Mobile responsiveness:
+      //   - Tablet/phone (≤768px): hide hover tooltips (touch has no hover),
+      //     keep the panel close to the corner, give Eleven's close button a
+      //     proper 44px touch target.
+      //   - Phone (≤480px): shrink launcher + action buttons slightly, cap
+      //     callback form height so it never overflows, scroll if needed.
+      // NOTE: do NOT use /* block comments */ between `+ 'str'` lines — JS
+      // parses `+ /* */ + 'next'` as a unary plus and yields NaN.
+      + '@media(max-width:768px){'
+      +   '.pa-sw-results{left:12px!important;right:12px!important;width:auto;bottom:12px!important;top:auto!important;max-height:55vh;}'
+      +   '.pa-sw-panel{gap:14px;}'
+      +   '.pa-sw-tooltip{display:none!important;}'
+      +   '.pa-sw-eleven-close{width:44px;height:44px;}'
+      +   '.pa-sw-eleven-close svg{width:18px;height:18px;}'
+      + '}'
+      + '@media(max-width:480px){'
+      +   '.pa-sw-form{width:calc(100vw - 32px);max-height:calc(100dvh - 160px);overflow-y:auto;padding:18px;}'
+      +   '.pa-sw-form-head h3{font-size:16px;}'
+      +   '.pa-sw-launcher{width:56px;height:56px;}'
+      +   '.pa-sw-launcher svg{width:28px;height:28px;}'
+      +   '.pa-sw-action,.pa-sw-row{width:52px;height:52px;}'
+      +   '.pa-sw-action svg{width:22px;height:22px;}'
+      +   '.pa-sw-ring{top:-5px;left:-5px;width:62px;height:62px;}'
+      + '}';
+
+    var style = document.createElement('style');
+    style.textContent = css;
+    document.head.appendChild(style);
+
+    // ---- SVG icons (Material / Heroicons style) ---------------------------
+    var ICON = {
+      // Solid phone handset
+      phone:    '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.23 15.26l-2.54-.29a1.99 1.99 0 0 0-1.64.57l-1.84 1.84a15.045 15.045 0 0 1-6.59-6.59l1.85-1.85c.43-.43.64-1.03.57-1.64l-.29-2.52a2.001 2.001 0 0 0-1.99-1.77H5.03c-1.13 0-2.07.94-2 2.07.53 8.54 7.36 15.36 15.89 15.89 1.13.07 2.07-.87 2.07-2v-1.73c.01-1.01-.75-1.86-1.76-1.98z"/></svg>',
+      // Sparkle / AI badge inside speech bubble
+      aiChat:   '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 3h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H8.83l-3.54 3.54A1 1 0 0 1 3.59 21V5a2 2 0 0 1 .41-2zM12 6.2l-1 2.6L8.4 9.8l2.6 1L12 13.4l1-2.6 2.6-1L13 8.8 12 6.2z"/></svg>',
+      // Microphone for in-browser voice call
+      mic:      '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2z"/></svg>',
+      // Envelope
+      mail:     '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 4.24l-8 4.99-8-4.99V6l8 5 8-5v2.24z"/></svg>',
+      // SMS / chat bubble with three dots
+      sms: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM9 11H7V9h2v2zm4 0h-2V9h2v2zm4 0h-2V9h2v2z"/></svg>',
+      // WhatsApp glyph
+      whatsapp: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 3.5A10.4 10.4 0 0 0 3.4 16.2L2 22l5.9-1.5A10.4 10.4 0 1 0 20.5 3.5zm-8.4 16.1a8.7 8.7 0 0 1-4.4-1.2l-.3-.2-3.5.9.9-3.4-.2-.3a8.6 8.6 0 1 1 7.5 4.2zm4.8-6.5c-.3-.1-1.6-.8-1.9-.9s-.4-.1-.6.1c-.2.3-.7.9-.8 1.1-.2.2-.3.2-.5.1a7.1 7.1 0 0 1-3.6-3.1c-.3-.5.3-.5.8-1.5.1-.2.1-.3 0-.5l-.9-2c-.2-.5-.4-.5-.6-.5h-.5a1 1 0 0 0-.7.3 2.9 2.9 0 0 0-.9 2.2 5 5 0 0 0 1 2.6 11.5 11.5 0 0 0 4.5 4 5 5 0 0 0 3 .6 2.5 2.5 0 0 0 1.6-1.2 2 2 0 0 0 .2-1.2c-.1-.1-.3-.2-.6-.3z"/></svg>',
+      // X close
+      close:    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+      // Chat bubble for launcher
+      bubble:   '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM7 9h10v2H7V9zm0 3h7v2H7v-2zm0-6h10v2H7V6z"/></svg>'
+    };
+
+    // SVG ring snippet reused for each row
+    var RING = '<svg class="pa-sw-ring" viewBox="0 0 66 66"><circle cx="33" cy="33" r="30"/></svg>';
+
+    function row(cls, btnHtml, tooltip) {
+      return '<div class="pa-sw-row ' + cls + '">' + RING + btnHtml + '<span class="pa-sw-tooltip">' + tooltip + '</span></div>';
+    }
+
+    // ---- Root markup ------------------------------------------------------
+    var root = document.createElement('div');
+    root.className = 'pa-sw-root';
+    root.innerHTML = ''
+      + '<button class="pa-sw-launcher" type="button" aria-label="Open support">' + ICON.bubble + '</button>'
+      + '<div class="pa-sw-panel" role="dialog" aria-label="Support options">'
+      +   row('ai',       '<button class="pa-sw-action ai" data-action="ai-chat" type="button" aria-label="AI chat">' + ICON.aiChat + '</button>',                                                            'AI Chat')
+      +   row('call',     '<button class="pa-sw-action call" data-action="ai-call" type="button" aria-label="Voice call with AI">' + ICON.mic + '</button>',                                                  'Voice call (AI)')
+      +   row('whatsapp', '<a class="pa-sw-action whatsapp" target="_blank" rel="noopener" href="https://wa.me/' + CFG.whatsapp + '" aria-label="WhatsApp">' + ICON.whatsapp + '</a>',                         'WhatsApp')
+      +   row('email',    '<a class="pa-sw-action email" href="mailto:' + CFG.email + '" aria-label="Email us">' + ICON.mail + '</a>',                                                                         'Email us')
+      +   row('sms',      '<button class="pa-sw-action sms" data-action="sms" type="button" aria-label="Send us an SMS">' + ICON.sms + '</button>',                                                       'Send us an SMS')
+      +   row('close',    '<button class="pa-sw-action close" data-action="close" type="button" aria-label="Close">' + ICON.close + '</button>',                                                               'Close')
+      + '</div>'
+      + '<form class="pa-sw-form" novalidate>'
+      +   '<div class="pa-sw-form-head"><div><h3>Send us an SMS</h3><p>Fill in your details — we\'ll open your SMS app with a message ready to send.</p></div><button type="button" class="pa-sw-form-close" data-action="form-close" aria-label="Close form">' + ICON.close + '</button></div>'
+      +   '<div class="pa-sw-field"><label>First name</label><input name="first_name" type="text" autocomplete="given-name" required></div>'
+      +   '<div class="pa-sw-field"><label>Last name</label><input name="last_name" type="text" autocomplete="family-name" required></div>'
+      +   '<div class="pa-sw-field"><label>Email</label><input name="email" type="email" autocomplete="email" required></div>'
+      +   '<div class="pa-sw-field"><label>Your phone number</label><input name="phone" type="tel" autocomplete="tel" placeholder="+61 4xx xxx xxx" required></div>'
+      +   '<div class="pa-sw-field"><label>Message (optional)</label><textarea name="message" rows="2" placeholder="How can we help you?"></textarea></div>'
+      +   '<button type="submit" class="pa-sw-submit">Open SMS</button>'
+      +   '<div class="pa-sw-status" role="status" aria-live="polite"></div>'
+      + '</form>';
+    document.body.appendChild(root);
+
+    // ---- Interactions -----------------------------------------------------
+    function openPanel()  { root.dataset.open = '1'; root.dataset.form = ''; }
+    function closeAll()   { root.dataset.open = '';  root.dataset.form = ''; }
+    function openForm()   { root.dataset.form = '1'; }
+    function closeForm()  { root.dataset.form = ''; root.dataset.open = '1'; }
+
+    root.querySelector('.pa-sw-launcher').addEventListener('click', function () {
+      openPanel();
+      // Pre-load the ElevenLabs script while the user reads the panel options.
+      // Mobile browsers grant the audio autoplay permission for ~1 s after a
+      // user tap. If the script isn't already cached the download takes several
+      // seconds, blowing past that window and silencing the agent's greeting.
+      // Starting the download here (on launcher tap) gives it a head-start so
+      // the script is ready — or nearly so — when the user picks Voice/Chat.
+      ensureElevenScript(function () {});
+    });
+    root.addEventListener('click', function (e) {
+      var t = e.target.closest('[data-action]');
+      if (!t) return;
+      var a = t.dataset.action;
+      if (a === 'close')           closeAll();
+      else if (a === 'sms')        openForm();
+      else if (a === 'form-close') closeForm();
+      else if (a === 'ai-chat')    openEleven('chat');
+      else if (a === 'ai-call')    openEleven('voice');
+    });
+
+    // ---- SMS form submit ------------------------------------------------
+    // On submit: build a pre-filled sms: URI and open the native SMS app.
+    // The user's own details are embedded in the message body so the team
+    // knows who is writing. Cross-platform: iOS uses & separator, Android ?.
+    var form = root.querySelector('.pa-sw-form');
+    var status = form.querySelector('.pa-sw-status');
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      status.className = 'pa-sw-status';
+      status.textContent = '';
+
+      var firstName = form.elements.first_name.value.trim();
+      var lastName  = form.elements.last_name.value.trim();
+      var email     = form.elements.email.value.trim();
+      var phone     = form.elements.phone.value.trim();
+      var message   = form.elements.message.value.trim();
+
+      if (!firstName || !lastName || !email || !phone) {
+        status.className = 'pa-sw-status error';
+        status.textContent = 'Please fill in all required fields.';
+        return;
+      }
+
+      var body = 'Hi, I\'m ' + firstName + ' ' + lastName
+        + ' (Email: ' + email + ', Phone: ' + phone + ').'
+        + (message ? ' ' + message : '');
+
+      // iOS requires & separator; Android/others use ?
+      var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+      var sep = isIOS ? '&' : '?';
+      var smsUrl = 'sms:' + CFG.phone + sep + 'body=' + encodeURIComponent(body);
+
+      var a = document.createElement('a');
+      a.href = smsUrl;
+      a.click();
+
+      status.className = 'pa-sw-status success';
+      status.textContent = 'Opening your SMS app…';
+      form.reset();
+      setTimeout(closeAll, 3000);
+    });
+
+    // ---- AI widget (ElevenLabs Convai) -----------------------------------
+    // Important: we intentionally do NOT touch the widget's shadow DOM here.
+    // Previous attempts (hiding launcher, injecting CSS, re-mounting) caused
+    // layout jumps and broke the widget's own close button. We just mount the
+    // widget once and let it render normally. The agent's *dashboard*
+    // modality settings decide voice vs text — that's the supported way.
+    //
+    //   • Voice call button: sets start-call="true" so a call starts as soon
+    //     as the widget initialises.
+    //   • Chat button: just opens the widget (no start-call) — the user can
+    //     then type. For this to land on the text input directly, set the
+    //     agent's Widget → Interface in the ElevenLabs dashboard to
+    //     "Voice + text" with Text input toggle ON (or "Text only").
+    //
+    // The widget has its own visible close/minimise control, so we don't add
+    // an extra one and we don't suppress theirs.
+    var elevenScriptLoaded = false;
+    var elevenEl = null;
+    var elevenMode = null;    // 'chat' | 'voice' | null
+    var elevenOpened = false; // panel currently shown
+
+    // Overlay X close — the widget's own minimise control isn't always
+    // visible (especially when start-call auto-opens the call view).
+    var elevenCloseBtn = document.createElement('button');
+    elevenCloseBtn.type = 'button';
+    elevenCloseBtn.className = 'pa-sw-eleven-close';
+    elevenCloseBtn.setAttribute('aria-label', 'Close');
+    elevenCloseBtn.innerHTML = ICON.close;
+    elevenCloseBtn.addEventListener('click', function () { closeEleven(); });
+    document.body.appendChild(elevenCloseBtn);
+
+    // ---- Voice → chat product results overlay ----------------------------
+    // When the agent calls the `display_products_in_chat` client tool we
+    // render the product list here so the customer can see/click without
+    // the agent having to read URLs aloud during a voice call.
+    var elevenResults = document.createElement('div');
+    elevenResults.className = 'pa-sw-results';
+    elevenResults.setAttribute('aria-live', 'polite');
+    elevenResults.innerHTML =
+      '<div class="pa-sw-results-head">'
+      + '<h4>Recommended for you</h4>'
+      + '<button type="button" class="pa-sw-results-close" aria-label="Hide results">' + ICON.close + '</button>'
+      + '</div>'
+      + '<p class="pa-sw-results-intro" data-pa-intro></p>'
+      + '<div data-pa-cards></div>';
+    document.body.appendChild(elevenResults);
+    elevenResults.querySelector('.pa-sw-results-close')
+      .addEventListener('click', function () { hideResults(); });
+
+    function hideResults() {
+      elevenResults.removeAttribute('data-open');
+    }
+    function escapeHTML(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+    function safeUrl(u) {
+      // Only allow http(s) URLs; everything else becomes #.
+      try {
+        var p = new URL(u, window.location.origin);
+        if (p.protocol === 'http:' || p.protocol === 'https:') return p.href;
+      } catch (e) {}
+      return '#';
+    }
+    function positionResults() {
+      // Anchor the results panel to the left of the ElevenLabs panel.
+      if (!elevenEl || !elevenEl.shadowRoot) return;
+      var panel = elevenEl.shadowRoot.querySelector('.sheet');
+      if (!panel) return;
+      var r = panel.getBoundingClientRect();
+      if (!r.width) return;
+      // Reset mobile overrides set by CSS for sm screens.
+      if (window.innerWidth > 768) {
+        elevenResults.style.right = (window.innerWidth - r.left + 12) + 'px';
+        elevenResults.style.bottom = Math.max(12, window.innerHeight - r.bottom) + 'px';
+        elevenResults.style.top = '';
+        elevenResults.style.left = '';
+      } else {
+        // Let CSS handle mobile.
+        elevenResults.style.right = '';
+        elevenResults.style.bottom = '';
+        elevenResults.style.top = '';
+        elevenResults.style.left = '';
+      }
+    }
+    function showResults(payload) {
+      if (!elevenResults) { console.error('showResults: elevenResults not ready'); return; }
+      var intro = (payload && payload.intro) || '';
+      var products = (payload && Array.isArray(payload.products)) ? payload.products : [];
+      elevenResults.querySelector('[data-pa-intro]').textContent = intro;
+      var cards = products.slice(0, 6).map(function (p) {
+        var name  = escapeHTML(p && p.name);
+        var url   = safeUrl(p && p.url);
+        var price = p && p.price ? escapeHTML(p.price) : '';
+        var note  = p && p.note ? escapeHTML(p.note) : '';
+        var avail = (p && p.available != null) ? p.available : null;
+        // Stock badge: use explicit available field if present; fall back to
+        // recognising "In stock" / "unavailable" keywords in the note.
+        var badgeHtml = '';
+        if (avail === true || (avail == null && note && /in stock/i.test(note))) {
+          badgeHtml = '<span class="pa-sw-badge pa-sw-badge--green">In stock</span>';
+          if (/in stock/i.test(note)) note = note.replace(/in stock/i, '').trim().replace(/^[,;:]+/, '').trim();
+        } else if (avail === false || (avail == null && note && /unavailable|out of stock/i.test(note))) {
+          badgeHtml = '<span class="pa-sw-badge pa-sw-badge--amber">Check availability</span>';
+          if (/unavailable|out of stock/i.test(note)) note = note.replace(/currently unavailable|unavailable|out of stock/i, '').trim().replace(/^[,;:]+/, '').trim();
+        }
+        return ''
+          + '<a class="pa-sw-card" href="' + url + '" target="_blank" rel="noopener">'
+          +   '<p class="pa-sw-card-name">' + name + '</p>'
+          +   '<p class="pa-sw-card-meta">'
+          +     (price ? '<span class="pa-sw-card-price">' + price + '</span>' : '')
+          +     badgeHtml
+          +   '</p>'
+          +   (note  ? '<p class="pa-sw-card-note">' + note + '</p>' : '')
+          + '</a>';
+      }).join('');
+      elevenResults.querySelector('[data-pa-cards]').innerHTML = cards
+        || '<p class="pa-sw-card-note">No matching products.</p>';
+      elevenResults.setAttribute('data-open', '1');
+      positionResults();
+    }
+
+    // ---- Client tools exposed to the ElevenLabs widget --------------------
+    // Each tool's name must match the tool definition on the agent
+    // (see setup/create-tools.js). The agent dispatches a call, the
+    // widget invokes the handler in the browser, and we update the UI.
+    var clientTools = {
+      display_products_in_chat: function (params) {
+        try { showResults(params || {}); } catch (e) { console.error('display_products_in_chat failed:', e); }
+        return 'displayed';
+      },
+      end_conversation: function () {
+        // Agent calls this tool when ending the conversation. We schedule the
+        // widget close immediately. After 1.5s we also force-end the session
+        // in case the built-in end_call doesn't fire in the same response.
+        try { scheduleClose(); } catch (e) {}
+        setTimeout(function () {
+          try {
+            if (activeSession && typeof activeSession.isOpen === 'function' && activeSession.isOpen()) {
+              activeSession.endSession();
+            }
+          } catch (e) {}
+        }, 1500);
+        return 'conversation ending';
+      }
+    };
+
+    function ensureElevenScript(cb) {
+      if (window.customElements && customElements.get && customElements.get('elevenlabs-convai')) {
+        return cb();
+      }
+      if (!elevenScriptLoaded) {
+        elevenScriptLoaded = true;
+        var s = document.createElement('script');
+        s.src = 'https://unpkg.com/@elevenlabs/convai-widget-embed';
+        s.async = true;
+        s.type = 'text/javascript';
+        document.body.appendChild(s);
+      }
+      var tries = 0;
+      var i = setInterval(function () {
+        tries++;
+        if (window.customElements && customElements.get && customElements.get('elevenlabs-convai')) {
+          clearInterval(i); cb();
+        } else if (tries > 80) { clearInterval(i); cb(); }
+      }, 200);
+    }
+
+    function mountEleven(mode) {
+      callEverStarted = false;
+      elevenEl = document.createElement('elevenlabs-convai');
+      elevenEl.setAttribute('agent-id', CFG.elevenAgentId);
+      elevenEl.setAttribute('dynamic-variables', JSON.stringify({
+        customer_name:  CFG.customerName ? ', ' + CFG.customerName : '',
+        customer_email: CFG.customerEmail || '',
+        customer_id:    CFG.customerId || ''
+      }));
+      // Register client-side tools BEFORE the widget initialises the call.
+      // The widget fires `elevenlabs-convai:call` once per session; we inject
+      // our config here.
+      //
+      // IMPORTANT — widget override list (confirmed from widget source):
+      //   onMessage, onDisconnect, onStatusChange, onModeChange,
+      //   onCanSendFeedbackChange, onAgentChatResponsePart,
+      //   onAgentToolRequest, onAgentToolResponse  ← ALL replaced, injections discarded.
+      //
+      // SAFE to inject (not overridden):
+      //   clientTools, onConversationCreated, onDebug, onConnect,
+      //   onAudio, onInterruption, onAgentResponseCorrection
+      elevenEl.addEventListener('elevenlabs-convai:call', function (event) {
+        callEverStarted = true;
+        try {
+          if (event && event.detail && event.detail.config) {
+            event.detail.config.clientTools = clientTools;
+
+            // Store session reference so end_conversation client tool can
+            // call endSession() if end_call doesn't fire in the same turn.
+            event.detail.config.onConversationCreated = function (session) {
+              activeSession = session;
+            };
+
+            // onDebug fires for internal_tentative_agent_response messages.
+            // These contain the FULL tentative agent response text as the LLM
+            // generates it — including farewell phrases — in voice mode.
+            // NOT overridden by the widget's startSession. Belt-and-suspenders
+            // signal alongside the end_conversation client tool.
+            event.detail.config.onDebug = function (debug) {
+              try {
+                if (debug && debug.type === 'tentative_agent_response' && debug.response) {
+                  if (farewellRe.test(debug.response)) { scheduleClose(); }
+                }
+              } catch (e) {}
+            };
+          }
+        } catch (e) { console.error('client tools registration failed:', e); }
+        // Give the widget 600 ms to render the active-call UI before we start
+        // watching, so we don't fire on the pre-call 'New call' button text.
+        setTimeout(function () { watchForDisconnect(); }, 600);
+      });
+      // start-call="true" tells the widget to auto-initiate on render
+      if (mode === 'voice') elevenEl.setAttribute('start-call', 'true');
+      // Shift the panel left so it clears our FAB launcher button. On mobile
+      // the launcher is smaller (52-56px) and tucked into the corner, so we
+      // need less overlay padding — otherwise the widget's own panel ends up
+      // hanging off the right edge of the screen.
+      // --el-overlay-padding shifts the panel left from the right viewport edge.
+      // On mobile the shadow CSS already constrains width/position, so keep
+      // this small to avoid the panel being pushed off-screen to the left.
+      var overlayPad = window.matchMedia('(max-width:768px)').matches ? '0px' : '90px';
+      elevenEl.style.setProperty('--el-overlay-padding', overlayPad);
+      document.body.appendChild(elevenEl);
+      return elevenEl;
+    }
+
+    function closeEleven() {
+      if (disconnectObs) { disconnectObs.disconnect(); disconnectObs = null; }
+      if (disconnectPollId) { clearInterval(disconnectPollId); disconnectPollId = null; }
+      if (closeTimer) { clearTimeout(closeTimer); closeTimer = null; }
+      callEverStarted = false;
+      activeSession = null;
+      elevenCloseBtn.style.display = 'none';
+      elevenCloseBtn.style.visibility = 'visible';
+      stopPositionLoop();
+      hideResults();
+      elevenOpened = false;
+      elevenMode = null;
+      shadowStyleInjected = false;
+      if (elevenEl && elevenEl.parentNode) elevenEl.parentNode.removeChild(elevenEl);
+      elevenEl = null;
+    }
+
+    // --- Disconnect detection -----------------------------------------------
+    // Three independent signals all call scheduleClose() → 7-second countdown
+    // → closeEleven(). Any ONE is sufficient; all three together are reliable.
+    //
+    // Signal 1 — end_conversation CLIENT TOOL (most reliable):
+    //   Agent calls our end_conversation tool on farewell. Browser code runs
+    //   immediately: scheduleClose() + force-ends session after 1.5s.
+    //   Requires: agent config has end_conversation tool + system prompt.
+    //
+    // Signal 2 — onDebug tentative_agent_response:
+    //   Fires as the LLM generates the response text (before speech ends).
+    //   NOT overridden by the widget. Detects farewell phrases in the raw
+    //   tentative text the moment they appear.
+    //
+    // Signal 3 — Shadow-DOM MutationObserver + setInterval polling:
+    //   Catches 'ended the conversation' / 'New call' text that the widget
+    //   renders after the session fully disconnects (end_call fires or
+    //   end_conversation forces endSession()). Polling backup ensures the
+    //   observer never misses a mutation.
+
+    var closeTimer = null;        // auto-close countdown
+    var disconnectObs = null;     // MutationObserver on shadow root
+    var disconnectPollId = null;  // setInterval polling backup
+    var callEverStarted = false;  // true once elevenlabs-convai:call fires
+    var activeSession = null;     // session ref from onConversationCreated
+
+    // Farewell phrases Jessica uses — checked against onAgentChatResponsePart.
+    var farewellRe = /have a great (one|day)\b|happy painting\b|all the best\b|take care\b|bye\b/i;
+
+    function scheduleClose() {
+      if (closeTimer) return; // already counting down
+      closeTimer = setTimeout(function () {
+        closeTimer = null;
+        try { closeEleven(); } catch (e) {}
+      }, 7000);
+    }
+
+    // Check if the shadow DOM shows the post-call disconnect state.
+    function checkDisconnected(root) {
+      if (!elevenEl || !callEverStarted) return false;
+      var text = root.textContent || '';
+      return text.indexOf('ended the conversation') !== -1 || text.indexOf('New call') !== -1;
+    }
+
+    // Watch shadow DOM for the post-call disconnect state text.
+    // Uses both a MutationObserver and a setInterval polling backup.
+    function watchForDisconnect() {
+      if (!elevenEl || disconnectObs) return;
+      // shadowRoot is always available on a custom element once defined.
+      // Fall back to the element itself in case it isn't (shouldn't happen).
+      var root = elevenEl.shadowRoot || elevenEl;
+
+      // Immediate check: if disconnect already happened within the 600ms delay.
+      if (checkDisconnected(root)) { scheduleClose(); return; }
+
+      var obs = new MutationObserver(function () {
+        if (checkDisconnected(root)) {
+          obs.disconnect(); disconnectObs = null;
+          if (disconnectPollId) { clearInterval(disconnectPollId); disconnectPollId = null; }
+          scheduleClose();
+        }
+      });
+      obs.observe(root, { childList: true, subtree: true, characterData: true });
+      disconnectObs = obs;
+
+      // Polling backup every 750ms — catches mutations the observer might miss
+      // (nested shadow DOM redraws, browser quirks with characterData events).
+      disconnectPollId = setInterval(function () {
+        if (!elevenEl) { clearInterval(disconnectPollId); disconnectPollId = null; return; }
+        if (checkDisconnected(root)) {
+          obs.disconnect(); disconnectObs = null;
+          clearInterval(disconnectPollId); disconnectPollId = null;
+          scheduleClose();
+        }
+      }, 750);
+    }
+
+    // Position the close button anchored to the actual panel's top-right.
+    // We strictly target ".sheet" (the panel container) — NOT classes that
+    // merely contain "sheet" as a substring like "rounded-compact-sheet"
+    // (which is the small launcher bubble at the bottom).
+    function positionCloseBtn() {
+      if (!elevenEl || !elevenEl.shadowRoot) return false;
+      var panel = elevenEl.shadowRoot.querySelector('.sheet');
+      if (!panel) return false;
+      var r = panel.getBoundingClientRect();
+      if (!r.width) return false;
+      var btnW = elevenCloseBtn.offsetWidth || (window.innerWidth <= 768 ? 44 : 36);
+      var half = btnW / 2;
+      if (window.innerWidth <= 768) {
+        // On mobile the panel top is near the site header — placing the
+        // close button above the panel bleeds into the navigation bar.
+        // Instead, anchor it INSIDE the panel's top-right corner.
+        elevenCloseBtn.style.top   = (r.top + 10) + 'px';
+        elevenCloseBtn.style.right = Math.max(4, window.innerWidth - r.right + 10) + 'px';
+      } else {
+        elevenCloseBtn.style.top   = Math.max(4, r.top - half) + 'px';
+        elevenCloseBtn.style.right = Math.max(4, window.innerWidth - r.right - half) + 'px';
+      }
+      return true;
+    }
+
+    // Click the small launcher bubble (collapsed state) to expand the panel.
+    function clickLauncherBubble(sr) {
+      // The launcher is the small floating bubble. Its container has class
+      // "rounded-compact-sheet" and contains a single button (no aria-label).
+      var bubble = sr.querySelector('.rounded-compact-sheet button');
+      if (bubble) { bubble.click(); return true; }
+      return false;
+    }
+
+    // Click the in-panel "Start a call" button (voice mode).
+    function clickStartCall(sr) {
+      var btns = Array.prototype.slice.call(sr.querySelectorAll('button:not([disabled])'));
+      for (var b = 0; b < btns.length; b++) {
+        var lbl = (btns[b].getAttribute('aria-label') || '').toLowerCase();
+        if (lbl === 'start a call' || lbl.indexOf('start a call') !== -1) {
+          btns[b].click();
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // Inject CSS into shadow root to hide Collapse button and "Powered by" footer.
+    var shadowStyleInjected = false;
+    function injectShadowCSS(sr) {
+      if (shadowStyleInjected) return;
+      var st = document.createElement('style');
+      st.setAttribute('data-pa', '1');
+      st.textContent =
+        // Hide the Collapse button AND its white circle container
+        'button[aria-label="Collapse"],.rounded-compact-sheet{display:none!important;}'
+        // Hide the "Powered by ElevenLabs" footer link/text
+        + 'a[href*="elevenlabs.io"]{display:none!important;}'
+
+        // ---- Mobile compact overrides ----
+        // NOTE: the Shopify theme's root font-size is ~7.8px so we MUST use
+        // px not rem for sizes that are relative to the design intention.
+        //
+        // Sheet positioning: the widget anchors .sheet with both top AND bottom
+        // so the element stretches to fill the gap. Overriding `bottom` with a
+        // larger value shortens the panel from below without touching `top`.
+        //
+        // .sheet > div:nth-child(3) = orb container (absolute, default 192×192)
+        //   > div:first-child       = visual circle (w-48 h-48 = 192px Tailwind)
+        // .sheet > div:nth-child(2) > div:first-child = scrollable content (pt-20 = 80px)
+        // .sheet > div:nth-child(2) > div:last-child  = sticky input bar
+        + '@media(max-width:768px){'
+        +   '.sheet{width:calc(100vw - 20px)!important;max-width:calc(100vw - 20px)!important;bottom:185px!important;right:10px!important;}'
+        +   '.sheet > div:nth-child(3) > div:first-child{width:130px!important;height:130px!important;}'
+        +   '.sheet > div:nth-child(2) > div:first-child{padding-top:36px!important;}'
+        +   '.sheet > div:nth-child(2) > div:last-child > div > div{padding-bottom:8px!important;}'
+        + '}'
+        + '@media(max-width:480px){'
+        +   '.sheet{width:calc(100vw - 14px)!important;max-width:calc(100vw - 14px)!important;bottom:180px!important;right:7px!important;}'
+        +   '.sheet > div:nth-child(3) > div:first-child{width:110px!important;height:110px!important;}'
+        +   '.sheet > div:nth-child(2) > div:first-child{padding-top:28px!important;}'
+        + '}';
+      sr.appendChild(st);
+      shadowStyleInjected = true;
+    }
+
+    // Drive the widget to the desired state. The widget always boots into
+    // the collapsed launcher state — we must click it to open the panel.
+    // For voice mode we also click "Start a call" once the panel renders.
+    function driveWidget(el, mode) {
+      var phase = 'launcher'; // launcher → opened (→ called for voice)
+      var tries = 0;
+      var iv = setInterval(function () {
+        tries++;
+        if (tries > 80) { clearInterval(iv); return; } // ~16s
+        var sr = el.shadowRoot;
+        if (!sr) return;
+
+        if (phase === 'launcher') {
+          if (clickLauncherBubble(sr)) phase = 'opening';
+        }
+        // Once panel exists, position close button and inject CSS.
+        var panelExists = positionCloseBtn();
+        if (panelExists && phase === 'opening') {
+          injectShadowCSS(sr);
+          compactSheet();
+          phase = 'opened';
+        }
+        if (phase === 'opened' && mode === 'voice') {
+          if (clickStartCall(sr)) phase = 'called';
+        }
+        // Stop polling once we've reached terminal state for this mode.
+        if (mode === 'voice' && phase === 'called') { clearInterval(iv); }
+        if (mode !== 'voice' && phase === 'opened') { clearInterval(iv); }
+      }, 150);
+    }
+
+    // Keep the close button glued to the panel as it animates / resizes.
+    // Cheap: cancel-on-unmount via interval cleared in closeEleven.
+    // Force compact sizing on mobile by setting inline styles on shadow DOM
+    // elements every tick — CSS !important alone loses to the widget's own JS
+    // on real mobile Safari which continuously resets inline bottom/sizes.
+    function compactSheet() {
+      if (!elevenEl || !elevenEl.shadowRoot || window.innerWidth > 768) return;
+      var sr = elevenEl.shadowRoot;
+      var sheet = sr.querySelector('.sheet');
+      if (!sheet) return;
+      var isSm = window.innerWidth <= 480;
+      sheet.style.setProperty('bottom', isSm ? '180px' : '185px', 'important');
+      sheet.style.setProperty('top', 'auto', 'important');
+      sheet.style.setProperty('max-height', isSm ? 'calc(100dvh - 310px)' : 'calc(100dvh - 310px)', 'important');
+      var orb = sheet.children[2] && sheet.children[2].firstElementChild;
+      if (orb) {
+        var sz = isSm ? '110px' : '130px';
+        orb.style.setProperty('width', sz, 'important');
+        orb.style.setProperty('height', sz, 'important');
+      }
+      var ctPad = sheet.children[1] && sheet.children[1].firstElementChild;
+      if (ctPad) ctPad.style.setProperty('padding-top', isSm ? '28px' : '36px', 'important');
+    }
+
+    var positionInterval = null;
+    function startPositionLoop() {
+      if (positionInterval) clearInterval(positionInterval);
+      positionInterval = setInterval(function () {
+        positionCloseBtn();
+        compactSheet();
+        if (elevenResults.getAttribute('data-open') === '1') positionResults();
+      }, 250);
+    }
+    function stopPositionLoop() {
+      if (positionInterval) { clearInterval(positionInterval); positionInterval = null; }
+    }
+
+    function openEleven(mode) {
+      // Same mode already open: do nothing.
+      if (elevenOpened && elevenMode === mode) return;
+      // Different mode or first open: tear down and remount.
+      if (elevenEl) closeEleven();
+      root.dataset.open = '';
+      root.dataset.form = '';
+      ensureElevenScript(function () {
+        var el = mountEleven(mode);
+        elevenOpened = true;
+        elevenMode = mode;
+        elevenCloseBtn.style.display = 'flex';
+        // Hide the close button until correctly positioned to avoid the
+        // jump-from-wrong-spot flicker.
+        elevenCloseBtn.style.visibility = 'hidden';
+        driveWidget(el, mode);
+        // Show close button as soon as it's at the right place.
+        var showTries = 0;
+        var showIv = setInterval(function () {
+          showTries++;
+          if (showTries > 80) { clearInterval(showIv); return; }
+          if (positionCloseBtn()) {
+            elevenCloseBtn.style.visibility = 'visible';
+            clearInterval(showIv);
+            startPositionLoop();
+          }
+        }, 150);
+      });
+    }
+  })();
+</script>

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Lead Capture + Shopify CRM Integration — Plan</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; max-width: 900px; margin: 40px auto; padding: 0 24px; color: #222; }
+  h1 { font-size: 22px; border-bottom: 2px solid #333; padding-bottom: 8px; }
+  h2 { font-size: 17px; margin-top: 32px; border-left: 4px solid #E63946; padding-left: 10px; }
+  h3 { font-size: 14px; margin-top: 20px; color: #444; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  th { background: #f0f0f0; text-align: left; padding: 8px 10px; border: 1px solid #ccc; font-size: 13px; }
+  td { padding: 7px 10px; border: 1px solid #ccc; font-size: 13px; vertical-align: top; }
+  tr:nth-child(even) td { background: #fafafa; }
+  code, pre { background: #f4f4f4; border-radius: 4px; font-family: "Courier New", monospace; font-size: 12px; }
+  pre { padding: 14px 16px; overflow-x: auto; border: 1px solid #ddd; line-height: 1.5; }
+  code { padding: 1px 4px; }
+  ul, ol { margin: 6px 0 6px 20px; }
+  li { margin-bottom: 4px; }
+  .status-ok  { color: #1a7f37; font-weight: bold; }
+  .status-no  { color: #cf222e; font-weight: bold; }
+  .warn { background: #fff8c5; border-left: 4px solid #d4a017; padding: 10px 14px; margin: 12px 0; }
+  .info { background: #dbeafe; border-left: 4px solid #2563eb; padding: 10px 14px; margin: 12px 0; }
+  .phase { background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 10px 16px; margin: 10px 0; }
+  .phase strong { color: #15803d; }
+  .q { background: #fef9c3; border: 1px solid #fde047; border-radius: 4px; padding: 8px 12px; margin: 6px 0; }
+  .provide { background: #fce7f3; border: 1px solid #f9a8d4; border-radius: 4px; padding: 8px 12px; margin: 6px 0; }
+  h1 { color: #1a1a1a; }
+  .meta { color: #666; font-size: 12px; margin-bottom: 24px; }
+</style>
+</head>
+<body>
+
+<h1>Lead Capture + Shopify CRM Integration — Full Plan</h1>
+<p class="meta">Paint Access AI Agent — Generated 18 May 2026</p>
+
+<h2>🎯 What You're Asking For</h2>
+<p>Every meaningful AI agent conversation (voice or chat) should:</p>
+<ol>
+  <li><strong>Collect contact info</strong> — first name, last name, email, optional phone.</li>
+  <li><strong>Ask if they're an existing customer</strong> + consent to be added to the database.</li>
+  <li><strong>Push into Shopify Customers</strong> via API (create or update), tagged <code>AI Agent</code>.</li>
+  <li><strong>Log the journey</strong> — what they asked, what they were interested in, did they buy.</li>
+  <li><strong>Feed downstream marketing</strong> — Omnisend / Shopify Flow for email, SMS, retargeting.</li>
+</ol>
+
+<hr>
+
+<h2>✅ What We Already Have</h2>
+<table>
+  <tr><th>Component</th><th>Status</th></tr>
+  <tr><td>ElevenLabs agent (Jessica) — voice + chat</td><td class="status-ok">Working</td></tr>
+  <tr><td>4 tools: <code>lookup_order</code>, <code>search_products</code>, <code>check_inventory</code>, <code>send_email_notification</code></td><td class="status-ok">Working</td></tr>
+  <tr><td>Vercel backend with Shopify Admin API auth</td><td class="status-ok">Working</td></tr>
+  <tr><td>Shopify token, store domain, scopes</td><td class="status-ok">Working — read_products, read_orders, write_draft_orders, read_draft_orders, read_inventory</td></tr>
+  <tr><td>Callback form in widget (name, phone, email, message)</td><td>Exists — but only used for "request callback", not for lead capture from chat/voice</td></tr>
+  <tr><td>Conversation transcripts in ElevenLabs</td><td>Available via <code>/v1/convai/conversations/{id}</code> API</td></tr>
+  <tr><td><code>customer_id</code>, <code>customer.email</code>, <code>customer.first_name</code> in widget</td><td>Passed to agent for logged-in customers</td></tr>
+</table>
+
+<hr>
+
+<h2>❌ What's Missing</h2>
+
+<h3>1. Shopify Side</h3>
+<table>
+  <tr><th>Missing</th><th>Why It Matters</th></tr>
+  <tr><td><code>write_customers</code> scope</td><td>Current token is read-only on customers. Cannot create/update without it.</td></tr>
+  <tr><td><code>read_customers</code> scope</td><td>Needed to look up existing customer by email before deciding create vs update.</td></tr>
+  <tr><td><code>write_orders</code> (optional)</td><td>For attaching AI-conversation notes to orders for "did they buy" attribution.</td></tr>
+</table>
+
+<h3>2. Backend (Vercel)</h3>
+<table>
+  <tr><th>Missing Endpoint</th><th>Purpose</th></tr>
+  <tr><td><code>POST /api/shopify/customer/upsert</code></td><td>Create or update a Shopify customer by email, set tags, write notes/metafields.</td></tr>
+  <tr><td><code>POST /api/agent/log-conversation</code></td><td>Receive end-of-call summary (transcript, interests, query, outcome) and append to customer record.</td></tr>
+  <tr><td><code>POST /api/omnisend/upsert-contact</code> (optional)</td><td>If Omnisend should be source-of-truth vs relying on Shopify→Omnisend sync.</td></tr>
+  <tr><td>ElevenLabs post-call webhook handler</td><td>Automatically log after every call without the agent having to remember mid-conversation.</td></tr>
+</table>
+
+<h3>3. ElevenLabs Agent</h3>
+<table>
+  <tr><th>Missing</th><th>Purpose</th></tr>
+  <tr><td>New tool: <code>save_lead</code></td><td>Agent calls this when it has collected name/email/etc.</td></tr>
+  <tr><td>New tool: <code>log_interest</code> (or merged into save_lead)</td><td>Records what product/topic interested them.</td></tr>
+  <tr><td>System prompt rules</td><td>Greeting flow, when to ask for details, opt-in language, what to do if customer refuses.</td></tr>
+  <tr><td>Post-call webhook</td><td>ElevenLabs fires this when a conversation ends — best place to push the final lead, not mid-conversation.</td></tr>
+</table>
+
+<h3>4. Storefront Widget</h3>
+<table>
+  <tr><th>Missing</th><th>Purpose</th></tr>
+  <tr><td>Pre-fill <code>last_name</code> + <code>phone</code> from logged-in customer</td><td>Shopify exposes these — currently only first_name and email are passed.</td></tr>
+  <tr><td>Anonymous → known transition</td><td>When agent collects email, widget stores in localStorage so subsequent sessions tie back.</td></tr>
+  <tr><td>Consent UI</td><td>Checkbox or spoken opt-in record — required for Australian Spam Act + GDPR.</td></tr>
+  <tr><td>UTM / referrer capture</td><td>So we know where the lead came from beyond just "AI Agent" tag.</td></tr>
+</table>
+
+<h3>5. Omnisend</h3>
+<table>
+  <tr><th>Missing</th><th>Purpose</th></tr>
+  <tr><td>Decision: Shopify→Omnisend native sync OR direct push</td><td>Native sync is simpler but slow (minutes lag); direct push is real-time.</td></tr>
+  <tr><td>Tag/segment definitions in Omnisend</td><td>Drives the automations on their side matching <code>AI Agent</code>, <code>AI Lead</code> etc.</td></tr>
+  <tr><td>Omnisend API key + endpoint (if direct push)</td><td>Not stored anywhere yet.</td></tr>
+</table>
+
+<hr>
+
+<h2>⚠️ Edge Cases, Bottlenecks & Complications</h2>
+<ol>
+  <li><strong>Voice agents can't reliably repeat back emails.</strong> STT confuses "j"/"g", "five"/"nine", domains like gmail vs g-mail. Need an explicit confirmation step: <em>"So that's john at gmail dot com, J-O-H-N — correct?"</em></li>
+  <li><strong>Duplicate customers.</strong> Shopify allows multiple customers with the same phone but unique emails. Logic must be: lookup by email → if found, update tags/notes; if not, create new.</li>
+  <li><strong>Anonymous voice calls (Twilio inbound).</strong> No customer context. Agent must collect everything from scratch.</li>
+  <li><strong>Consent &amp; compliance.</strong> Australian Spam Act 2003 + GDPR (if any EU traffic). Must record explicit opt-in for marketing. "AI Agent" tag alone is not legal consent.</li>
+  <li><strong>Tool-call latency mid-conversation.</strong> Calling <code>save_lead</code> mid-call adds a 1–3 second pause. Better strategy: gather data in memory, push everything in a single post-call webhook at the end.</li>
+  <li><strong>Transcript size limits.</strong> ElevenLabs transcripts can be 5–50KB. Shopify customer notes have a 5,000-char limit; metafields can hold more (up to 64KB) but need a defined namespace.</li>
+  <li><strong>PII in logs.</strong> Vercel logs will contain emails, phones, transcripts. Retention policy / scrubbing may be required.</li>
+  <li><strong>Idempotency.</strong> If the post-call webhook fires twice (ElevenLabs retries), duplicate notes will be created. Must dedupe by <code>conversation_id</code>.</li>
+  <li><strong>Existing-customer flag mismatch.</strong> Customer says "yes, I'm a customer" but email isn't in DB. Agent shouldn't argue — just collect and tag.</li>
+  <li><strong>Tag explosion.</strong> One tag per interest topic leads to dozens of tags. Recommendation: single <code>AI Agent</code> tag + structured JSON metafield for interests.</li>
+  <li><strong>Cost creep.</strong> Every conversation = Shopify Admin API calls + ElevenLabs minutes. Bulk testing could burn through quota again.</li>
+  <li><strong>Widget form vs voice agent overlap.</strong> If a user submits the callback form AND talks to the agent, we'll double-create the lead. Email must be the single source-of-truth deduplication key.</li>
+  <li><strong>Phone normalisation.</strong> <code>0488 826 453</code> vs <code>+61 488 826 453</code> vs <code>61488826453</code> — must normalise to E.164 before storing.</li>
+</ol>
+
+<hr>
+
+<h2>📐 Proposed Architecture</h2>
+<pre>
+┌────────────────────────┐
+│ Widget (chat + voice)  │
+└──────────┬─────────────┘
+           │ pre-fills name/email/phone if logged in
+           │ captures UTM + referrer + page URL
+           ▼
+┌────────────────────────┐         ┌──────────────────────────┐
+│ ElevenLabs agent       │◄────────┤ System prompt (new rules)│
+│ + new tool: save_lead  │         └──────────────────────────┘
+└──────────┬─────────────┘
+           │
+           │ POST-CALL webhook ──────────────────────────►
+           │                                    ┌──────────────────────────────────┐
+           │                                    │ Vercel backend                   │
+           │                                    │  POST /api/agent/log-conversation│
+           │                                    │   ├─ pull full transcript        │
+           │                                    │   ├─ extract email/name/phone    │
+           │                                    │   ├─ extract product interests   │
+           │                                    │   └─ POST /api/shopify/customer/upsert
+           │                                    └──────────────┬───────────────────┘
+           │                                                    ▼
+           │                               ┌──────────────────────────────────────┐
+           │                               │ Shopify Customer record              │
+           │                               │  ├─ tags: "AI Agent", "AI Lead"      │
+           │                               │  ├─ note: short summary              │
+           │                               │  ├─ metafield: conversation_id       │
+           │                               │  ├─ metafield: interests (JSON)      │
+           │                               │  └─ metafield: utm_source/medium     │
+           │                               └──────────────┬───────────────────────┘
+           │                                               │ native sync (minutes)
+           │                                               ▼
+           │                               ┌──────────────────────────────────────┐
+           │                               │ Omnisend                             │
+           │                               │  ├─ Segment: "AI Lead"              │
+           │                               │  └─ Trigger flows by tag/metafield  │
+           │                               └──────────────────────────────────────┘
+</pre>
+
+<hr>
+
+<h2>📋 Phased Implementation Plan</h2>
+
+<div class="phase">
+  <strong>Phase 1 — Shopify Access + Backend Foundation</strong>
+  <ul>
+    <li>Add <code>write_customers</code> and <code>read_customers</code> scopes to Shopify custom app (owner does this, then rotates token).</li>
+    <li>New endpoint: <code>POST /api/shopify/customer/upsert</code>.</li>
+    <li>New endpoint: <code>POST /api/agent/log-conversation</code> (handles ElevenLabs post-call webhook).</li>
+  </ul>
+</div>
+
+<div class="phase">
+  <strong>Phase 2 — Agent Rules + New Tool</strong>
+  <ul>
+    <li>Add <code>save_lead</code> server tool to ElevenLabs agent.</li>
+    <li>Update system prompt with lead-capture flow, opt-in language, refusal handling.</li>
+    <li>Configure ElevenLabs post-call webhook URL to point at <code>/api/agent/log-conversation</code>.</li>
+  </ul>
+</div>
+
+<div class="phase">
+  <strong>Phase 3 — Storefront Widget</strong>
+  <ul>
+    <li>Pass UTM, referrer, and current page URL into agent dynamic variables.</li>
+    <li>Pass logged-in customer's <code>last_name</code> and <code>phone</code> when available.</li>
+    <li>Store collected email in localStorage for cross-session continuity.</li>
+  </ul>
+</div>
+
+<div class="phase">
+  <strong>Phase 4 — Omnisend</strong>
+  <ul>
+    <li>Decide: native Shopify→Omnisend sync vs direct API push.</li>
+    <li>Define segments matching tags (<code>AI Agent</code>, <code>AI Lead</code>).</li>
+    <li>If direct: add <code>/api/omnisend/upsert-contact</code> endpoint.</li>
+  </ul>
+</div>
+
+<div class="phase">
+  <strong>Phase 5 — Polish &amp; Compliance</strong>
+  <ul>
+    <li>Consent recording (spoken or checkbox).</li>
+    <li>PII redaction in Vercel logs.</li>
+    <li>Deduplicate webhook calls by <code>conversation_id</code>.</li>
+    <li>Phone normalisation to E.164.</li>
+  </ul>
+</div>
+
+<hr>
+
+<h2>❓ Questions to Clarify Before Building</h2>
+
+<div class="q"><strong>Q1. Shopify scopes.</strong> Can you add <code>write_customers</code> + <code>read_customers</code> to the existing Shopify custom app yourself, or do you need a step-by-step walkthrough?</div>
+<div class="q"><strong>Q2. Marketing consent.</strong> Should the agent explicitly ask <em>"May I add you to our list to receive emails about paint deals and tips?"</em> and only set the <code>accepts_marketing</code> flag if they say yes? Or are you OK with a softer transactional-only approach?</div>
+<div class="q"><strong>Q3. Existing-customer detection.</strong> When the customer says "yes, I'm already a customer", should the agent confirm by email lookup, or just trust them and add the tag?</div>
+<div class="q"><strong>Q4. Tags vs metafields.</strong> Just a single <code>AI Agent</code> tag, or also per-topic tags like <code>AI Lead - Sprayers</code>? Recommendation: single tag + structured JSON metafield.</div>
+<div class="q"><strong>Q5. Transcript storage.</strong> Full transcript in a Shopify metafield (visible to staff), or only a short AI-generated summary — with full transcript staying in ElevenLabs?</div>
+<div class="q"><strong>Q6. Omnisend strategy.</strong> Native Shopify→Omnisend sync (simpler, minutes lag) or direct API push (real-time)? If direct, please provide an Omnisend API key.</div>
+<div class="q"><strong>Q7. Language.</strong> Should Jessica ask for lead details in English only? The task was written in Russian — should the agent also support Russian-speaking customers?</div>
+<div class="q"><strong>Q8. What counts as a "useful" conversation?</strong> Save every call as a lead (including 10-second hi/bye), or only when at least an email was collected? Recommendation: only save when email is present.</div>
+<div class="q"><strong>Q9. Anonymous Twilio inbound calls.</strong> These have a phone number but no email. Should they also create Shopify customers (phone-only), or skip CRM logging unless email is collected?</div>
+<div class="q"><strong>Q10. Tagging existing customers.</strong> If the contact already exists in Shopify, should we add the <code>AI Agent</code> tag to mark the new AI interaction, or leave existing customers untagged?</div>
+
+<hr>
+
+<h2>📋 What You Need to Provide</h2>
+
+<div class="provide"><strong>New Shopify access token</strong> with <code>write_customers</code> + <code>read_customers</code> scopes added — required to create/update customers.</div>
+<div class="provide"><strong>Answers to the 10 questions above</strong> — needed to finalize behaviour before building.</div>
+<div class="provide"><strong>Omnisend API key</strong> (only if you choose direct push) — for real-time sync.</div>
+<div class="provide"><strong>Consent wording confirmation</strong> — so Jessica's script matches your legal compliance posture for Australian Spam Act 2003.</div>
+<div class="provide"><strong>Confirmation I can update the live agent system prompt</strong> — the prompt will grow noticeably and affects every conversation immediately.</div>
+<div class="provide"><strong>A test email + phone number</strong> I can use to verify end-to-end without polluting real customer data.</div>
+
+</body>
+</html>

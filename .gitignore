@@ -2,4 +2,18 @@ node_modules/
 dist/
 .vercel/
 .env
+.env.local
 .vercel
+
+# _store/ — non-backend files tracked for history (Shopify theme, setup scripts, KB)
+# Exclude secrets and generated artefacts only:
+_store/setup/auth.json
+_store/setup/.env
+_store/setup/.env.local
+_store/setup/node_modules/
+_store/setup/test-output/
+_store/setup/find-pretty.err
+_store/setup/find-pretty.log
+_store/setup/find-pretty.out
+_store/setup/*.err
+_store/setup/*.log
