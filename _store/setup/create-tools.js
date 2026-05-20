@@ -215,6 +215,50 @@ const toolDefs = [
       },
     },
   },
+  {
+    // Webhook tool. Creates or updates a Shopify customer record when a
+    // guest shares their contact details during a conversation.
+    // Requires write_customers scope on the Shopify access token.
+    tool_config: {
+      type: "webhook",
+      name: "capture_lead",
+      description:
+        "Save a guest customer's contact details to the Paint Access CRM (Shopify). " +
+        "Call ONCE per conversation when a guest ({{customer_id}} is empty) shares their name AND email. " +
+        "Do NOT call for logged-in customers. Do NOT call more than once per session. " +
+        "After it succeeds, say 'Perfect, I've saved your details.' and continue naturally.",
+      force_pre_tool_speech: false,
+      api_schema: {
+        url: `${BACKEND_URL}/api/shopify/customer`,
+        method: "POST",
+        request_headers: {
+          Authorization: `Bearer ${API_SECRET}`,
+        },
+        request_body_schema: {
+          type: "object",
+          required: ["name", "email"],
+          properties: {
+            name: {
+              type: "string",
+              description: "Customer's full name as they provided it.",
+            },
+            email: {
+              type: "string",
+              description: "Customer's email address.",
+            },
+            phone: {
+              type: "string",
+              description: "Customer's phone number (optional, include if shared).",
+            },
+            note: {
+              type: "string",
+              description: "One-line context, e.g. 'Interested in airless sprayers'.",
+            },
+          },
+        },
+      },
+    },
+  },
 ];
 
 async function createTools() {

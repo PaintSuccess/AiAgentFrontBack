@@ -1,4 +1,4 @@
-const { shopifyFetch, corsHeaders, cleanEnv } = require("../lib/shopify");
+const { shopifyFetch, corsHeaders, cleanEnv, sanitizeInput } = require("../lib/shopify");
 
 // Public-facing endpoint — no Bearer auth required (called by storefront widget).
 // Accepts callback request form data, logs it as a Shopify draft order, then
@@ -64,6 +64,69 @@ module.exports = async function handler(req, res) {
   } catch (err) {
     // Non-fatal — still attempt the call
     console.error("[Callback] Draft order error:", err.message);
+  }
+
+  // ---- 1b. Upsert Shopify customer -----------------------------------------
+  // Creates or updates a customer record so callback requestors are visible
+  // in Shopify CRM. Non-fatal — a failure here never blocks the outbound call.
+  // Requires write_customers scope on the Shopify access token.
+  if (cleanEmail || cleanPhone) {
+    try {
+      const nameParts = cleanName.split(/\s+/);
+      const callbackTags = ["ai-lead", "ai-widget", "callback-request"];
+      const callbackNote = [
+        "SMS callback request via AI widget",
+        cleanTime  ? `Best time: ${cleanTime}`  : null,
+        cleanMsg   ? `Message: ${cleanMsg}`     : null,
+      ].filter(Boolean).join(" | ");
+
+      if (cleanEmail) {
+        // Search by email first to avoid duplicates
+        const search = await shopifyFetch(
+          `customers/search.json?query=email:${encodeURIComponent(cleanEmail)}&limit=1`
+        );
+        const existing = search.customers?.[0];
+
+        if (existing) {
+          const existingTags = existing.tags
+            ? existing.tags.split(",").map((t) => t.trim()).filter(Boolean)
+            : [];
+          const mergedTags = [...new Set([...existingTags, ...callbackTags])].join(",");
+          await shopifyFetch(`customers/${existing.id}.json`, {
+            method: "PUT",
+            body: JSON.stringify({
+              customer: {
+                id: existing.id,
+                tags: mergedTags,
+                note: callbackNote,
+                ...(cleanPhone && !existing.phone ? { phone: cleanPhone } : {}),
+              },
+            }),
+          });
+          console.log("[Callback] Customer updated:", existing.id);
+        } else {
+          const created = await shopifyFetch("customers.json", {
+            method: "POST",
+            body: JSON.stringify({
+              customer: {
+                first_name: nameParts[0] || cleanName,
+                last_name:  nameParts.slice(1).join(" ") || "",
+                email:      cleanEmail,
+                ...(cleanPhone ? { phone: cleanPhone } : {}),
+                tags:       callbackTags.join(","),
+                note:       callbackNote,
+                accepts_marketing: false,
+                verified_email:    false,
+              },
+            }),
+          });
+          console.log("[Callback] Customer created:", created.customer?.id);
+        }
+      }
+    } catch (err) {
+      // Non-fatal — scopes may not include write_customers yet
+      console.error("[Callback] Customer upsert error:", err.message);
+    }
   }
 
   // ---- 2. Trigger outbound AI call via ElevenLabs Twilio integration ----
