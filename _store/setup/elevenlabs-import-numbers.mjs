@@ -56,7 +56,7 @@ function updateEnvFile(filePath, key, value) {
   writeFileSync(filePath, content);
 }
 
-const envPaths = [join(__dirname, '.env'), join(__dirname, '..', 'app', '.env')];
+const envPaths = [join(__dirname, '.env'), join(__dirname, '..', '..', '.env')];
 
 for (const num of NUMBERS) {
   console.log(`\n--- ${num.label} (${num.phone}) ---`);

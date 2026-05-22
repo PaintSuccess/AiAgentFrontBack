@@ -28,6 +28,9 @@ Set in Vercel Dashboard → Settings → Environment Variables:
 | `TWILIO_ACCOUNT_SID` | Twilio account SID for SMS/call APIs |
 | `TWILIO_AUTH_TOKEN` | Twilio auth token for API auth and webhook verification |
 | `TWILIO_MOBILE_NUMBER` | SMS-capable Twilio sender number in E.164 format |
+| `TWILIO_SYDNEY_NUMBER` | Voice-capable Sydney/local Twilio number for direct calls |
+| `ELEVENLABS_PHONE_NUMBER_ID_MOBILE` | ElevenLabs imported phone number ID for the mobile number |
+| `ELEVENLABS_PHONE_NUMBER_ID_SYDNEY` | ElevenLabs imported phone number ID for the Sydney/local number |
 
 ## Deploy
 
