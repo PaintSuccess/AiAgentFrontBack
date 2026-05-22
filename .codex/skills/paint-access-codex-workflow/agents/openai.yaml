@@ -1,0 +1,4 @@
+interface:
+  display_name: "Paint Access Codex Workflow"
+  short_description: "Project workflow for Paint Access support app"
+  default_prompt: "Use $paint-access-codex-workflow when working on the Paint Access Shopify AI support app."

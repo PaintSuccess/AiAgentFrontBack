@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const { corsHeaders, rateLimit, cleanEnv } = require("../../lib/shopify");
+const { askElevenLabsTextAgent } = require("../../lib/elevenlabs-text");
 
 function verifyTwilioSignature(req) {
   const authToken = cleanEnv("TWILIO_AUTH_TOKEN");
@@ -53,38 +54,18 @@ module.exports = async function handler(req, res) {
 
     const phoneNumber = from.replace("whatsapp:", "");
 
-    // Send to ElevenLabs as a text conversation
-    const ELEVENLABS_API_KEY = cleanEnv("ELEVENLABS_API_KEY");
-    const AGENT_ID = cleanEnv("ELEVENLABS_AGENT_ID");
-
-    const conversationRes = await fetch(
-      `https://api.elevenlabs.io/v1/convai/conversation`,
-      {
-        method: "POST",
-        headers: {
-          "xi-api-key": ELEVENLABS_API_KEY,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          agent_id: AGENT_ID,
-          text: body,
-          dynamic_variables: {
-            customer_name: profileName || "",
-            customer_phone: phoneNumber,
-          },
-        }),
-      }
-    );
-
     let replyText = "Thanks for contacting Paint Access! For immediate help, call us at 028-064-70-50 or visit paintaccess.com.au";
 
-    if (conversationRes.ok) {
-      const data = await conversationRes.json();
-      if (data.response) {
-        replyText = data.response;
-      }
-    } else {
-      console.error("ElevenLabs API error:", await conversationRes.text());
+    try {
+      const agentReply = await askElevenLabsTextAgent({
+        text: body,
+        channel: "whatsapp",
+        customerName: profileName || "",
+        customerPhone: phoneNumber,
+      });
+      if (agentReply) replyText = agentReply;
+    } catch (err) {
+      console.error("ElevenLabs WhatsApp text agent error:", err.message);
     }
 
     // Respond with TwiML

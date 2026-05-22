@@ -204,6 +204,7 @@ async function updateAgent() {
       agent: {
         prompt: {
           prompt: systemPrompt,
+          llm: "claude-haiku-4-5",
         },
         first_message: firstMessage,
         language: "en",
