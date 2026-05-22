@@ -10,9 +10,13 @@ const {
 // Smaller pool = faster Shopify response (and smaller GraphQL payload).
 // 25 still leaves enough headroom for client-side scoring on broad queries.
 const CANDIDATE_POOL = 25;   // products fetched from Shopify per search call
-const RESULT_LIMIT = 15;     // products returned to the caller
+// Keep the response tiny so the LLM (voice agent uses gemini-2.5-flash) can
+// ingest + reply quickly. 5 results × ~150B = ~750B JSON instead of 11KB,
+// which empirically drops LLM-side latency by several seconds.
+const RESULT_LIMIT = 5;      // products returned to the caller
 const MAX_FALLBACK_TOKENS = 3; // cap parallel per-token fallback fan-out
 const STORE_URL = "https://paintaccess.com.au";
+const SEARCH_DEBUG = process.env.PRODUCT_SEARCH_DEBUG === "1";
 
 // Words to drop from natural-language input ("I need a brush" → "brush")
 const STOP_WORDS = new Set([
@@ -45,10 +49,12 @@ const PRODUCT_SEARCH_QUERY = `
                 title
                 price
                 sku
+                barcode
                 availableForSale
                 inventoryQuantity
                 inventoryPolicy
                 inventoryItem { tracked }
+                selectedOptions { name value }
               }
             }
           }
@@ -76,10 +82,12 @@ const COLLECTION_SEARCH_QUERY = `
                   title
                   price
                   sku
+                  barcode
                   availableForSale
                   inventoryQuantity
                   inventoryPolicy
                   inventoryItem { tracked }
+                  selectedOptions { name value }
                 }
               }
             }
@@ -106,6 +114,103 @@ function tokenize(normalized) {
     .filter((t) => t.length >= 2 && !STOP_WORDS.has(t));
 }
 
+function unique(items) {
+  return [...new Set(items.filter(Boolean))];
+}
+
+function expandUnitToken(token) {
+  const match = String(token || "").match(/^(\d+(?:\.\d+)?)(mm|cm|m|ml|l|lt|ltr|litre|litres|kg|g)$/i);
+  if (!match) return [token];
+
+  const amount = match[1];
+  const unit = match[2].toLowerCase();
+  const normalizedUnit =
+    unit === "lt" || unit === "ltr" || unit === "litre" || unit === "litres"
+      ? "l"
+      : unit;
+
+  return unique([token, amount, `${amount}${normalizedUnit}`]);
+}
+
+function expandTokens(tokens) {
+  return unique(tokens.flatMap(expandUnitToken));
+}
+
+function tokenVariants(token) {
+  const variants = new Set(expandUnitToken(token));
+  const spaced = String(token || "").match(/^(\d+(?:\.\d+)?)([a-z]+)$/i);
+  if (spaced) variants.add(`${spaced[1]} ${spaced[2].toLowerCase()}`);
+  return [...variants];
+}
+
+function variantFields(product) {
+  return (product.variants?.edges || []).flatMap((e) => {
+    const v = e.node || {};
+    return [
+      v.title,
+      v.sku,
+      v.barcode,
+      ...(v.selectedOptions || []).flatMap((opt) => [opt.name, opt.value]),
+    ];
+  });
+}
+
+function searchableFields(product) {
+  return [
+    product.title,
+    product.productType,
+    product.vendor,
+    ...(product.tags || []),
+    ...variantFields(product),
+  ]
+    .map((v) => String(v || "").toLowerCase())
+    .filter(Boolean);
+}
+
+function tokenizeSearchableText(fields) {
+  return fields
+    .join(" ")
+    .replace(/[^a-z0-9.\s-]/g, " ")
+    .split(/\s+/)
+    .filter((t) => t.length >= 2);
+}
+
+function editDistance(a, b) {
+  if (a === b) return 0;
+  if (!a || !b) return Math.max(a.length, b.length);
+  if (Math.abs(a.length - b.length) > 2) return 3;
+
+  const prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  const curr = new Array(b.length + 1);
+
+  for (let i = 1; i <= a.length; i++) {
+    curr[0] = i;
+    let rowMin = curr[0];
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(
+        curr[j - 1] + 1,
+        prev[j] + 1,
+        prev[j - 1] + cost
+      );
+      rowMin = Math.min(rowMin, curr[j]);
+    }
+    if (rowMin > 2) return 3;
+    for (let j = 0; j <= b.length; j++) prev[j] = curr[j];
+  }
+
+  return prev[b.length];
+}
+
+function fuzzyTokenHit(token, fieldTokens) {
+  if (token.length < 4) return false;
+  const maxDistance = token.length >= 7 ? 2 : 1;
+  return fieldTokens.some((fieldToken) => {
+    if (fieldToken.length < 4) return false;
+    return editDistance(token, fieldToken) <= maxDistance;
+  });
+}
+
 function looksLikeSku(raw) {
   const cleaned = String(raw || "").trim();
   return SKU_PATTERN.test(cleaned) && /\d/.test(cleaned);
@@ -127,27 +232,59 @@ function scoreProduct(product, tokens, fullPhrase) {
   const type = (product.productType || "").toLowerCase();
   const vendor = (product.vendor || "").toLowerCase();
   const tags = (product.tags || []).map((t) => String(t).toLowerCase());
-  const variantSkus = (product.variants?.edges || [])
-    .map((e) => (e.node.sku || "").toLowerCase())
+  const variants = (product.variants?.edges || []).map((e) => e.node || {});
+  const variantTitles = variants.map((v) => (v.title || "").toLowerCase()).filter(Boolean);
+  const variantCodes = variants
+    .flatMap((v) => [v.sku, v.barcode])
+    .map((v) => String(v || "").toLowerCase())
     .filter(Boolean);
+  const optionValues = variants
+    .flatMap((v) => v.selectedOptions || [])
+    .flatMap((opt) => [opt.name, opt.value])
+    .map((v) => String(v || "").toLowerCase())
+    .filter(Boolean);
+  const allFields = searchableFields(product);
+  const allFieldTokens = tokenizeSearchableText(allFields);
+  const expanded = expandTokens(tokens);
 
   let score = 0;
   let tokensInTitle = 0;
+  let tokensInAnyField = 0;
 
   for (const tok of tokens) {
-    if (title.includes(tok)) { score += 10; tokensInTitle += 1; }
-    if (type.includes(tok)) score += 5;
-    if (vendor.includes(tok)) score += 4;
-    if (tags.some((t) => t.includes(tok))) score += 3;
-    if (variantSkus.some((s) => s.includes(tok))) score += 8;
+    const variantsForToken = tokenVariants(tok);
+    const titleHit = variantsForToken.some((v) => title.includes(v));
+    const typeHit = variantsForToken.some((v) => type.includes(v));
+    const vendorHit = variantsForToken.some((v) => vendor.includes(v));
+    const tagHit = variantsForToken.some((v) => tags.some((t) => t.includes(v)));
+    const variantTitleHit = variantsForToken.some((v) => variantTitles.some((t) => t.includes(v)));
+    const codeHit = variantsForToken.some((v) => variantCodes.some((s) => s.includes(v)));
+    const optionHit = variantsForToken.some((v) => optionValues.some((s) => s.includes(v)));
+    const fuzzyHit = !titleHit && fuzzyTokenHit(tok, allFieldTokens);
+
+    if (titleHit) { score += 12; tokensInTitle += 1; }
+    if (typeHit) score += 5;
+    if (vendorHit) score += 4;
+    if (tagHit) score += 3;
+    if (variantTitleHit) score += 6;
+    if (codeHit) score += 10;
+    if (optionHit) score += 4;
+    if (fuzzyHit) score += 3;
+    if (titleHit || typeHit || vendorHit || tagHit || variantTitleHit || codeHit || optionHit || fuzzyHit) {
+      tokensInAnyField += 1;
+    }
   }
 
   // All tokens land in title
-  if (tokens.length > 1 && tokensInTitle === tokens.length) score += 20;
+  if (tokens.length > 1 && tokensInTitle === tokens.length) score += 24;
+  if (tokens.length > 1 && tokensInAnyField === tokens.length) score += 12;
   // Contiguous phrase in title (e.g. "angle sash brush")
-  if (tokens.length > 1 && title.includes(tokens.join(" "))) score += 15;
+  if (tokens.length > 1 && title.includes(tokens.join(" "))) score += 18;
   // Full normalized phrase in title
   if (fullPhrase && title.includes(fullPhrase)) score += 10;
+  if (expanded.length > tokens.length && expanded.every((tok) => allFields.some((field) => field.includes(tok)))) {
+    score += 8;
+  }
 
   // In-stock tiebreaker
   // This store's online fulfillment location always has 0 qty for ALL products —
@@ -169,26 +306,16 @@ function scoreProduct(product, tokens, fullPhrase) {
 }
 
 function shapeProduct(p) {
-  const variants = (p.variants?.edges || []).map((e) => {
-    const v = e.node;
-    // Availability: this store's online fulfillment location always carries 0 qty —
-    // warehouse stock (at a separate location) is NOT linked to the online channel.
-    // Admin API availableForSale aggregates ALL locations and is unreliable for
-    // DENY-policy products.  inventoryPolicy is the correct discriminator:
-    //   CONTINUE = customer CAN order regardless of qty (Add to cart on storefront)
-    //   DENY     = storefront shows "Out of stock" / "Notify me" (online qty always 0)
-    // For untracked variants there is no location-specific stock, so trust Admin API.
+  // Compute availability + price range from variants but DO NOT include the
+  // full variants array in the response — voice-agent LLM only needs a
+  // compact summary it can speak back.  See inventoryPolicy comment in
+  // scoreProduct() for the availability discriminator rationale.
+  const variants = (p.variants?.edges || []).map((e) => e.node);
+  const anyAvailable = variants.some((v) => {
     const tracked = v.inventoryItem?.tracked === true;
-    const available = tracked
+    return tracked
       ? v.inventoryPolicy === 'CONTINUE'
       : v.availableForSale === true;
-    return {
-      title: v.title,
-      price: v.price,
-      sku: v.sku,
-      available,
-      inventory_quantity: v.inventoryQuantity ?? null,
-    };
   });
 
   const prices = variants
@@ -199,20 +326,15 @@ function shapeProduct(p) {
 
   return {
     name: p.title,
-    title: p.title,
     url: `${STORE_URL}/products/${p.handle}`,
     vendor: p.vendor || null,
-    product_type: p.productType || null,
-    price_range: minP != null ? { min: minP, max: maxP } : null,
     price:
       minP == null
         ? null
         : minP === maxP
           ? `$${minP.toFixed(2)} AUD`
           : `$${minP.toFixed(2)}–$${maxP.toFixed(2)} AUD`,
-    available: variants.some((v) => v.available),
-    variants,
-    image: p.featuredImage?.url || null,
+    available: anyAvailable,
   };
 }
 
@@ -225,17 +347,51 @@ async function fetchPool(shopifyQuery) {
   return (data.products?.edges || []).map((e) => e.node);
 }
 
+function buildSearchQueries(rawQuery, tokens, normalized) {
+  const base = tokens.length ? tokens.join(" ") : normalized || rawQuery;
+  const queries = [`status:active ${base}`];
+
+  const unitRelaxed = tokens
+    .map((tok) => {
+      const match = tok.match(/^(\d+(?:\.\d+)?)(mm|cm|m|ml|l|lt|ltr|litre|litres|kg|g)$/i);
+      return match ? match[1] : tok;
+    })
+    .join(" ");
+
+  if (unitRelaxed && unitRelaxed !== base) {
+    queries.push(`status:active ${unitRelaxed}`);
+  }
+
+  const dehyphenated = base.replace(/-/g, " ");
+  if (dehyphenated && dehyphenated !== base) {
+    queries.push(`status:active ${dehyphenated}`);
+  }
+
+  return unique(queries);
+}
+
 /**
  * Strategy:
  *   1. SKU-shaped input? Try sku: lookup first.
  *   2. Broad fulltext using normalized query (Shopify's default ranker).
- *   3. If pool too small, run each token individually and union.
- *   4. Score client-side and return ranked candidates.
+ *   3. If pool too small OR some tokens are "orphaned" (match nothing in the
+ *      pool — a sign of voice STT artefacts like "stratismen" for "tradesman"),
+ *      re-run with only the tokens that actually appeared in at least one result.
+ *   4. Per-token fallback for very sparse pools.
+ *   5. Score client-side and return ranked candidates.
+ *
+ * The orphaned-token step (3) is the key fix for voice: ElevenLabs STT
+ * frequently mutates brand/product names that it doesn't recognise.  When a
+ * token matches zero products in the pool the Shopify ranker effectively
+ * ignores it anyway — but our client-side scorer then promotes unrelated
+ * results because no product earns the token weight.  By stripping such tokens
+ * and re-querying we get the product the customer actually said.
  */
 async function searchProducts(rawQuery) {
   const normalized = normalizeQuery(rawQuery);
   const tokens = tokenize(normalized);
-  const usableQuery = tokens.length ? tokens.join(" ") : normalized;
+  const expandedTokens = expandTokens(tokens);
+  const strategies = [];
 
   const seen = new Map(); // handle → node
   const add = (nodes) => {
@@ -246,34 +402,89 @@ async function searchProducts(rawQuery) {
   };
   const safeFetch = (q) => fetchPool(q).catch(() => []);
 
-  // 1+2. Run SKU lookup (if applicable) and the primary broad search in
-  // parallel. The SKU shortcut is independent of the broad query, so there's
-  // no benefit to chaining them — fire both at once and merge.
-  const primaryQ = `status:active ${usableQuery || normalized || rawQuery}`;
-  const initial = [safeFetch(primaryQ)];
+  // 1+2. Run SKU lookup (if applicable), primary broad search, and safe
+  // normalized variants in parallel. The variants are generic: unit relaxation
+  // ("175mm" -> "175") and punctuation cleanup, never brand/product hardcodes.
+  const primaryQueries = buildSearchQueries(rawQuery, tokens, normalized);
+  strategies.push(...primaryQueries);
+  const initial = primaryQueries.map((q) => safeFetch(q));
   if (looksLikeSku(rawQuery)) {
-    initial.unshift(safeFetch(`status:active sku:${String(rawQuery).trim()}`));
+    const skuQ = `status:active sku:${String(rawQuery).trim()}`;
+    strategies.push(skuQ);
+    initial.unshift(safeFetch(skuQ));
   }
   for (const nodes of await Promise.all(initial)) add(nodes);
 
-  // 3. Per-token fallback: only when the primary search returned almost
-  // nothing. Fire up to MAX_FALLBACK_TOKENS in parallel rather than one at a
-  // time — this is the strategy that previously dominated tail latency.
-  if (seen.size < 5 && tokens.length > 1) {
+  // 3. STT artefact recovery:
+  //    Case A — primary returned products but a token appears in NONE of them
+  //              (token is an invented word; re-run with only matched tokens).
+  //    Case B — primary returned 0 (Shopify strict-AND killed the query because
+  //              one token is total nonsense); try ALL n-1 token combinations in
+  //              parallel — one of them omits the bad token and finds real results.
+  //    Both cases are typical when ElevenLabs STT mishears a product name,
+  //    e.g. "Tradesman" -> "Stratismen".
+  if (tokens.length > 1) {
+    if (seen.size === 0) {
+      // Case B: primary returned nothing — try dropping each token once.
+      const nMinus1Queries = tokens.map((_, i) =>
+        tokens.filter((_, j) => j !== i).join(" ")
+      );
+      strategies.push(...nMinus1Queries.map((q) => `status:active ${q}`));
+      const results = await Promise.all(
+        nMinus1Queries.map((q) => safeFetch(`status:active ${q}`))
+      );
+      for (const nodes of results) add(nodes);
+    } else {
+      // Case A: primary had results — check which tokens appear in none of them.
+      const pool0 = Array.from(seen.values());
+      const matchedTokens = tokens.filter((tok) =>
+        pool0.some(
+          (p) => tokenVariants(tok).some((variant) =>
+            searchableFields(p).some((field) => field.includes(variant))
+          )
+        )
+      );
+      if (matchedTokens.length > 0 && matchedTokens.length < tokens.length) {
+        strategies.push(`status:active ${matchedTokens.join(" ")}`);
+        const cleanNodes = await safeFetch(`status:active ${matchedTokens.join(" ")}`);
+        add(cleanNodes);
+      }
+    }
+  }
+
+  // 4. Per-token fallback: when the pool is still sparse after primary search
+  // + STT artefact recovery.  Fire up to MAX_FALLBACK_TOKENS in parallel.
+  if (seen.size < 10 && tokens.length > 1) {
     const picks = tokens.slice(0, MAX_FALLBACK_TOKENS);
+    strategies.push(...picks.map((tok) => `status:active ${tok}`));
     const results = await Promise.all(picks.map((tok) => safeFetch(`status:active ${tok}`)));
     for (const nodes of results) add(nodes);
   }
 
   const pool = Array.from(seen.values());
-  if (pool.length === 0) return { products: [], tokens };
+  if (pool.length === 0) return { products: [], tokens, expandedTokens, strategies };
 
   const fullPhrase = tokens.join(" ");
   const scored = pool
     .map((p) => ({ p, score: scoreProduct(p, tokens, fullPhrase) }))
     .sort((a, b) => b.score - a.score);
 
-  return { products: scored.map(({ p }) => p), tokens };
+  if (SEARCH_DEBUG) {
+    console.info("[ProductSearch]", {
+      query: rawQuery,
+      tokens,
+      expandedTokens,
+      strategies: unique(strategies),
+      candidates: pool.length,
+      top: scored.slice(0, RESULT_LIMIT).map(({ p, score }) => ({
+        handle: p.handle,
+        title: p.title,
+        score,
+      })),
+    });
+  }
+
+  return { products: scored.map(({ p }) => p), tokens, expandedTokens, strategies };
 }
 
 async function searchByCollection(handle) {
@@ -301,15 +512,29 @@ module.exports = async function handler(req, res) {
 
     let pool = [];
     let tokens = [];
+    let expandedTokens = [];
+    let strategies = [];
     if (query) {
       const result = await searchProducts(query);
       pool = result.products;
       tokens = result.tokens;
+      expandedTokens = result.expandedTokens || [];
+      strategies = result.strategies || [];
     } else {
       pool = await searchByCollection(collection);
     }
 
     if (pool.length === 0) {
+      if (SEARCH_DEBUG) {
+        console.info("[ProductSearch] no results", {
+          query,
+          collection,
+          tokens,
+          expandedTokens,
+          strategies: unique(strategies),
+        });
+      }
+
       return res.status(200).json({
         found: false,
         query: query || null,
@@ -325,11 +550,9 @@ module.exports = async function handler(req, res) {
       found: true,
       query: query || null,
       collection: collection || null,
-      tokens,
       summary: {
         total: shaped.length,
         in_stock: shaped.filter((p) => p.available).length,
-        out_of_stock: shaped.filter((p) => !p.available).length,
       },
       products: shaped,
     });

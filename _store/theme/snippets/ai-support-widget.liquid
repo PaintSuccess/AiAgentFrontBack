@@ -91,6 +91,7 @@
       + '.pa-sw-field label{display:block;font-size:12px;color:#555;margin-bottom:4px;font-weight:500;}'
       + '.pa-sw-field input,.pa-sw-field textarea,.pa-sw-field select{width:100%;padding:9px 12px;border:1px solid #d9d9d9;border-radius:8px;font:inherit;font-size:14px;background:#fff;color:#1a1a1a;}'
       + '.pa-sw-field input:focus,.pa-sw-field textarea:focus,.pa-sw-field select:focus{outline:none;border-color:#E63946;}'
+      + '.pa-sw-field small{display:block;margin-top:5px;font-size:12px;color:#666;line-height:1.35;}'
       + '.pa-sw-field textarea{min-height:64px;resize:vertical;}'
       + '.pa-sw-submit{width:100%;background:#E63946;color:#fff;border:none;border-radius:8px;padding:11px 14px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;margin-top:4px;}'
       + '.pa-sw-submit:hover{background:#cf2f3c;}'
@@ -196,7 +197,7 @@
       +   '<div class="pa-sw-field"><label>First name</label><input name="first_name" type="text" autocomplete="given-name" required></div>'
       +   '<div class="pa-sw-field"><label>Last name</label><input name="last_name" type="text" autocomplete="family-name" required></div>'
       +   '<div class="pa-sw-field"><label>Email</label><input name="email" type="email" autocomplete="email" required></div>'
-      +   '<div class="pa-sw-field"><label>Your phone number</label><input name="phone" type="tel" autocomplete="tel" placeholder="+61 4xx xxx xxx" required></div>'
+      +   '<div class="pa-sw-field"><label>Your phone number (mobile)</label><input name="phone" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="0410 609 617" pattern="04[0-9 ]{8,12}" required><small>Enter Australian mobile number starting with 04</small></div>'
       +   '<div class="pa-sw-field"><label>Message (optional)</label><textarea name="message" rows="2" placeholder="How can we help you?"></textarea></div>'
       +   '<button type="submit" class="pa-sw-submit">Open SMS</button>'
       +   '<div class="pa-sw-status" role="status" aria-live="polite"></div>'
@@ -236,6 +237,27 @@
     // knows who is writing. Cross-platform: iOS uses & separator, Android ?.
     var form = root.querySelector('.pa-sw-form');
     var status = form.querySelector('.pa-sw-status');
+    var phoneInput = form.elements.phone;
+
+    function normaliseAustralianMobile(value) {
+      var digits = String(value || '').replace(/\D/g, '');
+      if (digits.indexOf('6104') === 0) digits = '04' + digits.slice(4);
+      else if (digits.indexOf('614') === 0) digits = '04' + digits.slice(3);
+      else if (digits.indexOf('4') === 0 && digits.length === 9) digits = '0' + digits;
+      return digits;
+    }
+
+    function formatAustralianMobile(value) {
+      var digits = normaliseAustralianMobile(value).slice(0, 10);
+      if (digits.length <= 4) return digits;
+      if (digits.length <= 7) return digits.slice(0, 4) + ' ' + digits.slice(4);
+      return digits.slice(0, 4) + ' ' + digits.slice(4, 7) + ' ' + digits.slice(7);
+    }
+
+    phoneInput.addEventListener('input', function () {
+      phoneInput.value = formatAustralianMobile(phoneInput.value);
+    });
+
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       status.className = 'pa-sw-status';
@@ -244,7 +266,7 @@
       var firstName = form.elements.first_name.value.trim();
       var lastName  = form.elements.last_name.value.trim();
       var email     = form.elements.email.value.trim();
-      var phone     = form.elements.phone.value.trim();
+      var phone     = formatAustralianMobile(form.elements.phone.value);
       var message   = form.elements.message.value.trim();
 
       if (!firstName || !lastName || !email || !phone) {
@@ -252,6 +274,14 @@
         status.textContent = 'Please fill in all required fields.';
         return;
       }
+
+      if (!/^04\d{8}$/.test(normaliseAustralianMobile(phone))) {
+        status.className = 'pa-sw-status error';
+        status.textContent = 'Please enter an Australian mobile number starting with 04.';
+        return;
+      }
+
+      form.elements.phone.value = phone;
 
       var body = 'Hi, I\'m ' + firstName + ' ' + lastName
         + ' (Email: ' + email + ', Phone: ' + phone + ').'
