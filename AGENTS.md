@@ -7,7 +7,7 @@ These instructions adapt the existing GitHub Copilot project workflow for Codex.
 - Frontend: React 18 and Shopify Polaris, served as an embedded Shopify app.
 - Backend: Vercel serverless functions under `api/`.
 - AI agent: ElevenLabs Conversational AI, currently `agent_1001kn99pk1xefprh4gb665f6j3p`.
-- Production backend: `https://ai-agent-front-back-eta.vercel.app`.
+- Production backend: `https://ai-agent-front-back.vercel.app`.
 - Shopify store: `zgmzge-0d.myshopify.com` for `paintaccess.com.au`.
 
 ## Working Rules

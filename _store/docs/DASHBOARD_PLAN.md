@@ -129,5 +129,5 @@ Shopify Admin loads it inside an iframe — it looks native to Shopify admin.
 |---|---|
 | ElevenLabs Agent ID | `agent_1001kn99pk1xefprh4gb665f6j3p` |
 | Shopify Store | `zgmzge-0d.myshopify.com` |
-| Vercel Backend | `ai-agent-front-back-eta.vercel.app` |
+| Vercel Backend | `ai-agent-front-back.vercel.app` |
 | GitHub Repo | `https://github.com/PaintSuccess/AiAgentFrontBack` |

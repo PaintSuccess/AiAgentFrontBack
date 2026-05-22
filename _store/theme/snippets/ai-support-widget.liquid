@@ -25,6 +25,7 @@
       email:          'trade@paintaccess.com.au',
       whatsapp:       '61480846611',
       callbackApi:    'https://ai-agent-front-back.vercel.app/api/callback',
+      smsApi:         'https://ai-agent-front-back.vercel.app/api/twilio/sms-send',
       elevenAgentId:  'agent_1001kn99pk1xefprh4gb665f6j3p',
       customerName:   "{% if customer %}{{ customer.first_name | escape }}{% endif %}",
       customerEmail:  customerEmail,
@@ -32,16 +33,16 @@
     };
 
     // ---- Styles -----------------------------------------------------------
-    // Ring sizes: button is 56px; ring SVG is 64px (4px padding all around).
-    // r=30, circumference = 2*pi*30 ≈ 188.5 → use 190 for stroke-dasharray.
+    // Ring sizes: button is 56px; ring SVG is 76px and centered with -10px
+    // offsets. Inner/outer radii keep the two arcs on separate tracks.
     var css = ''
       + '.pa-sw-root{position:fixed;right:20px;bottom:100px;z-index:2147483600;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}'
       + '.pa-sw-root *{box-sizing:border-box;}'
       // Launcher (closed state)
-      + '.pa-sw-launcher{width:60px;height:60px;border-radius:50%;background:#E63946;color:#fff;border:none;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;position:relative;transition:transform .2s ease;}'
-      + '.pa-sw-launcher:hover{transform:scale(1.06);}'
+      + '.pa-sw-launcher{width:60px;height:60px;border-radius:50%;background:#FF6128;color:#fff;border:none;cursor:pointer;box-shadow:0 8px 22px rgba(0,0,0,0.24);display:flex;align-items:center;justify-content:center;position:relative;transition:transform .2s ease,box-shadow .2s ease;}'
+      + '.pa-sw-launcher:hover{transform:scale(1.05);box-shadow:0 10px 26px rgba(0,0,0,0.28);}'
       + '.pa-sw-launcher svg{width:30px;height:30px;}'
-      + '.pa-sw-launcher::before,.pa-sw-launcher::after{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid #E63946;animation:pa-sw-pulse 2.4s infinite;pointer-events:none;}'
+      + '.pa-sw-launcher::before,.pa-sw-launcher::after{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid #FF6128;animation:pa-sw-pulse 2.4s infinite;pointer-events:none;}'
       + '.pa-sw-launcher::after{animation-delay:1.2s;}'
       + '@keyframes pa-sw-pulse{0%{transform:scale(1);opacity:.7;}80%,100%{transform:scale(1.7);opacity:0;}}'
       + '.pa-sw-root[data-open="1"] .pa-sw-launcher{display:none;}'
@@ -52,53 +53,63 @@
       // Row wraps button + ring + tooltip
       + '.pa-sw-row{position:relative;width:56px;height:56px;display:flex;align-items:center;justify-content:center;}'
       // Action buttons
-      + '.pa-sw-action{width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 4px 14px rgba(0,0,0,0.22);text-decoration:none;position:relative;z-index:1;}'
+      + '.pa-sw-action{width:56px;height:56px;border-radius:50%;border:2px solid transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 6px 16px rgba(0,0,0,0.2);text-decoration:none;position:relative;z-index:1;transition:transform .2s ease,box-shadow .2s ease,background-color .2s ease,color .2s ease;}'
+      + '.pa-sw-row:hover .pa-sw-action{transform:translateY(-1px);box-shadow:0 9px 22px rgba(0,0,0,0.25);}'
       + '.pa-sw-action svg{width:24px;height:24px;}'
-      + '.pa-sw-action.ai{background:linear-gradient(135deg,#6E48F5,#2A6BFF);}'
-      + '.pa-sw-action.call{background:#46AB54;}'
-      + '.pa-sw-action.email{background:#2C7BE5;}'
-      + '.pa-sw-action.sms{background:#E63946;}'
-      + '.pa-sw-action.whatsapp{background:#25D366;}'
-      + '.pa-sw-action.close{background:#FFFFFF;color:#666;box-shadow:0 4px 14px rgba(0,0,0,0.18);}'
+      + '.pa-sw-action.ai{background:#FF6128;}'
+      + '.pa-sw-action.call{background:#3A2A2F;}'
+      + '.pa-sw-action.email{background:#30343B;}'
+      + '.pa-sw-action.sms{background:#FFFFFF;color:#FF6128;border-color:#FF6128;}'
+      + '.pa-sw-action.whatsapp{background:#1F8E4D;}'
+      + '.pa-sw-action.close{background:#FFFFFF;color:#3A2A2F;border-color:rgba(221,214,208,.8);box-shadow:0 5px 14px rgba(0,0,0,0.16);}'
       + '.pa-sw-action.close svg{width:20px;height:20px;}'
       // Temporary: hide WhatsApp and email options while these channels are being tested.
       + '.pa-sw-row.whatsapp,.pa-sw-row.email{display:none!important;}'
-      // Hover ring — SVG circle that draws around the button
-      + '.pa-sw-ring{position:absolute;top:-5px;left:-5px;width:66px;height:66px;pointer-events:none;overflow:visible;transform:rotate(-90deg);z-index:0;}'
-      + '.pa-sw-ring circle{fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-dasharray:190;stroke-dashoffset:190;transition:stroke-dashoffset .9s cubic-bezier(.65,.05,.36,1);}'
-      + '.pa-sw-row:hover .pa-sw-ring circle{stroke-dashoffset:0;}'
-      + '.pa-sw-row.ai{color:#6E48F5;}'
-      + '.pa-sw-row.call{color:#46AB54;}'
-      + '.pa-sw-row.email{color:#2C7BE5;}'
-      + '.pa-sw-row.sms{color:#E63946;}'
-      + '.pa-sw-row.whatsapp{color:#25D366;}'
-      + '.pa-sw-row.close{color:#FFFFFF;}'
+      // Hover ring — two incomplete arcs spin in opposite directions.
+      + '.pa-sw-ring{position:absolute;top:-10px;left:-10px;width:76px;height:76px;pointer-events:none;overflow:visible;z-index:0;}'
+      + '.pa-sw-ring circle{fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;opacity:0;transform-box:view-box;transform-origin:center;transition:opacity .18s ease;}'
+      + '.pa-sw-ring .pa-sw-ring-a{stroke-dasharray:86 109;}'
+      + '.pa-sw-ring .pa-sw-ring-b{stroke-dasharray:98 122;}'
+      + '.pa-sw-ring .pa-sw-ring-a{transform:rotate(-80deg);}'
+      + '.pa-sw-ring .pa-sw-ring-b{stroke-width:2;stroke-dashoffset:95;transform:rotate(100deg);opacity:0;}'
+      + '.pa-sw-row:hover .pa-sw-ring circle{opacity:1;}'
+      + '.pa-sw-row:hover .pa-sw-ring-a{animation:pa-sw-spin-cw 1.15s linear infinite;}'
+      + '.pa-sw-row:hover .pa-sw-ring-b{animation:pa-sw-spin-ccw 1.4s linear infinite;}'
+      + '@keyframes pa-sw-spin-cw{to{transform:rotate(280deg);}}'
+      + '@keyframes pa-sw-spin-ccw{to{transform:rotate(-260deg);}}'
+      + '.pa-sw-row.ai{color:#FF6128;}'
+      + '.pa-sw-row.call{color:#3A2A2F;}'
+      + '.pa-sw-row.email{color:#30343B;}'
+      + '.pa-sw-row.sms{color:#FF6128;}'
+      + '.pa-sw-row.whatsapp{color:#1F8E4D;}'
+      + '.pa-sw-row.close{color:rgba(221,214,208,.95);}'
       // Tooltip
-      + '.pa-sw-tooltip{position:absolute;right:78px;top:50%;transform:translateY(-50%);background:#1a1a1a;color:#fff;font-size:13px;padding:7px 11px;border-radius:8px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;box-shadow:0 4px 14px rgba(0,0,0,0.18);}'
-      + '.pa-sw-tooltip::after{content:"";position:absolute;left:100%;top:50%;transform:translateY(-50%);border:6px solid transparent;border-left-color:#1a1a1a;}'
+      + '.pa-sw-tooltip{position:absolute;right:82px;top:50%;transform:translateY(-50%);background:#3A2A2F;color:#fff;font-size:13px;padding:7px 11px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;box-shadow:0 4px 14px rgba(0,0,0,0.18);}'
+      + '.pa-sw-tooltip::after{content:"";position:absolute;left:100%;top:50%;transform:translateY(-50%);border:6px solid transparent;border-left-color:#3A2A2F;}'
       + '.pa-sw-row:hover .pa-sw-tooltip{opacity:1;}'
       // Callback form
-      + '.pa-sw-form{display:none;position:absolute;right:0;bottom:0;width:320px;max-width:calc(100vw - 32px);background:#fff;border-radius:14px;box-shadow:0 12px 36px rgba(0,0,0,0.22);padding:20px;}'
+      + '.pa-sw-form{display:none;position:absolute;right:0;bottom:0;width:344px;max-width:calc(100vw - 32px);background:#fff;border:1px solid rgba(25,25,25,.1);border-radius:8px;box-shadow:0 16px 44px rgba(0,0,0,0.24);padding:22px 20px 20px;}'
+      + '.pa-sw-form::before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:#FF6128;border-radius:8px 8px 0 0;}'
       + '.pa-sw-root[data-form="1"] .pa-sw-panel{display:none;}'
       + '.pa-sw-root[data-form="1"] .pa-sw-form{display:block;}'
-      + '.pa-sw-form-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;}'
-      + '.pa-sw-form-head h3{margin:0;font-size:17px;color:#1a1a1a;font-weight:600;}'
-      + '.pa-sw-form-head p{margin:4px 0 0;font-size:13px;color:#666;}'
-      + '.pa-sw-form-close{background:none;border:none;cursor:pointer;color:#888;padding:6px;line-height:0;border-radius:6px;flex-shrink:0;}'
-      + '.pa-sw-form-close:hover{background:#f3f3f3;color:#222;}'
+      + '.pa-sw-form-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px;padding-bottom:13px;border-bottom:1px solid #EFEFEF;}'
+      + '.pa-sw-form-head h3{margin:0;font-size:18px;line-height:1.2;color:#3A2A2F;font-weight:700;}'
+      + '.pa-sw-form-head p{margin:6px 0 0;font-size:13px;color:#575757;line-height:1.35;}'
+      + '.pa-sw-form-close{background:#F7F7F7;border:1px solid #E7E7E7;cursor:pointer;color:#555;padding:7px;line-height:0;border-radius:50%;flex-shrink:0;transition:background .16s ease,color .16s ease,border-color .16s ease;}'
+      + '.pa-sw-form-close:hover{background:#3A2A2F;border-color:#3A2A2F;color:#fff;}'
       + '.pa-sw-form-close svg{width:18px;height:18px;}'
-      + '.pa-sw-field{display:block;margin-bottom:10px;}'
-      + '.pa-sw-field label{display:block;font-size:12px;color:#555;margin-bottom:4px;font-weight:500;}'
-      + '.pa-sw-field input,.pa-sw-field textarea,.pa-sw-field select{width:100%;padding:9px 12px;border:1px solid #d9d9d9;border-radius:8px;font:inherit;font-size:14px;background:#fff;color:#1a1a1a;}'
-      + '.pa-sw-field input:focus,.pa-sw-field textarea:focus,.pa-sw-field select:focus{outline:none;border-color:#E63946;}'
-      + '.pa-sw-field small{display:block;margin-top:5px;font-size:12px;color:#666;line-height:1.35;}'
-      + '.pa-sw-field textarea{min-height:64px;resize:vertical;}'
-      + '.pa-sw-submit{width:100%;background:#E63946;color:#fff;border:none;border-radius:8px;padding:11px 14px;font:inherit;font-size:15px;font-weight:600;cursor:pointer;margin-top:4px;}'
-      + '.pa-sw-submit:hover{background:#cf2f3c;}'
+      + '.pa-sw-field{display:block;margin-bottom:11px;}'
+      + '.pa-sw-field label{display:block;font-size:12px;color:#2F2F2F;margin-bottom:5px;font-weight:700;}'
+      + '.pa-sw-field input,.pa-sw-field textarea,.pa-sw-field select{width:100%;min-height:42px;padding:10px 12px;border:1px solid #D7D7D7;border-radius:6px;font:inherit;font-size:14px;background:#FBFBFB;color:#191919;box-shadow:inset 0 1px 0 rgba(255,255,255,.65);transition:border-color .16s ease,box-shadow .16s ease,background .16s ease;}'
+      + '.pa-sw-field input:focus,.pa-sw-field textarea:focus,.pa-sw-field select:focus{outline:none;background:#fff;border-color:#FF6128;box-shadow:0 0 0 3px rgba(255,97,40,.16);}'
+      + '.pa-sw-field small{display:block;margin-top:5px;font-size:12px;color:#6A6A6A;line-height:1.35;}'
+      + '.pa-sw-field textarea{min-height:70px;resize:vertical;}'
+      + '.pa-sw-submit{width:100%;background:#FF6128;color:#fff;border:none;border-radius:6px;padding:12px 14px;font:inherit;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;box-shadow:0 8px 18px rgba(255,97,40,.26);transition:background .18s ease,transform .18s ease,box-shadow .18s ease;}'
+      + '.pa-sw-submit:hover{background:#E8501E;transform:translateY(-1px);box-shadow:0 10px 22px rgba(255,97,40,.3);}'
       + '.pa-sw-submit:disabled{opacity:.6;cursor:not-allowed;}'
-      + '.pa-sw-status{font-size:13px;margin-top:10px;padding:8px 10px;border-radius:6px;display:none;}'
-      + '.pa-sw-status.error{display:block;background:#fdecea;color:#a4181f;}'
-      + '.pa-sw-status.success{display:block;background:#e6f7ec;color:#1d6b3a;}'
+      + '.pa-sw-status{font-size:13px;margin-top:10px;padding:9px 10px;border-radius:6px;display:none;line-height:1.35;}'
+      + '.pa-sw-status.error{display:block;background:#FFF4E8;color:#8A3A12;border:1px solid #FFD2A9;}'
+      + '.pa-sw-status.success{display:block;background:#EDF8F0;color:#1D6B3A;border:1px solid #CDEDD7;}'
       + '.pa-sw-eleven-close{position:fixed;width:36px;height:36px;border-radius:50%;border:2px solid #e0e0e0;background:#fff;color:#444;box-shadow:0 2px 8px rgba(0,0,0,0.18);cursor:pointer;z-index:2147483700;display:none;align-items:center;justify-content:center;}'
       + '.pa-sw-eleven-close svg{width:16px;height:16px;}'
       + '.pa-sw-eleven-close:hover{background:#f3f3f3;}'
@@ -115,10 +126,10 @@
       + '.pa-sw-results-close svg{width:16px;height:16px;}'
       + '.pa-sw-results-intro{margin:0 0 10px;font-size:13px;color:#444;line-height:1.45;}'
       + '.pa-sw-card{display:block;border:1px solid #ececec;border-radius:10px;padding:10px 12px;margin-bottom:8px;text-decoration:none;color:#1a1a1a;transition:border-color .15s,background .15s;}'
-      + '.pa-sw-card:hover{border-color:#E63946;background:#fafafa;}'
+      + '.pa-sw-card:hover{border-color:#FF6128;background:#fafafa;}'
       + '.pa-sw-card-name{font-size:14px;font-weight:600;color:#1a1a1a;margin:0 0 3px;line-height:1.3;}'
       + '.pa-sw-card-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:#666;margin:0;}'
-      + '.pa-sw-card-price{color:#E63946;font-weight:600;}'
+      + '.pa-sw-card-price{color:#FF6128;font-weight:600;}'
       + '.pa-sw-badge{display:inline-block;font-size:11px;font-weight:600;border-radius:4px;padding:1px 6px;line-height:1.6;}'
       + '.pa-sw-badge--green{background:#d4edda;color:#1a6130;}'
       + '.pa-sw-badge--amber{background:#fff3cd;color:#7a5700;}'
@@ -139,13 +150,14 @@
       +   '.pa-sw-eleven-close svg{width:18px;height:18px;}'
       + '}'
       + '@media(max-width:480px){'
+      +   '.pa-sw-root{right:12px;}'
       +   '.pa-sw-form{width:calc(100vw - 32px);max-height:calc(100dvh - 160px);overflow-y:auto;padding:18px;}'
       +   '.pa-sw-form-head h3{font-size:16px;}'
       +   '.pa-sw-launcher{width:56px;height:56px;}'
       +   '.pa-sw-launcher svg{width:28px;height:28px;}'
       +   '.pa-sw-action,.pa-sw-row{width:52px;height:52px;}'
       +   '.pa-sw-action svg{width:22px;height:22px;}'
-      +   '.pa-sw-ring{top:-5px;left:-5px;width:62px;height:62px;}'
+      +   '.pa-sw-ring{top:-10px;left:-10px;width:72px;height:72px;}'
       + '}';
 
     var style = document.createElement('style');
@@ -173,7 +185,7 @@
     };
 
     // SVG ring snippet reused for each row
-    var RING = '<svg class="pa-sw-ring" viewBox="0 0 66 66"><circle cx="33" cy="33" r="30"/></svg>';
+    var RING = '<svg class="pa-sw-ring" viewBox="0 0 76 76"><circle class="pa-sw-ring-a" cx="38" cy="38" r="31"/><circle class="pa-sw-ring-b" cx="38" cy="38" r="35"/></svg>';
 
     function row(cls, btnHtml, tooltip) {
       return '<div class="pa-sw-row ' + cls + '">' + RING + btnHtml + '<span class="pa-sw-tooltip">' + tooltip + '</span></div>';
@@ -193,13 +205,13 @@
       +   row('close',    '<button class="pa-sw-action close" data-action="close" type="button" aria-label="Close">' + ICON.close + '</button>',                                                               'Close')
       + '</div>'
       + '<form class="pa-sw-form" novalidate>'
-      +   '<div class="pa-sw-form-head"><div><h3>Send us an SMS</h3><p>Fill in your details — we\'ll open your SMS app with a message ready to send.</p></div><button type="button" class="pa-sw-form-close" data-action="form-close" aria-label="Close form">' + ICON.close + '</button></div>'
+      +   '<div class="pa-sw-form-head"><div><h3>Send us an SMS</h3><p>Fill in your details and we\'ll text you from our Paint Access SMS number.</p></div><button type="button" class="pa-sw-form-close" data-action="form-close" aria-label="Close form">' + ICON.close + '</button></div>'
       +   '<div class="pa-sw-field"><label>First name</label><input name="first_name" type="text" autocomplete="given-name" required></div>'
       +   '<div class="pa-sw-field"><label>Last name</label><input name="last_name" type="text" autocomplete="family-name" required></div>'
       +   '<div class="pa-sw-field"><label>Email</label><input name="email" type="email" autocomplete="email" required></div>'
       +   '<div class="pa-sw-field"><label>Your phone number (mobile)</label><input name="phone" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="0410 609 617" pattern="04[0-9 ]{8,12}" required><small>Enter Australian mobile number starting with 04</small></div>'
       +   '<div class="pa-sw-field"><label>Message (optional)</label><textarea name="message" rows="2" placeholder="How can we help you?"></textarea></div>'
-      +   '<button type="submit" class="pa-sw-submit">Open SMS</button>'
+      +   '<button type="submit" class="pa-sw-submit">Send SMS</button>'
       +   '<div class="pa-sw-status" role="status" aria-live="polite"></div>'
       + '</form>';
     document.body.appendChild(root);
@@ -232,12 +244,12 @@
     });
 
     // ---- SMS form submit ------------------------------------------------
-    // On submit: build a pre-filled sms: URI and open the native SMS app.
-    // The user's own details are embedded in the message body so the team
-    // knows who is writing. Cross-platform: iOS uses & separator, Android ?.
+    // Sends through the backend so desktop users receive an SMS from the
+    // Paint Access Twilio number instead of relying on a local SMS app.
     var form = root.querySelector('.pa-sw-form');
     var status = form.querySelector('.pa-sw-status');
     var phoneInput = form.elements.phone;
+    var submitBtn = form.querySelector('.pa-sw-submit');
 
     function normaliseAustralianMobile(value) {
       var digits = String(value || '').replace(/\D/g, '');
@@ -283,23 +295,42 @@
 
       form.elements.phone.value = phone;
 
-      var body = 'Hi, I\'m ' + firstName + ' ' + lastName
-        + ' (Email: ' + email + ', Phone: ' + phone + ').'
-        + (message ? ' ' + message : '');
-
-      // iOS requires & separator; Android/others use ?
-      var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-      var sep = isIOS ? '&' : '?';
-      var smsUrl = 'sms:' + CFG.phone + sep + 'body=' + encodeURIComponent(body);
-
-      var a = document.createElement('a');
-      a.href = smsUrl;
-      a.click();
-
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Sending...';
       status.className = 'pa-sw-status success';
-      status.textContent = 'Opening your SMS app…';
-      form.reset();
-      setTimeout(closeAll, 3000);
+      status.textContent = 'Sending SMS...';
+
+      fetch(CFG.smsApi, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          first_name: firstName,
+          last_name: lastName,
+          email: email,
+          phone: normaliseAustralianMobile(phone),
+          message: message
+        })
+      })
+        .then(function (res) {
+          return res.json().catch(function () { return {}; }).then(function (data) {
+            if (!res.ok) throw new Error(data.error || 'SMS send failed.');
+            return data;
+          });
+        })
+        .then(function (data) {
+          status.className = 'pa-sw-status success';
+          status.textContent = data.message || 'Thanks! We sent an SMS to your mobile number.';
+          form.reset();
+          setTimeout(closeAll, 3000);
+        })
+        .catch(function (err) {
+          status.className = 'pa-sw-status error';
+          status.textContent = err.message || 'We could not send the SMS. Please try again.';
+        })
+        .finally(function () {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Send SMS';
+        });
     });
 
     // ---- AI widget (ElevenLabs Convai) -----------------------------------

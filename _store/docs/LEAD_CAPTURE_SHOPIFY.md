@@ -158,7 +158,7 @@ After the draft order is created (existing step 1), add step 1b:
 try {
   const BACKEND = process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
-    : 'https://ai-agent-front-back-eta.vercel.app';
+    : 'https://ai-agent-front-back.vercel.app';
   await fetch(`${BACKEND}/api/shopify/customer`, {
     method: 'POST',
     headers: {

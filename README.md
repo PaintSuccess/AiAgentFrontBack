@@ -10,6 +10,7 @@ Vercel serverless backend for the Paint Access AI support system. Acts as middle
 | `/api/shopify/products` | POST | Product search by name/brand/type |
 | `/api/shopify/inventory` | POST | Stock availability check |
 | `/api/email/send` | POST | Email request via Shopify Draft Order |
+| `/api/twilio/sms-send` | POST | Send storefront SMS form replies through Twilio |
 | `/api/twilio/sms-inbound` | POST | Incoming SMS webhook (Twilio) |
 | `/api/twilio/whatsapp-inbound` | POST | Incoming WhatsApp webhook (Twilio) |
 
@@ -24,6 +25,9 @@ Set in Vercel Dashboard → Settings → Environment Variables:
 | `ELEVENLABS_API_KEY` | ElevenLabs API key |
 | `ELEVENLABS_AGENT_ID` | ElevenLabs agent ID |
 | `API_SECRET_TOKEN` | Bearer token for endpoint auth |
+| `TWILIO_ACCOUNT_SID` | Twilio account SID for SMS/call APIs |
+| `TWILIO_AUTH_TOKEN` | Twilio auth token for API auth and webhook verification |
+| `TWILIO_MOBILE_NUMBER` | SMS-capable Twilio sender number in E.164 format |
 
 ## Deploy
 
