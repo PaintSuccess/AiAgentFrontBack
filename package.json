@@ -6,6 +6,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "test:search": "node scripts/test-product-search.js",
+    "test:search:local": "node scripts/test-product-search.js local",
     "deploy": "vercel --prod"
   },
   "dependencies": {

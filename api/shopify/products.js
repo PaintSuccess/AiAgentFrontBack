@@ -143,6 +143,15 @@ function tokenVariants(token) {
   return [...variants];
 }
 
+function singularToken(token) {
+  const value = String(token || "");
+  if (value.length <= 4) return value;
+  if (value.endsWith("ies")) return `${value.slice(0, -3)}y`;
+  if (value.endsWith("es")) return value.slice(0, -2);
+  if (value.endsWith("s")) return value.slice(0, -1);
+  return value;
+}
+
 function variantFields(product) {
   return (product.variants?.edges || []).flatMap((e) => {
     const v = e.node || {};
@@ -165,6 +174,10 @@ function searchableFields(product) {
   ]
     .map((v) => String(v || "").toLowerCase())
     .filter(Boolean);
+}
+
+function compactField(field) {
+  return String(field || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 function tokenizeSearchableText(fields) {
@@ -204,10 +217,20 @@ function editDistance(a, b) {
 
 function fuzzyTokenHit(token, fieldTokens) {
   if (token.length < 4) return false;
-  const maxDistance = token.length >= 7 ? 2 : 1;
+  const maxDistance = token.length >= 8 ? 3 : token.length >= 6 ? 2 : 1;
+  const singular = singularToken(token);
   return fieldTokens.some((fieldToken) => {
-    if (fieldToken.length < 4) return false;
-    return editDistance(token, fieldToken) <= maxDistance;
+    const fieldSingular = singularToken(fieldToken);
+    if (fieldSingular.length < 4) return false;
+    if (singular[0] !== fieldSingular[0]) return false;
+    if (
+      Math.abs(singular.length - fieldSingular.length) <= 2 &&
+      (singular.startsWith(fieldSingular) || fieldSingular.startsWith(singular))
+    ) {
+      return true;
+    }
+    if (singular[singular.length - 1] !== fieldSingular[fieldSingular.length - 1]) return false;
+    return editDistance(singular, fieldSingular) <= maxDistance;
   });
 }
 
@@ -260,6 +283,10 @@ function scoreProduct(product, tokens, fullPhrase) {
     const variantTitleHit = variantsForToken.some((v) => variantTitles.some((t) => t.includes(v)));
     const codeHit = variantsForToken.some((v) => variantCodes.some((s) => s.includes(v)));
     const optionHit = variantsForToken.some((v) => optionValues.some((s) => s.includes(v)));
+    const compactHit = variantsForToken.some((v) => {
+      const compactToken = compactField(v);
+      return compactToken.length >= 4 && allFields.some((field) => compactField(field).includes(compactToken));
+    });
     const fuzzyHit = !titleHit && fuzzyTokenHit(tok, allFieldTokens);
 
     if (titleHit) { score += 12; tokensInTitle += 1; }
@@ -269,8 +296,9 @@ function scoreProduct(product, tokens, fullPhrase) {
     if (variantTitleHit) score += 6;
     if (codeHit) score += 10;
     if (optionHit) score += 4;
+    if (compactHit) score += 3;
     if (fuzzyHit) score += 3;
-    if (titleHit || typeHit || vendorHit || tagHit || variantTitleHit || codeHit || optionHit || fuzzyHit) {
+    if (titleHit || typeHit || vendorHit || tagHit || variantTitleHit || codeHit || optionHit || compactHit || fuzzyHit) {
       tokensInAnyField += 1;
     }
   }
