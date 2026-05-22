@@ -2,7 +2,7 @@
 # Run this BEFORE editing any file in kb-docs/ to ensure you have the latest version.
 #
 # Usage:
-#   cd "C:\Active Projects\AiAgentFrontBack"
+#   cd "C:\Active Projects\Shopify-PaintAccess-Site\app"
 #   .\kb-docs\sync-pull.ps1
 
 $apiKey = $env:ELEVENLABS_API_KEY

@@ -1,22 +1,22 @@
 # KB Docs — ElevenLabs Knowledge Base Local Mirror
 Agent ID: agent_1001kn99pk1xefprh4gb665f6j3p
-Last synced: 2026-05-03 16:05
+Last synced: 2026-05-22 16:27
 
 | File | ElevenLabs Doc ID | usage_mode |
 |------|------------------|------------|
 | Bot Behavior Rules.md | nbb6fb64F7ZBvmro9Nsl | prompt |
 | Product Knowledge & Painting Guides.md | EVajfWCHiLwFnKX5XwR0 | auto |
 | Paint Sprayers Trouble-Shoot.md | aBEgdkiaVTYH16z8XwCn | auto |
-| Product Recommendation Rules.md | p5jWk3wzcnKkKbVHylNc | auto |
+| Product Recommendation Rules.md | p5jWk3wzcnKkKbVHylNc | prompt |
 | Excluded Products & Restrictions.md | iLprP0WEHUQH8rbxIqJG | prompt |
 | Company Information.md | 6McwhoGGBfRItnfrFMqe | prompt |
-| Conversation & Estimation Logic paint calculation.md | 71nlTO6VThpGJ3bZGyQN | auto |
+| Conversation & Estimation Logic paint calculation.md | Ke8gBcBEnppeOdFppI5U | prompt |
 
 ## Sync commands
 
 ### Pull all docs from ElevenLabs (run before editing any file here):
 ```powershell
-cd "C:\Active Projects\AiAgentFrontBack"
+cd "C:\Active Projects\Shopify-PaintAccess-Site\app"
 .\kb-docs\sync-pull.ps1
 ```
 

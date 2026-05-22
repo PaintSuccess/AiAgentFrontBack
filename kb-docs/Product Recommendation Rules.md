@@ -1,4 +1,4 @@
-<!-- ElevenLabs KB Doc | id: p5jWk3wzcnKkKbVHylNc | usage_mode: auto -->
+<!-- ElevenLabs KB Doc | id: p5jWk3wzcnKkKbVHylNc | usage_mode: prompt -->
 # Product Recommendation Rules for PaintAccess AI Agent
 
 ## 1. Main goal

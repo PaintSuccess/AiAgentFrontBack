@@ -176,7 +176,7 @@ const toolDefs = [
       type: "client",
       name: "display_products_in_chat",
       description:
-        "Use this ONLY during voice conversations to send a list of products to the on-screen chat. Call immediately after search_products returns results — never read URLs, SKUs or long product names aloud. After calling, briefly say 'I've put the details on your screen' and continue. Do not call in text/chat mode.",
+        "Use this in the website widget to send a list of products to the on-screen product cards. Call immediately after every successful search_products result whenever this client tool is available. Never read URLs, SKUs or long product names aloud. After calling, briefly say 'I've put the details on your screen' and continue. Do not call in SMS or WhatsApp.",
       expects_response: false,
       parameters: {
         type: "object",

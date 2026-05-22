@@ -304,9 +304,11 @@
     document.body.appendChild(elevenCloseBtn);
 
     // ---- Voice → chat product results overlay ----------------------------
-    // When the agent calls the `display_products_in_chat` client tool we
-    // render the product list here so the customer can see/click without
-    // the agent having to read URLs aloud during a voice call.
+    // Product cards render in two ways:
+    //   1. The agent calls the `display_products_in_chat` client tool.
+    //   2. Safety net: we observe ElevenLabs WebSocket tool-result events and
+    //      render `search_products` results even if the LLM skips the follow-up
+    //      client tool. This avoids model-specific tool chaining flakiness.
     var elevenResults = document.createElement('div');
     elevenResults.className = 'pa-sw-results';
     elevenResults.setAttribute('aria-live', 'polite');
@@ -395,6 +397,115 @@
       positionResults();
     }
 
+    var productAutoDisplayInstalled = false;
+    var lastAutoProductKey = '';
+    function installProductAutoDisplayWatcher() {
+      if (productAutoDisplayInstalled || typeof window.WebSocket !== 'function') return;
+      productAutoDisplayInstalled = true;
+
+      var NativeWebSocket = window.WebSocket;
+
+      function WrappedWebSocket(url, protocols) {
+        var ws = protocols !== undefined
+          ? new NativeWebSocket(url, protocols)
+          : new NativeWebSocket(url);
+
+        try {
+          var urlText = String(url && url.url ? url.url : url);
+          if (/elevenlabs|convai/i.test(urlText)) {
+            ws.addEventListener('message', function (event) {
+              try { autoDisplayProductsFromMessage(event.data); }
+              catch (e) { console.warn('product auto-display failed:', e); }
+            });
+          }
+        } catch (e) {}
+
+        return ws;
+      }
+
+      try {
+        Object.setPrototypeOf(WrappedWebSocket, NativeWebSocket);
+        WrappedWebSocket.prototype = NativeWebSocket.prototype;
+        ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED'].forEach(function (key) {
+          try { WrappedWebSocket[key] = NativeWebSocket[key]; } catch (e) {}
+        });
+        window.WebSocket = WrappedWebSocket;
+      } catch (e) {
+        productAutoDisplayInstalled = false;
+        window.WebSocket = NativeWebSocket;
+      }
+    }
+
+    function parseMaybeJSON(value) {
+      if (typeof value !== 'string') return value;
+      var s = value.trim();
+      if (!s || ('{['.indexOf(s.charAt(0)) === -1)) return value;
+      try { return JSON.parse(s); } catch (e) { return value; }
+    }
+
+    function isProductLike(item) {
+      return !!item && typeof item === 'object' && !!(item.url || item.name || item.title);
+    }
+
+    function normaliseProducts(products) {
+      return products.filter(isProductLike).slice(0, 6).map(function (p) {
+        return {
+          name: p.name || p.title || '',
+          url: p.url || '#',
+          price: p.price || '',
+          note: p.note || p.product_type || p.vendor || '',
+          available: p.available
+        };
+      }).filter(function (p) { return p.name && p.url && p.url !== '#'; });
+    }
+
+    function productKey(products) {
+      return products.map(function (p) { return p.url || p.name; }).join('|');
+    }
+
+    function autoDisplayProductsFromPayload(payload) {
+      var products = normaliseProducts(payload && payload.products || []);
+      if (!products.length) return;
+
+      var key = productKey(products);
+      if (key && key === lastAutoProductKey) return;
+      lastAutoProductKey = key;
+
+      showResults({
+        intro: payload.intro || ('Found ' + products.length + ' product' + (products.length === 1 ? ':' : 's:')),
+        products: products
+      });
+    }
+
+    function scanForProductPayloads(value, depth) {
+      if (depth > 7 || value == null) return;
+      value = parseMaybeJSON(value);
+
+      if (Array.isArray(value)) {
+        value.forEach(function (item) { scanForProductPayloads(item, depth + 1); });
+        return;
+      }
+
+      if (typeof value !== 'object') return;
+
+      if (Array.isArray(value.products)) {
+        autoDisplayProductsFromPayload(value);
+      }
+
+      Object.keys(value).forEach(function (key) {
+        scanForProductPayloads(value[key], depth + 1);
+      });
+    }
+
+    function autoDisplayProductsFromMessage(raw) {
+      var data = parseMaybeJSON(raw);
+      if (!data || typeof data !== 'object') return;
+
+      // `agent_tool_response` payloads are the ideal path, but the recursive
+      // scan also catches provider shape changes and nested JSON strings.
+      scanForProductPayloads(data, 0);
+    }
+
     // ---- Client tools exposed to the ElevenLabs widget --------------------
     // Each tool's name must match the tool definition on the agent
     // (see setup/create-tools.js). The agent dispatches a call, the
@@ -421,6 +532,7 @@
     };
 
     function ensureElevenScript(cb) {
+      installProductAutoDisplayWatcher();
       if (window.customElements && customElements.get && customElements.get('elevenlabs-convai')) {
         return cb();
       }
