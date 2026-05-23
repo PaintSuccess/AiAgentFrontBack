@@ -13,6 +13,8 @@ Vercel serverless backend for the Paint Access AI support system. Acts as middle
 | `/api/twilio/sms-send` | POST | Send storefront SMS form replies through Twilio |
 | `/api/twilio/sms-inbound` | POST | Incoming SMS webhook (Twilio) |
 | `/api/twilio/whatsapp-inbound` | POST | Incoming WhatsApp webhook (Twilio) |
+| `/api/webhooks/elevenlabs-post-call` | POST | ElevenLabs completed conversation transcript webhook |
+| `/api/dashboard/communication` | GET | Unified communication detail for chat, voice, SMS, and WhatsApp |
 
 ## Environment Variables
 
@@ -31,6 +33,17 @@ Set in Vercel Dashboard → Settings → Environment Variables:
 | `TWILIO_SYDNEY_NUMBER` | Voice-capable Sydney/local Twilio number for direct calls |
 | `ELEVENLABS_PHONE_NUMBER_ID_MOBILE` | ElevenLabs imported phone number ID for the mobile number |
 | `ELEVENLABS_PHONE_NUMBER_ID_SYDNEY` | ElevenLabs imported phone number ID for the Sydney/local number |
+| `TRADE_NOTIFICATION_EMAIL` | Trade notification inbox, defaults to `Trade@paintaccess.com.au` |
+| `SENDGRID_API_KEY` | Optional. If present, Trade notifications send through SendGrid |
+| `SENDGRID_FROM_EMAIL` | Optional SendGrid sender address |
+| `SENDGRID_FROM_NAME` | Optional SendGrid sender name |
+| `ELEVENLABS_WEBHOOK_SECRET` | Optional ElevenLabs webhook HMAC secret |
+
+## Communication Logs
+
+The Shopify app dashboard combines ElevenLabs conversations, Twilio SMS/WhatsApp messages, Twilio call records, and Shopify email requests into one timeline. Click any chat, call, SMS, or WhatsApp row to open the normalized record details.
+
+Trade notifications are sent to `TRADE_NOTIFICATION_EMAIL` whenever the AI handles SMS, WhatsApp, the storefront SMS form, or an ElevenLabs completed conversation webhook. With no SendGrid key configured, the app uses the existing Shopify Draft Order invoice email pattern so no new email provider is required.
 
 ## Deploy
 

@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const { corsHeaders, rateLimit, cleanEnv } = require("../../lib/shopify");
 const { askElevenLabsTextAgent } = require("../../lib/elevenlabs-text");
+const { formatFields, notifyTradeEmail } = require("../../lib/trade-email");
 
 function verifyTwilioSignature(req) {
   const authToken = cleanEnv("TWILIO_AUTH_TOKEN");
@@ -67,6 +68,26 @@ module.exports = async function handler(req, res) {
     } catch (err) {
       console.error("ElevenLabs WhatsApp text agent error:", err.message);
     }
+
+    await notifyTradeEmail({
+      subject: `Paint Access AI WhatsApp: ${phoneNumber}`,
+      text: [
+        "A WhatsApp message was handled by the AI assistant.",
+        "",
+        formatFields({
+          Channel: "WhatsApp",
+          From: phoneNumber,
+          Name: profileName,
+          To: req.body.To || "",
+        }),
+        "",
+        "Customer message:",
+        body,
+        "",
+        "AI reply:",
+        replyText,
+      ].join("\n"),
+    });
 
     // Respond with TwiML
     res.setHeader("Content-Type", "text/xml");

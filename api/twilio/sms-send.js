@@ -5,6 +5,7 @@ const {
   cleanEnv,
 } = require("../../lib/shopify");
 const { askElevenLabsTextAgent } = require("../../lib/elevenlabs-text");
+const { formatFields, notifyTradeEmail } = require("../../lib/trade-email");
 
 const TWILIO_ACCOUNT_SID = cleanEnv("TWILIO_ACCOUNT_SID");
 const TWILIO_AUTH_TOKEN = cleanEnv("TWILIO_AUTH_TOKEN");
@@ -168,6 +169,29 @@ module.exports = async function handler(req, res) {
 
     const twilioMessage = await sendTwilioSms({ to, body: smsBody });
     console.log("[SMS Send] Sent:", twilioMessage.sid, "to", to);
+
+    await notifyTradeEmail({
+      subject: `Paint Access AI SMS form: ${customerName}`,
+      text: [
+        "A customer submitted the website SMS form and received an AI SMS reply.",
+        "",
+        formatFields({
+          Channel: "Website SMS form",
+          Name: customerName,
+          Email: email,
+          Phone: to,
+          "Twilio message SID": twilioMessage.sid,
+          Status: twilioMessage.status,
+        }),
+        "",
+        "Customer form message:",
+        message || "(No message provided)",
+        "",
+        "AI SMS sent:",
+        smsBody,
+      ].join("\n"),
+      replyTo: email,
+    });
 
     return res.status(200).json({
       ok: true,

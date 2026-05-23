@@ -24,7 +24,7 @@ export default function ConversationPage({ id, onBack }) {
     async function load() {
       setLoading(true);
       try {
-        const conv = await dashboardFetch(`/api/dashboard/conversation?id=${id}`);
+        const conv = await dashboardFetch(`/api/dashboard/communication?id=${encodeURIComponent(id)}`);
         setData(conv);
       } catch (err) {
         setError(err.message);
@@ -99,6 +99,8 @@ export default function ConversationPage({ id, onBack }) {
                         <Badge tone="success">Success</Badge>
                       ) : data.call_successful === "failure" ? (
                         <Badge tone="critical">Failed</Badge>
+                      ) : data.status ? (
+                        <Badge>{data.status}</Badge>
                       ) : (
                         <Text as="span">—</Text>
                       ),
@@ -110,6 +112,10 @@ export default function ConversationPage({ id, onBack }) {
                   {
                     term: "Email",
                     description: data.customer_email || "—",
+                  },
+                  {
+                    term: "Phone",
+                    description: data.customer_phone || data.metadata?.from || "—",
                   },
                   {
                     term: "Date",
@@ -127,6 +133,22 @@ export default function ConversationPage({ id, onBack }) {
                     term: "Ended",
                     description: data.termination_reason || "—",
                   },
+                  ...(data.metadata
+                    ? [
+                        {
+                          term: "From",
+                          description: data.metadata.from || "—",
+                        },
+                        {
+                          term: "To",
+                          description: data.metadata.to || "—",
+                        },
+                        {
+                          term: "Direction",
+                          description: data.metadata.direction || "—",
+                        },
+                      ]
+                    : []),
                 ]}
               />
             </BlockStack>

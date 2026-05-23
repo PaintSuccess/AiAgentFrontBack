@@ -9,11 +9,9 @@ import {
   Filters,
   ChoiceList,
   TextField,
-  Button,
   Spinner,
   Banner,
   InlineStack,
-  BlockStack,
   Box,
   Pagination,
 } from "@shopify/polaris";
@@ -30,6 +28,8 @@ const TYPE_BADGE = {
 export default function DashboardPage({ onViewConversation }) {
   const [conversations, setConversations] = useState([]);
   const [emails, setEmails] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [calls, setCalls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [cursor, setCursor] = useState(null);
@@ -55,10 +55,16 @@ export default function DashboardPage({ onViewConversation }) {
           params.set("call_successful", successFilter[0]);
         }
 
-        const [convData, emailData] = await Promise.all([
+        const [convData, emailData, messageData, callData] = await Promise.all([
           dashboardFetch(`/api/dashboard/conversations?${params}`),
           !paginationCursor
             ? dashboardFetch("/api/dashboard/emails?limit=50")
+            : Promise.resolve(null),
+          !paginationCursor
+            ? optionalDashboardFetch("/api/dashboard/messages?type=sms&page_size=50")
+            : Promise.resolve(null),
+          !paginationCursor
+            ? optionalDashboardFetch("/api/dashboard/messages?type=calls&page_size=50")
             : Promise.resolve(null),
         ]);
 
@@ -68,6 +74,12 @@ export default function DashboardPage({ onViewConversation }) {
 
         if (emailData) {
           setEmails(emailData.items || []);
+        }
+        if (messageData) {
+          setMessages(messageData.items || []);
+        }
+        if (callData) {
+          setCalls(callData.items || []);
         }
       } catch (err) {
         console.error("Failed to fetch dashboard data:", err);
@@ -84,7 +96,7 @@ export default function DashboardPage({ onViewConversation }) {
   }, [fetchData]);
 
   // Merge conversations + emails into unified timeline
-  const allItems = mergeAndSort(conversations, emails, typeFilter);
+  const allItems = mergeAndSort(conversations, emails, messages, calls, typeFilter);
 
   const handleNextPage = () => {
     if (cursor) {
@@ -181,7 +193,7 @@ export default function DashboardPage({ onViewConversation }) {
         id={item.id}
         key={item.id}
         position={index}
-        onClick={isConversation ? () => onViewConversation(item.id) : undefined}
+        onClick={isConversation ? () => onViewConversation(item.detail_id || item.id) : undefined}
       >
         <IndexTable.Cell>
           <Text variant="bodyMd" as="span">
@@ -287,10 +299,41 @@ export default function DashboardPage({ onViewConversation }) {
   );
 }
 
-function mergeAndSort(conversations, emails, typeFilter) {
+async function optionalDashboardFetch(path) {
+  try {
+    return await dashboardFetch(path);
+  } catch (err) {
+    console.warn(`Optional dashboard feed failed (${path}):`, err);
+    return null;
+  }
+}
+
+function mergeAndSort(conversations, emails, messages, calls, typeFilter) {
   let all = [
     ...conversations.map((c) => ({ ...c, _time: new Date(c.started_at).getTime() })),
     ...emails.map((e) => ({ ...e, _time: new Date(e.started_at).getTime() })),
+    ...messages.map((m) => ({
+      ...m,
+      id: `twilio-message:${m.id}`,
+      detail_id: `twilio-message:${m.id}`,
+      customer_name:
+        m.direction && String(m.direction).startsWith("inbound")
+          ? m.from
+          : m.to,
+      summary: m.body || "—",
+      _time: new Date(m.started_at).getTime(),
+    })),
+    ...calls.map((c) => ({
+      ...c,
+      id: `twilio-call:${c.id}`,
+      detail_id: `twilio-call:${c.id}`,
+      customer_name:
+        c.direction && String(c.direction).startsWith("inbound")
+          ? c.from
+          : c.to,
+      summary: `Phone call ${c.direction || ""} ${c.status || ""}`.trim(),
+      _time: new Date(c.started_at).getTime(),
+    })),
   ];
 
   // Apply client-side type filter
