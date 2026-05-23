@@ -205,7 +205,7 @@ export default function DashboardPage({ onViewConversation }) {
         </IndexTable.Cell>
         <IndexTable.Cell>
           <Text variant="bodyMd" fontWeight="semibold" as="span">
-            {item.customer_name || item.customer_email || item.to || "Unknown"}
+            {item.customer_name || item.customer_email || item.customer_phone || item.to || "Unknown"}
           </Text>
         </IndexTable.Cell>
         <IndexTable.Cell>

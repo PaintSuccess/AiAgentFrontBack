@@ -71,7 +71,7 @@ async function getElevenLabsConversation(convId) {
     agent_name: conv.agent_name,
     status: conv.status,
     source: conv.conversation_initiation_source || "unknown",
-    type: mapSource(conv.conversation_initiation_source),
+    type: mapSource(conv.conversation_initiation_source, dynVars.channel),
     customer_name: (dynVars.customer_name || "").replace(/^,\s*/, "").trim() || null,
     customer_email: dynVars.customer_email || null,
     customer_id: dynVars.customer_id || null,
@@ -190,7 +190,11 @@ async function twilioFetch(path) {
   return response.json();
 }
 
-function mapSource(source) {
+function mapSource(source, channel) {
+  const c = String(channel || "").toLowerCase();
+  if (c.includes("sms")) return "sms";
+  if (c.includes("whatsapp")) return "whatsapp";
+
   if (!source) return "chat";
   const s = source.toLowerCase();
   if (s.includes("phone") || s.includes("twilio")) return "call";

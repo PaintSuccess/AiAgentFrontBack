@@ -73,10 +73,11 @@ module.exports = async function handler(req, res) {
       const dynVars = detail?.conversation_initiation_client_data?.dynamic_variables || {};
       const customerName = (dynVars.customer_name || "").replace(/^,\s*/, "").trim() || null;
       const customerEmail = dynVars.customer_email || null;
+      const customerPhone = dynVars.customer_phone || null;
 
       return {
         id: conv.conversation_id,
-        type: mapSource(conv.conversation_initiation_source),
+        type: mapSource(conv.conversation_initiation_source, dynVars.channel),
         status: conv.status,
         call_successful: conv.call_successful,
         started_at: conv.start_time_unix_secs
@@ -87,6 +88,7 @@ module.exports = async function handler(req, res) {
         source: conv.conversation_initiation_source || "unknown",
         customer_name: customerName,
         customer_email: customerEmail,
+        customer_phone: customerPhone,
         summary: conv.call_summary_title || null,
       };
     });
@@ -102,7 +104,11 @@ module.exports = async function handler(req, res) {
   }
 };
 
-function mapSource(source) {
+function mapSource(source, channel) {
+  const c = String(channel || "").toLowerCase();
+  if (c.includes("sms")) return "sms";
+  if (c.includes("whatsapp")) return "whatsapp";
+
   if (!source) return "chat";
   const s = source.toLowerCase();
   if (s.includes("phone") || s.includes("twilio")) return "call";

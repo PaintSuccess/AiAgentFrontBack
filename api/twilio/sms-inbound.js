@@ -1,7 +1,6 @@
 const crypto = require("crypto");
 const { corsHeaders, rateLimit, cleanEnv } = require("../../lib/shopify");
 const { askElevenLabsTextAgent } = require("../../lib/elevenlabs-text");
-const { formatFields, notifyTradeEmail } = require("../../lib/trade-email");
 
 // Validate Twilio webhook signature to prevent spoofed requests
 function verifyTwilioSignature(req) {
@@ -67,25 +66,6 @@ module.exports = async function handler(req, res) {
     } catch (err) {
       console.error("ElevenLabs SMS text agent error:", err.message);
     }
-
-    await notifyTradeEmail({
-      subject: `Paint Access AI SMS: ${from}`,
-      text: [
-        "A customer SMS was handled by the AI assistant.",
-        "",
-        formatFields({
-          Channel: "SMS",
-          From: from,
-          To: req.body.To || "",
-        }),
-        "",
-        "Customer message:",
-        body,
-        "",
-        "AI reply:",
-        replyText,
-      ].join("\n"),
-    });
 
     // Respond with TwiML
     res.setHeader("Content-Type", "text/xml");

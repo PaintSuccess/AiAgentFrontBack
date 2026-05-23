@@ -43,7 +43,7 @@ Set in Vercel Dashboard → Settings → Environment Variables:
 
 The Shopify app dashboard combines ElevenLabs conversations, Twilio SMS/WhatsApp messages, Twilio call records, and Shopify email requests into one timeline. Click any chat, call, SMS, or WhatsApp row to open the normalized record details.
 
-Trade notifications are sent to `TRADE_NOTIFICATION_EMAIL` whenever the AI handles SMS, WhatsApp, the storefront SMS form, or an ElevenLabs completed conversation webhook. With no SendGrid key configured, the app uses the existing Shopify Draft Order invoice email pattern so no new email provider is required.
+Trade notifications are sent to `TRADE_NOTIFICATION_EMAIL` from the ElevenLabs completed conversation webhook, so the email contains the finished AI session transcript rather than one transport message at a time. Twilio SMS/WhatsApp/call rows remain available in the dashboard as raw delivery/call audit records. With no SendGrid key configured, the app uses the existing Shopify Draft Order invoice email pattern so no new email provider is required.
 
 ## Deploy
 
