@@ -1,0 +1,48 @@
+.communications-table {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.communications-table .Polaris-IndexTable__Table {
+  table-layout: fixed;
+  width: 100%;
+  min-width: 760px;
+}
+
+.communications-table .Polaris-IndexTable__TableHeading,
+.communications-table .Polaris-IndexTable__TableCell {
+  overflow: hidden;
+}
+
+.communications-table .Polaris-IndexTable__TableHeading:nth-child(1),
+.communications-table .Polaris-IndexTable__TableCell:nth-child(1) {
+  width: 150px;
+}
+
+.communications-table .Polaris-IndexTable__TableHeading:nth-child(2),
+.communications-table .Polaris-IndexTable__TableCell:nth-child(2) {
+  width: 72px;
+}
+
+.communications-table .Polaris-IndexTable__TableHeading:nth-child(3),
+.communications-table .Polaris-IndexTable__TableCell:nth-child(3) {
+  width: 160px;
+}
+
+.communications-table .Polaris-IndexTable__TableHeading:nth-child(5),
+.communications-table .Polaris-IndexTable__TableCell:nth-child(5) {
+  width: 96px;
+}
+
+.communications-table .Polaris-IndexTable__TableHeading:nth-child(6),
+.communications-table .Polaris-IndexTable__TableCell:nth-child(6) {
+  width: 88px;
+}
+
+.communications-summary {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

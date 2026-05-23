@@ -209,9 +209,11 @@ export default function DashboardPage({ onViewConversation }) {
           </Text>
         </IndexTable.Cell>
         <IndexTable.Cell>
-          <Text variant="bodyMd" as="span" truncate>
-            {item.summary || item.subject || "—"}
-          </Text>
+          <span className="communications-summary">
+            <Text variant="bodyMd" as="span">
+              {item.summary || item.subject || "—"}
+            </Text>
+          </span>
         </IndexTable.Cell>
         <IndexTable.Cell>
           {item.call_successful === "success" ? (
@@ -245,54 +247,56 @@ export default function DashboardPage({ onViewConversation }) {
             </Box>
           )}
 
-          <Card padding="0">
-            <IndexTable
-              resourceName={resourceName}
-              itemCount={allItems.length}
-              headings={[
-                { title: "Date" },
-                { title: "Channel" },
-                { title: "Customer" },
-                { title: "Summary" },
-                { title: "Result" },
-                { title: "Duration" },
-              ]}
-              selectable={false}
-              loading={loading}
-              filterControl={
-                <Filters
-                  queryValue={search}
-                  queryPlaceholder="Search conversations..."
-                  onQueryChange={handleSearchChange}
-                  onQueryClear={handleSearchClear}
-                  onClearAll={handleFiltersClearAll}
-                  filters={filters}
-                  appliedFilters={appliedFilters}
-                />
-              }
-            >
-              {rowMarkup}
-            </IndexTable>
+          <div className="communications-table">
+            <Card padding="0">
+              <IndexTable
+                resourceName={resourceName}
+                itemCount={allItems.length}
+                headings={[
+                  { title: "Date" },
+                  { title: "Channel" },
+                  { title: "Customer" },
+                  { title: "Summary" },
+                  { title: "Result" },
+                  { title: "Duration" },
+                ]}
+                selectable={false}
+                loading={loading}
+                filterControl={
+                  <Filters
+                    queryValue={search}
+                    queryPlaceholder="Search conversations..."
+                    onQueryChange={handleSearchChange}
+                    onQueryClear={handleSearchClear}
+                    onClearAll={handleFiltersClearAll}
+                    filters={filters}
+                    appliedFilters={appliedFilters}
+                  />
+                }
+              >
+                {rowMarkup}
+              </IndexTable>
 
-            {!loading && allItems.length === 0 && (
+              {!loading && allItems.length === 0 && (
+                <Box padding="400">
+                  <Text as="p" alignment="center" tone="subdued">
+                    No communications found
+                  </Text>
+                </Box>
+              )}
+
               <Box padding="400">
-                <Text as="p" alignment="center" tone="subdued">
-                  No communications found
-                </Text>
+                <InlineStack align="center">
+                  <Pagination
+                    hasPrevious={cursorHistory.length > 0}
+                    onPrevious={handlePrevPage}
+                    hasNext={hasMore}
+                    onNext={handleNextPage}
+                  />
+                </InlineStack>
               </Box>
-            )}
-
-            <Box padding="400">
-              <InlineStack align="center">
-                <Pagination
-                  hasPrevious={cursorHistory.length > 0}
-                  onPrevious={handlePrevPage}
-                  hasNext={hasMore}
-                  onNext={handleNextPage}
-                />
-              </InlineStack>
-            </Box>
-          </Card>
+            </Card>
+          </div>
         </Layout.Section>
       </Layout>
     </Page>
