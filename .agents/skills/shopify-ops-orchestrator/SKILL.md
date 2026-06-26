@@ -11,6 +11,23 @@ Use this skill as the router for PaintAccess Shopify operations.
 
 Do not perform risky Shopify changes until the target resource is identified with high confidence. Prefer a safe lookup step before any mutation.
 
+## Shopify MCP rule
+
+Use the workspace app `PaintAccess Shopify Operations` as the default Shopify operations surface. It is backed by the repo endpoint `api/mcp/shopify.js` and exposes narrow tools for order lookup, readiness checks, notes, tags, ops metafields, fulfilment preparation, and cancellation preparation.
+
+Do not rely on the generic Shopify ChatGPT app for these pipelines; it is too limited for PaintAccess operational writes. Do not ask Daniel to connect Shopify credentials in Gmail/Drive or any Google app. Gmail and Google Drive remain Daniel-owned ChatGPT Apps and are used only when Daniel has connected them in his own ChatGPT account.
+
+Use these MCP tools by intent:
+
+- `shopify_search_orders` for recent/partial order discovery.
+- `shopify_get_order` for exact order inspection by order number, name, or GID.
+- `shopify_get_fulfillment_readiness` before tracking or fulfilment preparation.
+- `shopify_add_order_note` for operational notes and audit trail entries.
+- `shopify_add_order_tag` / `shopify_remove_order_tag` for controlled workflow markers.
+- `shopify_set_ops_metafield` for controlled `paintaccess_ops` state.
+- `shopify_prepare_fulfillment` to prepare fulfilment data only; Daniel must approve final fulfilment.
+- `shopify_prepare_cancellation` to prepare cancellation/refund review only; Daniel must approve final cancellation/refund.
+
 ## Routing
 
 Use this sequence:
@@ -27,7 +44,8 @@ Use this sequence:
    - supplier tracking and fulfilment preparation;
    - Shopify order note/status recording;
    - Operations Desk notification;
-   - GraphQL mutation;
+   - Shopify MCP tool call;
+   - GraphQL mutation only if the MCP does not expose the needed safe action;
    - post-operation skill improvement.
 2. Select the narrowest matching skill.
 3. Chain skills in a safe order.
@@ -88,13 +106,14 @@ Use this sequence:
 
 1. `shopify-order-lookup-safe`
 2. `shopify-order-note-recorder`
-3. `shopify-graphql-safe-mutation` if no dedicated order note tool exists
+3. `shopify-graphql-safe-mutation` only if `shopify_add_order_note` is unavailable or insufficient
 4. `shopify-flow-skill-evolver`
 
 ### Any Shopify write without a dedicated tool
 
 1. `shopify-order-lookup-safe` or equivalent resource lookup
-2. `shopify-graphql-safe-mutation`
+2. Prefer the narrow `PaintAccess Shopify Operations` MCP tool
+3. Use `shopify-graphql-safe-mutation` only after confirming no MCP tool covers the requested action
 3. `shopify-flow-skill-evolver`
 
 ## Safety constraints
@@ -105,6 +124,7 @@ Use this sequence:
 - For refunds/cancellations, prefer adding an internal reminder and giving manual Admin steps unless an approved tool safely supports the action.
 - Do not invent supplier mappings. Use existing mappings or ask for confirmation.
 - Do not claim a Gmail draft or Shopify note was created unless the relevant connector/tool confirms it.
+- Do not claim the generic Shopify app can complete admin-panel tasks. If a needed Shopify Admin action is not represented by the MCP, prepare a manual admin checklist or propose a backend/MCP extension.
 
 See `references/flow-routing.md`.
 See `references/operations-desk-lifecycle.md` for the full end-to-end product flow.

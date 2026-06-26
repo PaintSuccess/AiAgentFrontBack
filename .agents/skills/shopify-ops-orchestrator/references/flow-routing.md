@@ -10,7 +10,7 @@
 - "notify Daniel", "send notification", "ready for review", "approval required" -> Operations Desk notification flow.
 - "out of stock", "back in stock", "delay", "customer update" -> stock-delay customer workflow.
 - "create Gmail draft", "draft email", "send supplier email" -> Gmail draft flow, with send confirmation before sending.
-- "add note", "write inside order", "remark" -> order note flow, usually via safe GraphQL mutation if no direct tool exists.
+- "add note", "write inside order", "remark" -> order note flow, using `shopify_add_order_note` from the PaintAccess Shopify Operations MCP.
 - "PO sent", "already emailed", "copy of email", "record this in Shopify" -> order note/status recorder.
 - "reply to customer", "write email" -> customer email draft flow.
 
@@ -35,18 +35,30 @@ User provides an order number or asks to check recent orders.
 3. Determine suppliers from vendor, title, SKU, tags, product type, or confirmed mapping table.
 4. Split one order into multiple supplier-specific PO drafts when needed.
 5. Prepare supplier email drafts.
-6. Record the draft/sent status in Shopify notes, tags, or metafields when requested.
+6. Record the draft/sent status in Shopify notes, tags, or metafields through the PaintAccess Shopify Operations MCP when requested.
 
 ### Stock-delay customer email and note
 
 1. Identify the order.
 2. Draft a customer delay email with apology, item/out-of-stock reason, expected restock timing, no-action-needed line, and confirmation request.
 3. Create a Gmail draft if Gmail is available and requested.
-4. Add a Shopify order note with date, action taken, reason, expected timing, current status, and copy of the customer email.
+4. Add a Shopify order note with date, action taken, reason, expected timing, current status, and copy of the customer email using `shopify_add_order_note`.
 
 ### Fully automated external workflow
 
 For background automation, route to external systems: Shopify Flow, Make/Zapier, or custom middleware. A normal chat can run the flow on demand, but cannot continuously monitor Shopify by itself.
+
+## Shopify MCP routing
+
+Use the workspace app `PaintAccess Shopify Operations` for Shopify work:
+
+- lookup/search: `shopify_search_orders`, `shopify_get_order`;
+- fulfilment checks: `shopify_get_fulfillment_readiness`;
+- audit notes: `shopify_add_order_note`;
+- workflow markers: `shopify_add_order_tag`, `shopify_remove_order_tag`, `shopify_set_ops_metafield`;
+- prepared final actions: `shopify_prepare_fulfillment`, `shopify_prepare_cancellation`.
+
+Use `shopify-graphql-safe-mutation` only as an escalation path when the MCP does not expose a safe narrow tool for the action.
 
 ## Human approval gates
 

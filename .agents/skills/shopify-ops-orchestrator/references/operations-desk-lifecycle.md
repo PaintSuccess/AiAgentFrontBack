@@ -12,6 +12,10 @@ Inputs:
 - product/vendor/SKU/tags;
 - supplier mapping rules.
 
+Primary Shopify tool:
+
+- `PaintAccess Shopify Operations` MCP via `shopify_search_orders` or `shopify_get_order`.
+
 Actions:
 
 1. Identify products and quantities.
@@ -51,7 +55,7 @@ Actions:
 1. Find supplier Sales Confirmation email in Gmail.
 2. Compare supplier-confirmed products, quantities, prices, shipping charge, total, backorders, unavailable items, substitutions, and changes against PO and Shopify order.
 3. Notify Daniel with a clear match/mismatch summary.
-4. Add confirmation details to Shopify notes.
+4. Add confirmation details to Shopify notes with `shopify_add_order_note`.
 
 Skills:
 
@@ -66,7 +70,7 @@ Actions:
 
 1. Request Daniel approval for supplier payment.
 2. Record payment method: card on file or bank transfer.
-3. After approval/process, add Shopify note: payment approved/processed, waiting for tracking.
+3. After approval/process, add Shopify note with `shopify_add_order_note`: payment approved/processed, waiting for tracking.
 
 Approval gate:
 
@@ -85,7 +89,7 @@ Actions:
 1. Find supplier tracking email in Gmail.
 2. Identify Shopify order, supplier, carrier, tracking number, and shipped products when provided.
 3. Prepare customer update/draft if required.
-4. Add tracking to Shopify and prepare fulfilment when tools allow.
+4. Record tracking with `shopify_add_order_note` and use `shopify_prepare_fulfillment` to prepare fulfilment when tools allow.
 5. Notify Daniel that fulfilment is prepared.
 
 Approval gate:

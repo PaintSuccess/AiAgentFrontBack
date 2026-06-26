@@ -15,21 +15,22 @@ Shopify order -> supplier mapping -> PO draft -> supplier email -> Shopify note/
 
 ## Preconditions
 
-- Identify the Shopify order safely.
+- Identify the Shopify order safely with `shopify_get_order` or `shopify_search_orders` from the PaintAccess Shopify Operations MCP.
 - Confirm supplier mapping exists or ask for confirmation.
 - Do not invent supplier emails or PO details.
+- Use Gmail only through Daniel's connected ChatGPT Gmail app; do not request or store Google credentials.
 
 ## Workflow
 
-1. Retrieve the order.
+1. Retrieve the order through the PaintAccess Shopify Operations MCP.
 2. Extract line items, quantities, variants, shipping address, and customer notes.
 3. Map each line item to a supplier.
 4. If multiple suppliers exist, split into supplier-specific PO groups.
 5. Apply supplier-facing SKU and quantity transformations only from known rules or user confirmation.
 6. Prepare a PO summary for each supplier.
 7. Draft supplier email.
-8. If Gmail sending is requested and available, use `gmail-draft-safe`; send only after user confirmation unless the user has pre-approved automation.
-9. Use `shopify-order-note-recorder` to document PO/email action and prevent duplicate PO sends.
+8. If Gmail sending is requested and Daniel's Gmail app is available, use `gmail-draft-safe`; send only after user confirmation unless the user has pre-approved automation.
+9. Use `shopify-order-note-recorder`, backed by `shopify_add_order_note`, to document PO/email action and prevent duplicate PO sends.
 
 ## Output
 

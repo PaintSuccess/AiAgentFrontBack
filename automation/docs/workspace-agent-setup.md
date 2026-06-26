@@ -45,22 +45,22 @@ https://github.com/PaintSuccess/AiAgentFrontBack
 
 Minimum:
 
-- Gmail: search supplier/customer emails and prepare supplier/customer communication.
-- Google Drive: optional PO templates, attachments, generated PDFs/CSVs, shared reference files.
+- Gmail: Daniel/user-owned ChatGPT App connection for supplier/customer emails and supplier confirmations.
+- Google Drive: Daniel/user-owned ChatGPT App connection for optional PO templates, attachments, generated PDFs/CSVs, and shared reference files.
 - GitHub: maintain this automation repository.
-- Shopify: preferably via a custom MCP app/backend for read/write operational actions.
+- Shopify: workspace app `PaintAccess Shopify Operations`, backed by the custom MCP endpoint in this backend.
 
-Important: if built-in apps do not expose required write actions, use a custom MCP app for those write/modify steps.
+Important: do not put Gmail or Drive OAuth credentials into the backend by default. Daniel should connect Gmail and Drive from ChatGPT Apps. Shopify operational control comes from the custom MCP because the generic Shopify app does not expose the narrow write actions PaintAccess needs.
 
 ## Recommended authentication model
 
-Use shared/agent-owned connections where the workspace supports them:
+Use this split:
 
-- Gmail: preferably PaintAccess operations mailbox or delegated service account, not a personal mailbox.
-- Google Drive: PaintAccess shared Drive/service account where possible.
-- Shopify: dedicated PaintAccess app/API credentials with least required scopes.
+- Gmail: Daniel/user-owned ChatGPT App connection.
+- Google Drive: Daniel/user-owned ChatGPT App connection.
+- Shopify: dedicated PaintAccess Shopify app/API credentials stored as Vercel/runtime secrets and exposed only through the narrow MCP.
 
-Use end-user auth only when each team member must act as themselves.
+Use backend-owned Google OAuth only if Daniel later explicitly chooses that architecture.
 
 ## Setup steps
 
@@ -88,7 +88,7 @@ Workspace admin:
 2. Enable Gmail if available.
 3. Enable Google Drive if Drive files/templates are needed.
 4. Enable GitHub for repo maintenance if needed.
-5. Enable custom MCP apps if using a custom Shopify/Gmail/Drive backend.
+5. Enable the custom MCP app `PaintAccess Shopify Operations`.
 6. Configure app action permissions and constraints.
 
 Recommended constraints:
@@ -163,22 +163,22 @@ Add these project files as agent context:
 
 Add:
 
-- Gmail app/tool.
-- Google Drive app/tool if used.
-- Custom Shopify MCP/backend.
-- Custom Gmail/Drive MCP/backend if built-in apps do not support required write actions.
+- Custom Shopify MCP app `PaintAccess Shopify Operations`.
+- Gmail app/tool only when Daniel has connected Gmail in ChatGPT.
+- Google Drive app/tool only when Daniel has connected Drive in ChatGPT and Drive is needed.
 
 ### 7. Configure app authentication
 
 Choose per app:
 
 - End-user account: each person uses their own account.
-- Agent-owned account: one shared connection used by the agent.
+- Workspace/custom MCP: backend credentials are stored in Vercel/runtime secrets.
 
 Recommended for PaintAccess:
 
-- Agent-owned account for PaintAccess operations mailbox and Shopify operational API.
-- End-user account only for personal inbox workflows.
+- Shopify uses the workspace MCP app and backend Shopify token.
+- Gmail and Google Drive use Daniel/user-owned ChatGPT App connections.
+- Do not store Google OAuth tokens in this repository or backend unless the architecture is explicitly changed.
 
 ### 8. Configure schedules
 
@@ -219,20 +219,21 @@ Do not test live sending, refund, cancellation, payment, or final fulfilment unt
 
 ## Custom MCP/backend recommendation
 
-For a production-grade Operations Desk, build a custom MCP/backend for Shopify and any Google write actions that built-in apps do not support.
+For the production Operations Desk, use the custom MCP/backend for Shopify. Keep Google actions in Daniel/user-owned ChatGPT Apps unless Daniel later asks to move Google auth into backend automation.
 
-The backend should expose narrow tools:
+The Shopify MCP exposes narrow tools:
 
 - `shopify_get_order`
-- `shopify_update_order_note`
+- `shopify_search_orders`
+- `shopify_get_fulfillment_readiness`
+- `shopify_add_order_note`
 - `shopify_add_order_tag`
+- `shopify_remove_order_tag`
+- `shopify_set_ops_metafield`
 - `shopify_prepare_fulfillment`
-- `gmail_search_messages`
-- `gmail_create_draft`
-- `gmail_get_message`
-- `drive_create_po_file`
+- `shopify_prepare_cancellation`
 
-Avoid broad tools such as arbitrary GraphQL mutation or arbitrary Gmail send unless protected with strong approval and constraints.
+Avoid broad tools such as arbitrary GraphQL mutation, arbitrary Gmail send, or live admin-panel control unless protected with strong approval and constraints.
 
 ## Mobile usage
 

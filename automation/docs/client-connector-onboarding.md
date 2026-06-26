@@ -8,14 +8,14 @@ The repository can store the automation architecture, skills, setup checklists, 
 
 The repository must not store connected accounts, OAuth tokens, refresh tokens, passwords, API keys, or plugin authorizations.
 
-When Daniel or the client pulls this repository, the skills and documentation come with it, but every live account connector still needs to be installed and authorized in that user's Codex workspace/account.
+When Daniel or the client pulls this repository, the skills and documentation come with it, but live account access still needs to be authorized in the correct runtime. Shopify is authorized once through the backend MCP secrets. Gmail and Google Drive are authorized by Daniel in ChatGPT Apps.
 
 ## What Git can safely store
 
-- Skill folders in `skills/`.
+- Skill folders in `.agents/skills/`.
 - Architecture docs in `docs/`.
-- Required connector checklist.
-- OAuth setup instructions.
+- Required app/MCP checklist.
+- Setup instructions.
 - Environment variable names without real values.
 - Templates for notes, emails, notifications, and workflows.
 
@@ -34,40 +34,37 @@ When Daniel or the client pulls this repository, the skills and documentation co
 
 Minimum production connector set:
 
-- Shopify Admin / Shopify app access.
-- Gmail connector for message search, draft creation, confirmations, and tracking.
-- Google Drive connector only if PO files/templates/attachments are stored in Drive.
+- Workspace app `PaintAccess Shopify Operations` for Shopify Admin/API operations.
+- Daniel/user-owned ChatGPT Gmail app for message search, draft creation, confirmations, and tracking.
+- Daniel/user-owned ChatGPT Google Drive app only if PO files/templates/attachments are stored in Drive.
 - GitHub connector for repository operations.
 
 ## Expected setup flow
 
 1. Pull the repository.
 2. Open the workspace in Codex.
-3. Install/enable the required plugins or connectors.
-4. Authorize each connector with the correct client account.
-5. Test read-only operations first:
+3. Confirm the Shopify MCP endpoint is deployed and `SHOPIFY_MCP_TOKEN`, `SHOPIFY_STORE`, and `SHOPIFY_ACCESS_TOKEN` are set in Vercel/runtime secrets.
+4. Publish/enable the ChatGPT workspace app `PaintAccess Shopify Operations`.
+5. Daniel connects Gmail and Google Drive from ChatGPT Apps using the correct Google account when those apps are needed.
+6. Test read-only operations first:
    - find a Shopify order;
    - find a Gmail message;
    - read a Drive file if Drive is used.
-6. Test safe write operations:
+7. Test safe write operations:
    - create Gmail draft;
    - add Shopify note;
    - prepare fulfilment without completing it.
 
-## Google OAuth flow
+## Google app flow
 
-Use this when a custom Google app is needed instead of a built-in Codex connector:
+Default path:
 
-1. Create a Google Cloud Project.
-2. Enable Gmail API.
-3. Enable Google Drive API if Drive is needed.
-4. Configure OAuth Consent Screen.
-5. Create OAuth Client ID as Web Application.
-6. Generate the authorization URL.
-7. Daniel signs in with the correct Google account and clicks Allow.
-8. Store access and refresh tokens only in the approved runtime secret store.
+1. Daniel opens ChatGPT in the PaintAccess workspace.
+2. Daniel opens Apps and connects Gmail.
+3. Daniel connects Google Drive only if Drive files/templates are needed.
+4. The Operations Desk agent uses those apps only when Daniel's ChatGPT account/session has access.
 
-Never put tokens or client secrets in this repository.
+Do not create a custom Google Cloud OAuth app or store Google refresh tokens in the backend unless Daniel explicitly changes the architecture.
 
 ## Revoking access
 
@@ -77,7 +74,7 @@ Google access can be revoked from:
 Google Account -> Security -> Third-party apps -> Remove Access
 ```
 
-Codex/plugin access should also be removed from the relevant Codex connector/plugin settings when an account should no longer be used.
+ChatGPT App access should also be removed from the relevant ChatGPT app settings when an account should no longer be used.
 
 ## Portability model
 
@@ -93,7 +90,7 @@ Portable through Git:
 Not portable through Git:
 
 - account sessions;
-- OAuth grants;
+- OAuth grants and ChatGPT app authorizations;
 - connector authorization state;
 - refresh tokens;
 - plugin installs tied to a specific user/workspace.

@@ -12,15 +12,15 @@ approval_policy:
 tools:
   apps:
     - name: "Gmail"
-      authentication: "Agent-owned account preferred"
+      authentication: "Daniel/user-owned ChatGPT App connection"
       action_constraints: "Read/search only"
     - name: "Google Drive"
-      authentication: "Agent-owned account preferred"
+      authentication: "Daniel/user-owned ChatGPT App connection"
       action_constraints: "Read only"
   custom_mcps:
     - name: "PaintAccess Shopify Operations MCP"
       required: true
-      action_constraints: "Read-only Shopify order/product/status tools only"
+      action_constraints: "Use only shopify_search_orders, shopify_get_order, and shopify_get_fulfillment_readiness. Do not call note/tag/metafield/prepare tools."
 skills:
   core:
     - "shopify-ops-orchestrator"

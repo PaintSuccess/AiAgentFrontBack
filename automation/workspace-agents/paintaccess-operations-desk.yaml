@@ -18,12 +18,12 @@ approval_policy:
 tools:
   apps:
     - name: "Gmail"
-      authentication: "Agent-owned account preferred"
-      notes: "Use PaintAccess operations mailbox or service/delegated account where possible."
-      write_actions: "Always ask before sending. Draft creation may be allowed after testing."
+      authentication: "Daniel/user-owned ChatGPT App connection"
+      notes: "Daniel connects Gmail from ChatGPT Apps. Do not store Google OAuth credentials in the backend by default."
+      write_actions: "Always ask before sending. Draft creation may be allowed only when the connected ChatGPT Gmail app supports it."
     - name: "Google Drive"
-      authentication: "Agent-owned account preferred"
-      notes: "Use only if PO templates, generated files, or attachments are stored in Drive."
+      authentication: "Daniel/user-owned ChatGPT App connection"
+      notes: "Use only if Daniel has connected Drive in ChatGPT and PO templates, generated files, or attachments are stored there."
     - name: "GitHub"
       authentication: "End-user or admin-owned"
       notes: "For repository maintenance, issues, PRs, and docs updates."
@@ -34,9 +34,13 @@ tools:
       desired_tools:
         - "shopify_get_order"
         - "shopify_search_orders"
-        - "shopify_update_order_note"
+        - "shopify_get_fulfillment_readiness"
+        - "shopify_add_order_note"
         - "shopify_add_order_tag"
+        - "shopify_remove_order_tag"
+        - "shopify_set_ops_metafield"
         - "shopify_prepare_fulfillment"
+        - "shopify_prepare_cancellation"
 skills:
   core:
     - "shopify-ops-orchestrator"

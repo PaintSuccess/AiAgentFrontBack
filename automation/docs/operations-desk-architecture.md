@@ -93,14 +93,18 @@ automation/docs/shopify-operations-mcp-prd.md
 
 Codex remains the development and maintenance surface for this repository. The Workspace Agent is the operational surface for the PaintAccess team.
 
-## Google account connection outline
+## Google app connection outline
 
-1. Create Google Cloud Project.
-2. Enable Gmail API.
-3. Enable Google Drive API if needed.
-4. Configure OAuth Consent Screen.
-5. Create OAuth Client ID as Web Application.
-6. Generate the authorization URL.
-7. Daniel signs in with the correct Google account and clicks Allow.
-8. Store access and refresh tokens in runtime secrets, never in this repository.
-9. Revoke access if needed from Google Account -> Security -> Third-party apps -> Remove Access.
+1. Daniel opens ChatGPT in the PaintAccess workspace.
+2. Daniel connects Gmail from ChatGPT Apps using the correct Google account.
+3. Daniel connects Google Drive from ChatGPT Apps only if PO templates/files/attachments are needed.
+4. The Operations Desk uses Gmail/Drive through Daniel's ChatGPT app authorizations.
+5. Do not store Google OAuth access or refresh tokens in this repository or backend by default.
+6. Revoke access if needed from Google Account -> Security -> Third-party apps -> Remove Access and from ChatGPT app settings.
+
+## Shopify app connection outline
+
+1. Shopify Admin API credentials stay in Vercel/runtime secrets.
+2. The custom MCP endpoint is `api/mcp/shopify.js`.
+3. The ChatGPT workspace app is `PaintAccess Shopify Operations`.
+4. The Operations Desk agent should use this app for Shopify lookups, order notes, tags, ops metafields, fulfilment preparation, and cancellation preparation.

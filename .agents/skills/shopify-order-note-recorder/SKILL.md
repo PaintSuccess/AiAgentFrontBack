@@ -11,7 +11,11 @@ Use this skill to record operational actions back into a Shopify order.
 
 - Identify the order with high confidence.
 - Know whether the user wants a note, tag, metafield, or all available safe markers.
-- Use `shopify-graphql-safe-mutation` if no dedicated note/tag tool exists.
+- Use the workspace app `PaintAccess Shopify Operations` first:
+  - `shopify_add_order_note` for notes;
+  - `shopify_add_order_tag` / `shopify_remove_order_tag` for tags;
+  - `shopify_set_ops_metafield` for controlled `paintaccess_ops` state.
+- Use `shopify-graphql-safe-mutation` only if no MCP tool covers the requested safe action.
 
 ## Note types
 
@@ -46,11 +50,11 @@ Use this skill to record operational actions back into a Shopify order.
    - `Payment processed`;
    - `Tracking received`;
    - `Fulfilment prepared`.
-4. Write the note/tag/metafield only with a safe dedicated tool or validated GraphQL mutation.
+4. Write the note/tag/metafield with the matching PaintAccess Shopify Operations MCP tool.
 5. Report whether the write succeeded. If only text was prepared, say that clearly.
 
 ## Duplicate prevention
 
-Before sending supplier POs or marking a workflow complete, check existing order tags/notes/metafields when available. If a matching `PO sent` marker already exists, stop and ask before sending again.
+Before sending supplier POs or marking a workflow complete, check existing order tags/notes/metafields when available through `shopify_get_order`. If a matching `PO sent` marker already exists, stop and ask before sending again.
 
 See `references/note-templates.md`.

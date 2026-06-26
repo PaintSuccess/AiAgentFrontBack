@@ -10,6 +10,7 @@ Use this skill after Sales Confirmation has been checked.
 ## Approval rule
 
 Do not approve or process supplier payment without Daniel's explicit approval.
+Record decisions in Shopify only through the PaintAccess Shopify Operations MCP, normally via `shopify-order-note-recorder` and `shopify_add_order_note`.
 
 ## Payment paths
 

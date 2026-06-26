@@ -2,17 +2,25 @@
 
 ## Shopify
 
-Needs access to:
+Use the workspace app `PaintAccess Shopify Operations`, backed by the repo MCP endpoint.
 
-- read orders;
-- read products/variants;
-- update order notes/tags/metafields;
-- prepare tracking/fulfilment updates;
-- run Admin GraphQL queries/mutations when no dedicated tool exists.
+Expected tools:
+
+- `shopify_search_orders`;
+- `shopify_get_order`;
+- `shopify_get_fulfillment_readiness`;
+- `shopify_add_order_note`;
+- `shopify_add_order_tag`;
+- `shopify_remove_order_tag`;
+- `shopify_set_ops_metafield`;
+- `shopify_prepare_fulfillment`;
+- `shopify_prepare_cancellation`.
 
 ## Gmail
 
-Needs access to:
+Use Daniel/user-owned ChatGPT Gmail app connection. Do not store Gmail OAuth credentials in the backend by default.
+
+Needed abilities:
 
 - create drafts;
 - search messages;
@@ -22,7 +30,7 @@ Needs access to:
 
 ## Google Drive
 
-Needed only if PO files or attachments are stored/generated in Drive.
+Use Daniel/user-owned ChatGPT Google Drive app connection. Needed only if PO files or attachments are stored/generated in Drive.
 
 Needs access to:
 

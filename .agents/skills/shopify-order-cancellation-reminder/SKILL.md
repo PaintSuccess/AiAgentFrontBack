@@ -15,7 +15,8 @@ Create a clear internal order note that helps staff complete the cancellation/re
 
 - A specific order must be identified with high confidence.
 - Use `shopify-order-lookup-safe` first if order identity is uncertain.
-- If no dedicated order note tool exists, use `shopify-graphql-safe-mutation`.
+- Use `shopify_prepare_cancellation` from `PaintAccess Shopify Operations` when a cancellation/refund action needs structured review.
+- Use `shopify_add_order_note` through `shopify-order-note-recorder` for internal reminders.
 
 ## Workflow
 
@@ -24,7 +25,7 @@ Create a clear internal order note that helps staff complete the cancellation/re
    - paid/unpaid;
    - fulfilled/unfulfilled;
    - cancelled/open.
-3. Do not directly refund/cancel unless explicitly supported and safe.
+3. Do not directly refund/cancel. Prepare the cancellation/refund review and internal note; Daniel must approve/perform the final action unless rules change.
 4. Draft an internal note with:
    - staff name if provided;
    - customer name/company;
@@ -32,7 +33,7 @@ Create a clear internal order note that helps staff complete the cancellation/re
    - requested action;
    - order number;
    - product/reason if known.
-5. Add/update the order note.
+5. Add/update the order note with `shopify_add_order_note`.
 6. Tell the user the reminder was added and state whether manual cancellation/refund remains.
 
 ## Default note template

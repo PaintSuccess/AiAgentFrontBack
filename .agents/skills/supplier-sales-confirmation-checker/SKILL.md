@@ -9,8 +9,8 @@ Use this skill after the supplier sends a Sales Confirmation.
 
 ## Preconditions
 
-- Identify the Shopify order with high confidence.
-- Find the supplier confirmation email with `gmail-message-finder-safe`.
+- Identify the Shopify order with high confidence through `shopify_get_order` or `shopify_search_orders`.
+- Find the supplier confirmation email with `gmail-message-finder-safe` only when Daniel's ChatGPT Gmail app is connected.
 - Have the prepared PO or reconstructed PO details from `supplier-po-automation`.
 
 ## Check list
@@ -32,7 +32,7 @@ Compare the Sales Confirmation against the PO and Shopify order:
 ## Workflow
 
 1. Extract confirmation fields from the Gmail message or attachment text.
-2. Reconstruct expected order lines from Shopify/PO.
+2. Reconstruct expected order lines from Shopify MCP order data and PO details.
 3. Compare line by line.
 4. Classify result:
    - match;
@@ -40,7 +40,7 @@ Compare the Sales Confirmation against the PO and Shopify order:
    - mismatch;
    - needs Daniel review.
 5. Produce a notification-ready summary.
-6. Send details to `shopify-order-note-recorder`.
+6. Send details to `shopify-order-note-recorder`, backed by `shopify_add_order_note`.
 7. Route to `supplier-payment-approval-recorder` only after Daniel can review the result.
 
 ## Output format

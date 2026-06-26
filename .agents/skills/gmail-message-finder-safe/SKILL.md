@@ -7,6 +7,10 @@ description: safely find PaintAccess Gmail messages for Shopify order workflows.
 
 Use this skill before reading or acting on Gmail messages for order workflows.
 
+## Connector rule
+
+Use Gmail only through Daniel/user-owned ChatGPT Gmail app authorization. Do not ask for Google passwords, OAuth client secrets, access tokens, or refresh tokens. If the Gmail app is not connected in the current ChatGPT account/session, return the exact search query to run manually and state that no Gmail message was read.
+
 ## Core rules
 
 - Prefer exact order number, supplier name, customer name, PO subject, confirmation number, or tracking keyword.

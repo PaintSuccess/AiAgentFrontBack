@@ -33,10 +33,11 @@ Extract and verify:
 1. Match tracking email to Shopify order.
 2. Extract carrier and tracking number.
 3. Compare shipped products with order/PO/Sales Confirmation when product details are present.
-4. Prepare Shopify tracking update and fulfilment draft.
-5. Prepare customer update email only when required.
-6. Use `shopify-order-note-recorder` to record tracking received and fulfilment status.
-7. Notify Daniel that fulfilment is ready for approval.
+4. Use `shopify_get_fulfillment_readiness` to check whether the order can be prepared for fulfilment.
+5. Use `shopify_prepare_fulfillment` only to prepare the Shopify fulfilment payload/status; do not complete final fulfilment.
+6. Prepare customer update email only when required.
+7. Use `shopify-order-note-recorder` to record tracking received and fulfilment status.
+8. Notify Daniel that fulfilment is ready for approval.
 
 ## Standard note
 

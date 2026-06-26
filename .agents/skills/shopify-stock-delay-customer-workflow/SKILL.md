@@ -15,7 +15,7 @@ Use this skill when a PaintAccess customer needs an order update because product
 
 ## Workflow
 
-1. Retrieve order details:
+1. Retrieve order details with `shopify_get_order`:
    - order number;
    - customer name/email;
    - affected items;
@@ -29,7 +29,7 @@ Use this skill when a PaintAccess customer needs an order update because product
    - ask the customer to confirm the wait is acceptable.
 3. Use `gmail-draft-safe` when the user wants a Gmail draft.
 4. Prepare a Shopify note with date, action taken, reason, expected timing, current status, and copy of the email.
-5. Use `shopify-order-note-recorder` to write the note when requested and tools are available.
+5. Use `shopify-order-note-recorder` to write the note with `shopify_add_order_note` when requested and tools are available.
 
 ## Reporting
 

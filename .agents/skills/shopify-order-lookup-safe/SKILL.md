@@ -26,8 +26,8 @@ Possible inputs:
 
 1. Extract candidate identifiers from the user message.
 2. Prefer exact order number over all other signals.
-3. If an exact order number exists, retrieve that order.
-4. If only partial details exist, search recent orders or ask for clarification.
+3. If an exact order number exists, retrieve that order with `shopify_get_order` from the workspace app `PaintAccess Shopify Operations`.
+4. If only partial details exist, use `shopify_search_orders` or ask for clarification.
 5. Before mutation, verify at least two relevant signals when possible:
    - order number;
    - customer name/company;
@@ -50,6 +50,7 @@ Ask for clarification when:
 Return:
 
 - confirmed order number/name;
+- Shopify GID when available;
 - confidence level: high/medium/low;
 - key matching evidence;
 - recommended next skill/action.

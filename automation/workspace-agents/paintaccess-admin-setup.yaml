@@ -11,7 +11,7 @@ tools:
     - name: "GitHub"
       authentication: "Admin-owned"
     - name: "Google Drive"
-      authentication: "Admin-owned if needed"
+      authentication: "Daniel/admin-owned ChatGPT App connection if needed"
   custom_mcps:
     - name: "PaintAccess Shopify Operations MCP"
       required: false
@@ -27,5 +27,5 @@ files:
   - "docs/operations-desk-architecture.md"
 starter_prompts:
   - "Review the current Workspace Agent setup checklist and tell me what is missing."
-  - "Prepare a safe connector rollout plan for Gmail, Drive, Shopify, and GitHub."
+  - "Prepare a safe app rollout plan for Daniel-owned Gmail/Drive, workspace Shopify MCP, and GitHub."
   - "Check whether our repo skills need to be updated after a new operation."
