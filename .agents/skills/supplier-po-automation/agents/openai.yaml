@@ -1,0 +1,5 @@
+interface:
+  display_name: "Supplier PO Automation"
+  short_description: "Prepares supplier purchase order workflows from Shopify orders."
+  icon: "🛒"
+  brand_color: "#95BF47"

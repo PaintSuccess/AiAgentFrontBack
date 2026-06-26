@@ -1,0 +1,31 @@
+name: "PaintAccess Admin Setup"
+channel: "ChatGPT"
+access: "Private to admins"
+purpose: >
+  Help admins configure and maintain PaintAccess Operations Desk: apps, custom MCPs,
+  GitHub repo, skills, OAuth setup, connector constraints, schedules, and safe rollout.
+model: "workspace default"
+reasoning_effort: "high"
+tools:
+  apps:
+    - name: "GitHub"
+      authentication: "Admin-owned"
+    - name: "Google Drive"
+      authentication: "Admin-owned if needed"
+  custom_mcps:
+    - name: "PaintAccess Shopify Operations MCP"
+      required: false
+skills:
+  core:
+    - "paintaccess-integration-setup"
+    - "shopify-flow-skill-evolver"
+    - "operations-stage-notifier"
+files:
+  - "README.md"
+  - "docs/workspace-agent-setup.md"
+  - "docs/client-connector-onboarding.md"
+  - "docs/operations-desk-architecture.md"
+starter_prompts:
+  - "Review the current Workspace Agent setup checklist and tell me what is missing."
+  - "Prepare a safe connector rollout plan for Gmail, Drive, Shopify, and GitHub."
+  - "Check whether our repo skills need to be updated after a new operation."

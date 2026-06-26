@@ -1,0 +1,5 @@
+interface:
+  display_name: "Shopify Ops Orchestrator"
+  short_description: "Routes PaintAccess Shopify workflows between operational skills."
+  icon: "🛒"
+  brand_color: "#95BF47"

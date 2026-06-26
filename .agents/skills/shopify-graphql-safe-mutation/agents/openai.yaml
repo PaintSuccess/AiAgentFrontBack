@@ -1,0 +1,5 @@
+interface:
+  display_name: "Shopify GraphQL Safe Mutation"
+  short_description: "Runs validated Shopify GraphQL mutations safely."
+  icon: "🛒"
+  brand_color: "#95BF47"

@@ -1,0 +1,5 @@
+interface:
+  display_name: "Shopify Cancellation Reminder"
+  short_description: "Adds safe internal cancellation and refund reminders."
+  icon: "🛒"
+  brand_color: "#95BF47"

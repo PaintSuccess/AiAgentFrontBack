@@ -1,0 +1,6 @@
+interface:
+  display_name: "Gmail Message Finder"
+  short_description: "Finds order-related Gmail messages."
+  icon: "🛒"
+  brand_color: "#95BF47"
+  default_prompt: "Use $gmail-message-finder-safe to find the Gmail message related to this Shopify order."

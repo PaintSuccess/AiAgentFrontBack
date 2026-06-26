@@ -1,0 +1,40 @@
+name: "PaintAccess Read-only Monitor"
+channel: "ChatGPT"
+access: "Publish to PaintAccess workspace directory"
+purpose: >
+  Provide read-only operational visibility for PaintAccess orders: new orders,
+  pending POs, supplier confirmations, payment approval queue, tracking status,
+  and fulfilment readiness. Do not write to Shopify, Gmail, Drive, or GitHub.
+model: "workspace default"
+reasoning_effort: "medium"
+approval_policy:
+  writes: "disabled"
+tools:
+  apps:
+    - name: "Gmail"
+      authentication: "Agent-owned account preferred"
+      action_constraints: "Read/search only"
+    - name: "Google Drive"
+      authentication: "Agent-owned account preferred"
+      action_constraints: "Read only"
+  custom_mcps:
+    - name: "PaintAccess Shopify Operations MCP"
+      required: true
+      action_constraints: "Read-only Shopify order/product/status tools only"
+skills:
+  core:
+    - "shopify-ops-orchestrator"
+    - "shopify-order-lookup-safe"
+    - "gmail-message-finder-safe"
+    - "operations-stage-notifier"
+files:
+  - "README.md"
+  - "docs/operations-desk-architecture.md"
+starter_prompts:
+  - "Give me a read-only status report for open supplier orders."
+  - "Which orders need Daniel's approval today?"
+  - "Which orders are waiting for supplier tracking?"
+schedules:
+  - name: "Daily read-only status"
+    cadence: "Weekdays 9:00 AM"
+    instructions: "Prepare a read-only operations status report with no writes or drafts."

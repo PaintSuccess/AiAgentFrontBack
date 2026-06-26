@@ -1,0 +1,6 @@
+interface:
+  display_name: "Gmail Draft Safe"
+  short_description: "Creates safe PaintAccess Gmail drafts."
+  icon: "🛒"
+  brand_color: "#95BF47"
+  default_prompt: "Use $gmail-draft-safe to prepare this PaintAccess email as a Gmail draft for review."

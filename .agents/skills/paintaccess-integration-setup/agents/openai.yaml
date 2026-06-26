@@ -1,0 +1,6 @@
+interface:
+  display_name: "PaintAccess Integration Setup"
+  short_description: "Guides account connector setup."
+  icon: "🛒"
+  brand_color: "#95BF47"
+  default_prompt: "Use $paintaccess-integration-setup to prepare the required Shopify, Gmail, Drive, and GitHub connectors."

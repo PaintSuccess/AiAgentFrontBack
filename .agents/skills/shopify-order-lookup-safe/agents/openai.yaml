@@ -1,0 +1,5 @@
+interface:
+  display_name: "Shopify Order Lookup Safe"
+  short_description: "Safely identifies Shopify orders before actions."
+  icon: "🛒"
+  brand_color: "#95BF47"

@@ -1,0 +1,5 @@
+interface:
+  display_name: "Shopify Flow Skill Evolver"
+  short_description: "Evaluates completed operations and improves skills only when useful."
+  icon: "🛒"
+  brand_color: "#95BF47"

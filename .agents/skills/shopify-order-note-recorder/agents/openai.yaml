@@ -1,0 +1,6 @@
+interface:
+  display_name: "Shopify Order Note Recorder"
+  short_description: "Records operational notes in Shopify."
+  icon: "🛒"
+  brand_color: "#95BF47"
+  default_prompt: "Use $shopify-order-note-recorder to add this operational note to the Shopify order."

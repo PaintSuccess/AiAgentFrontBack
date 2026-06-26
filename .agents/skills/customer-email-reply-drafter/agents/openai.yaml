@@ -1,0 +1,5 @@
+interface:
+  display_name: "Customer Email Reply Drafter"
+  short_description: "Drafts PaintAccess customer replies for order issues."
+  icon: "🛒"
+  brand_color: "#95BF47"

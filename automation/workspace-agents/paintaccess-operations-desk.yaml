@@ -1,0 +1,78 @@
+name: "PaintAccess Operations Desk"
+channel: "ChatGPT"
+access: "Publish to PaintAccess workspace directory"
+purpose: >
+  Coordinate PaintAccess Shopify order operations end to end: review new orders,
+  prepare supplier POs, draft supplier/customer emails, check supplier confirmations,
+  record Shopify notes, coordinate payment approval, process tracking details, and
+  prepare fulfilment.
+model: "workspace default"
+reasoning_effort: "high"
+approval_policy:
+  require_daniel_approval_for:
+    - "sending supplier or customer emails"
+    - "approving or processing supplier payments"
+    - "cancelling Shopify orders"
+    - "issuing refunds"
+    - "completing final Shopify fulfilment"
+tools:
+  apps:
+    - name: "Gmail"
+      authentication: "Agent-owned account preferred"
+      notes: "Use PaintAccess operations mailbox or service/delegated account where possible."
+      write_actions: "Always ask before sending. Draft creation may be allowed after testing."
+    - name: "Google Drive"
+      authentication: "Agent-owned account preferred"
+      notes: "Use only if PO templates, generated files, or attachments are stored in Drive."
+    - name: "GitHub"
+      authentication: "End-user or admin-owned"
+      notes: "For repository maintenance, issues, PRs, and docs updates."
+  custom_mcps:
+    - name: "PaintAccess Shopify Operations MCP"
+      required: true
+      reason: "Built-in apps may not expose the narrow Shopify write actions we need."
+      desired_tools:
+        - "shopify_get_order"
+        - "shopify_search_orders"
+        - "shopify_update_order_note"
+        - "shopify_add_order_tag"
+        - "shopify_prepare_fulfillment"
+skills:
+  core:
+    - "shopify-ops-orchestrator"
+    - "shopify-order-lookup-safe"
+    - "supplier-po-automation"
+    - "gmail-message-finder-safe"
+    - "gmail-draft-safe"
+    - "supplier-sales-confirmation-checker"
+    - "shopify-order-note-recorder"
+    - "supplier-payment-approval-recorder"
+    - "supplier-tracking-fulfillment-prep"
+    - "operations-stage-notifier"
+  supporting:
+    - "customer-email-reply-drafter"
+    - "shopify-stock-delay-customer-workflow"
+    - "shopify-order-cancellation-reminder"
+    - "shopify-graphql-safe-mutation"
+    - "shopify-flow-skill-evolver"
+    - "paintaccess-integration-setup"
+files:
+  - "README.md"
+  - "docs/operations-desk-architecture.md"
+  - "docs/client-connector-onboarding.md"
+  - "docs/workspace-agent-setup.md"
+starter_prompts:
+  - "Check new Shopify orders and tell me which ones are ready for PO."
+  - "Find the Sales Confirmation for order #44478 and compare it with the PO."
+  - "Check whether tracking arrived for today's supplier orders."
+  - "Prepare supplier PO drafts for unprocessed paid orders."
+schedules:
+  - name: "Morning order review"
+    cadence: "Weekdays 8:30 AM"
+    instructions: "Check new Shopify orders and prepare a concise order review report."
+  - name: "Supplier confirmation check"
+    cadence: "Weekdays 11:30 AM"
+    instructions: "Check supplier Sales Confirmations and tracking emails, then report required actions."
+  - name: "Afternoon operations sweep"
+    cadence: "Weekdays 3:30 PM"
+    instructions: "Check unresolved payment approvals, supplier confirmations, tracking, and fulfilment prep."

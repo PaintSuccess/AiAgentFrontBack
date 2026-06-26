@@ -1,0 +1,6 @@
+interface:
+  display_name: "Payment Approval Recorder"
+  short_description: "Records supplier payment approval."
+  icon: "🛒"
+  brand_color: "#95BF47"
+  default_prompt: "Use $supplier-payment-approval-recorder to request and record supplier payment approval."

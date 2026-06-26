@@ -1,0 +1,6 @@
+interface:
+  display_name: "Sales Confirmation Checker"
+  short_description: "Checks supplier confirmations."
+  icon: "🛒"
+  brand_color: "#95BF47"
+  default_prompt: "Use $supplier-sales-confirmation-checker to compare this supplier confirmation with the Shopify order and PO."

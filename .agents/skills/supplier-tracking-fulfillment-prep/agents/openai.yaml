@@ -1,0 +1,6 @@
+interface:
+  display_name: "Tracking Fulfilment Prep"
+  short_description: "Prepares tracking and fulfilment."
+  icon: "🛒"
+  brand_color: "#95BF47"
+  default_prompt: "Use $supplier-tracking-fulfillment-prep to process this supplier tracking email and prepare fulfilment."

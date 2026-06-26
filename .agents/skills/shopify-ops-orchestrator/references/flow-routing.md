@@ -1,0 +1,61 @@
+# Flow routing reference
+
+## Intent detection
+
+- "cancel", "refund", "delete order", "Gerry emailed" -> cancellation reminder flow.
+- "which supplier", "purchase order", "PO", "send to supplier" -> supplier PO flow.
+- "sales confirmation", "supplier confirmation", "confirmation number", "supplier invoice" -> Sales Confirmation check flow.
+- "approve payment", "payment approval", "card on file", "bank transfer", "processed by supplier" -> payment approval flow.
+- "tracking", "consignment", "carrier", "ready for fulfilment", "fulfillment" -> tracking/fulfilment prep flow.
+- "notify Daniel", "send notification", "ready for review", "approval required" -> Operations Desk notification flow.
+- "out of stock", "back in stock", "delay", "customer update" -> stock-delay customer workflow.
+- "create Gmail draft", "draft email", "send supplier email" -> Gmail draft flow, with send confirmation before sending.
+- "add note", "write inside order", "remark" -> order note flow, usually via safe GraphQL mutation if no direct tool exists.
+- "PO sent", "already emailed", "copy of email", "record this in Shopify" -> order note/status recorder.
+- "reply to customer", "write email" -> customer email draft flow.
+
+## Minimum confidence to mutate Shopify
+
+A Shopify write requires at least one:
+
+- exact order number/name, e.g. #44394;
+- Shopify GID;
+- unambiguous order returned from Shopify lookup with matching customer/email/items.
+
+If not available, ask a clarifying question.
+
+## Supported automation chains from source chats
+
+### Manual ChatGPT supplier PO run
+
+User provides an order number or asks to check recent orders.
+
+1. Identify the order.
+2. Extract line items, SKU, quantity, customer, and shipping address.
+3. Determine suppliers from vendor, title, SKU, tags, product type, or confirmed mapping table.
+4. Split one order into multiple supplier-specific PO drafts when needed.
+5. Prepare supplier email drafts.
+6. Record the draft/sent status in Shopify notes, tags, or metafields when requested.
+
+### Stock-delay customer email and note
+
+1. Identify the order.
+2. Draft a customer delay email with apology, item/out-of-stock reason, expected restock timing, no-action-needed line, and confirmation request.
+3. Create a Gmail draft if Gmail is available and requested.
+4. Add a Shopify order note with date, action taken, reason, expected timing, current status, and copy of the customer email.
+
+### Fully automated external workflow
+
+For background automation, route to external systems: Shopify Flow, Make/Zapier, or custom middleware. A normal chat can run the flow on demand, but cannot continuously monitor Shopify by itself.
+
+## Human approval gates
+
+Require Daniel approval before:
+
+- sending supplier/customer emails;
+- approving or processing supplier payment;
+- cancelling orders;
+- issuing refunds;
+- completing final fulfilment.
+
+Drafting, checking, comparing, preparing notes, and preparing fulfilment can happen before approval.
