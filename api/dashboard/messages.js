@@ -83,7 +83,10 @@ module.exports = async function handler(req, res) {
       }
       return {
         id: rec.sid,
-        type: rec.from?.includes("whatsapp") ? "whatsapp" : "sms",
+        type:
+          rec.from?.includes("whatsapp") || rec.to?.includes("whatsapp")
+            ? "whatsapp"
+            : "sms",
         from: rec.from,
         to: rec.to,
         body: rec.body,
