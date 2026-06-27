@@ -3,11 +3,12 @@ const { corsHeaders, cleanEnv } = require("../../lib/shopify");
 const {
   formatFields,
   formatTranscript,
-  notifyTradeEmail,
 } = require("../../lib/trade-email");
+const { createAiCallNotification } = require("../../lib/shopify-call-notification");
 
 const WEBHOOK_SECRET = cleanEnv("ELEVENLABS_WEBHOOK_SECRET");
 const AGENT_ID = cleanEnv("ELEVENLABS_AGENT_ID");
+const API_SECRET_TOKEN = cleanEnv("API_SECRET_TOKEN");
 
 function getRawBody(req) {
   if (typeof req.rawBody === "string" || Buffer.isBuffer(req.rawBody)) {
@@ -53,6 +54,20 @@ function verifySignature(req) {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
+function verifyWebhookAuth(req) {
+  if (verifySignature(req)) return true;
+
+  const authHeader = req.headers.authorization || "";
+  const token =
+    String(req.headers["x-paintaccess-webhook-token"] || "").trim() ||
+    authHeader.replace(/^Bearer\s+/i, "").trim();
+  if (!API_SECRET_TOKEN || !token) return false;
+
+  const a = Buffer.from(token);
+  const b = Buffer.from(API_SECRET_TOKEN);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
 function mapSource(source, metadata = {}) {
   const sourceText = String(source || "").toLowerCase();
   const phoneData = metadata.phone_call || metadata.twilio || metadata.call || {};
@@ -77,7 +92,7 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  if (!verifySignature(req)) {
+  if (!verifyWebhookAuth(req)) {
     return res.status(401).json({ error: "Invalid webhook signature" });
   }
 
@@ -90,9 +105,16 @@ module.exports = async function handler(req, res) {
     }
 
     const metadata = data.metadata || {};
-    await notifyTradeEmail({
+    const notification = await createAiCallNotification({
+      event_type: "call_initiation_failure",
+      channel: "Call",
       subject: `Paint Access AI call failed: ${data.failure_reason || "unknown"}`,
-      text: [
+      conversation_id: data.conversation_id,
+      status: "failed",
+      agent: data.agent_id,
+      summary: data.failure_reason || "AI call failed before a transcript was created.",
+      raw_payload: event,
+      transcript: [
         "An AI call failed before a transcript was created.",
         "",
         formatFields({
@@ -108,7 +130,7 @@ module.exports = async function handler(req, res) {
       ].join("\n"),
     });
 
-    return res.status(200).json({ ok: true });
+    return res.status(200).json({ ok: true, notification });
   }
 
   if (event.type !== "post_call_transcription") {
@@ -132,9 +154,22 @@ module.exports = async function handler(req, res) {
     ? new Date(metadata.start_time_unix_secs * 1000).toISOString()
     : "";
 
-  await notifyTradeEmail({
+  const notification = await createAiCallNotification({
+    event_type: "post_call_transcription",
+    channel,
     subject: `Paint Access AI ${channel}: ${title}`.slice(0, 180),
-    text: [
+    conversation_id: data.conversation_id,
+    status: data.status,
+    agent: data.agent_name || data.agent_id,
+    started_at: startedAt,
+    duration: metadata.call_duration_secs ? `${metadata.call_duration_secs}s` : "",
+    result: analysis.call_successful,
+    customer_name: (dynVars.customer_name || "").replace(/^,\s*/, "").trim(),
+    customer_email: dynVars.customer_email,
+    customer_phone: dynVars.customer_phone || phoneData.caller_id || phoneData.from_number,
+    called_number: phoneData.called_number || phoneData.to_number,
+    summary: analysis.transcript_summary || "(No summary available)",
+    transcript: [
       "An AI conversation finished and the transcript is ready.",
       "",
       formatFields({
@@ -157,8 +192,8 @@ module.exports = async function handler(req, res) {
       "Transcript:",
       formatTranscript(data.transcript || []),
     ].join("\n"),
-    replyTo: dynVars.customer_email,
+    raw_payload: event,
   });
 
-  return res.status(200).json({ ok: true });
+  return res.status(200).json({ ok: true, notification });
 };

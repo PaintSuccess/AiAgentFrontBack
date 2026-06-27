@@ -1,4 +1,4 @@
-<!-- ElevenLabs KB Doc | id: 6McwhoGGBfRItnfrFMqe | usage_mode: prompt -->
+<!-- ElevenLabs KB Doc | id: rVqMNfjLnuc0Q5qMydnB | usage_mode: prompt -->
 # Paint Access - Company Information
 
 ## About Us
@@ -7,6 +7,7 @@ Website: paintaccess.com.au
 Tagline: Best SELECTION, Best PRICE, Best ADVICE
 
 ## Contact Details
+- Phone: 02 5838 5959
 - SMS: +61410609617
 - Email: trade@PaintAccess.com.au
 - Website: paintaccess.com.au
@@ -36,3 +37,4 @@ Tagline: Best SELECTION, Best PRICE, Best ADVICE
 - 30-day returns policy on unused items
 - Manufacturer warranty on all equipment
 - Contact trade@PaintAccess.com.au for returns
+

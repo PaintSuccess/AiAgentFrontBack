@@ -5,90 +5,56 @@ module.exports = async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
   if (rateLimit(req, res)) return;
 
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
   if (!verifyAuth(req)) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
   try {
-    const params = req.method === "POST" ? req.body : req.query;
+    const params = req.body || {};
     const order_number = sanitizeInput(params.order_number, 20);
     const email = sanitizeInput(params.email, 320);
-    const customer_email = sanitizeInput(params.customer_email, 320);
 
-    // customer_email = the verified email from the logged-in customer's session
-    // (passed via dynamic variables from Shopify Liquid — cannot be spoofed by the user)
-    // email = the email the user provides in chat (unverified, user-supplied)
-
-    if (!order_number && !email) {
-      return res.status(400).json({
-        error: "Please provide an order_number or email to look up the order.",
+    // Public AI channels cannot prove Shopify storefront identity. Dynamic
+    // variables are useful for personalization, but not for access control.
+    // Require the caller to provide both order number and matching order email.
+    if (!order_number || !email) {
+      return res.status(200).json({
+        found: false,
+        message:
+          "For security, please provide both your order number and the email used for that order.",
       });
     }
 
-    let orders;
+    const cleanNumber = String(order_number).replace(/^#/, "");
+    const data = await shopifyFetch(
+      `orders.json?name=%23${cleanNumber}&status=any&limit=1`
+    );
+    let orders = data.orders || [];
 
-    if (order_number) {
-      const cleanNumber = String(order_number).replace(/^#/, "");
-      const data = await shopifyFetch(
-        `orders.json?name=%23${cleanNumber}&status=any&limit=1`
-      );
-      orders = data.orders || [];
+    orders = orders.filter(
+      (o) => o.email && o.email.toLowerCase() === email.toLowerCase()
+    );
 
-      // SECURITY: If customer is logged in, only show orders belonging to them.
-      // If guest, require matching email as a second verification factor.
-      if (orders.length > 0) {
-        const verifyEmail = customer_email || email;
-        if (!verifyEmail) {
-          return res.status(200).json({
-            found: false,
-            message:
-              "For security, please provide your email address to verify this order belongs to you.",
-          });
-        }
-        orders = orders.filter(
-          (o) => o.email && o.email.toLowerCase() === verifyEmail.toLowerCase()
-        );
-        if (orders.length === 0) {
-          return res.status(200).json({
-            found: false,
-            message: `Order #${order_number} was not found for this email address. Please check your order number and the email you used when placing the order.`,
-          });
-        }
-      }
-    } else if (email) {
-      // SECURITY: Logged-in customers can only look up their own orders.
-      // Guests cannot browse orders by email alone — they need order# + email.
-      if (!customer_email) {
-        return res.status(200).json({
-          found: false,
-          message:
-            "For security, please provide both your order number and email. You can find your order number in the confirmation email you received.",
-        });
-      }
-      // Logged in — only look up their own orders
-      if (email && customer_email.toLowerCase() !== email.toLowerCase()) {
-        return res.status(200).json({
-          found: false,
-          message:
-            "For privacy, you can only look up orders associated with your own account email.",
-        });
-      }
-      const data = await shopifyFetch(
-        `orders.json?email=${encodeURIComponent(customer_email)}&status=any&limit=5`
-      );
-      orders = data.orders || [];
+    if (data.orders?.length && orders.length === 0) {
+      return res.status(200).json({
+        found: false,
+        message: `Order #${cleanNumber} was not found for this email address. Please check your order number and the email you used when placing the order.`,
+      });
     }
 
     if (!orders || orders.length === 0) {
       return res.status(200).json({
         found: false,
-        message: order_number
-          ? `No order found with number #${order_number}.`
-          : `No orders found for that email address.`,
+        message: `No order found with number #${cleanNumber}.`,
       });
     }
 
-    // Return simplified order data — no full addresses, no other customers' info
+    // Return simplified order data. No full addresses, customer profile,
+    // payment details, notes, tags, or unrelated customer fields.
     const results = orders.map((order) => {
       const fulfillments = (order.fulfillments || []).map((f) => ({
         status: f.status,
@@ -111,9 +77,6 @@ module.exports = async function handler(req, res) {
           price: item.price,
         })),
         fulfillments,
-        shipping_city: order.shipping_address
-          ? order.shipping_address.city
-          : null,
       };
     });
 

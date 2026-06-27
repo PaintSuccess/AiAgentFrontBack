@@ -3,6 +3,7 @@ const {
   rateLimit,
   sanitizeInput,
   cleanEnv,
+  shopifyFetch,
 } = require("../../lib/shopify");
 const { askElevenLabsTextAgent } = require("../../lib/elevenlabs-text");
 
@@ -17,6 +18,7 @@ const SMS_WINDOW_MS = 60 * 60 * 1000;
 const SMS_IP_MAX = 10;
 const SMS_PHONE_MAX = 3;
 const smsLimiter = new Map();
+const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{1,63}$/;
 
 function normalizePhoneEnv(value) {
   const raw = String(value || "").trim();
@@ -39,6 +41,81 @@ function toE164AustralianMobile(value) {
 function fallbackReply(firstName) {
   const greeting = firstName ? `Hi ${firstName},` : "Hi,";
   return `${greeting} this is Jessica from Paint Access. Thanks for reaching out. Reply to this SMS with your question and I can help with products, stock, orders, or painting advice.`;
+}
+
+function isPhoneValidationError(err) {
+  const upstream = String(err?.upstream || "");
+  return err?.statusCode === 422 && /"phone"\s*:/i.test(upstream);
+}
+
+function isEmailTakenError(err) {
+  const upstream = String(err?.upstream || "");
+  return err?.statusCode === 422 && /"email"\s*:\s*\[.*already been taken/i.test(upstream);
+}
+
+async function createSmsLead({ firstName, lastName, email, phone, message }) {
+  const cleanEmail = String(email || "").toLowerCase();
+  if (!EMAIL_RE.test(cleanEmail)) {
+    return { action: "skipped", reason: "invalid_email" };
+  }
+
+  const search = await shopifyFetch(
+    `customers/search.json?query=email:${encodeURIComponent(cleanEmail)}&limit=1`
+  );
+  const existing = search.customers?.[0];
+  if (existing) {
+    console.log("[SMS Send] Existing customer left untouched:", existing.id);
+    return {
+      action: "skipped",
+      reason: "existing_customer_unverified",
+      customer_id: existing.id,
+    };
+  }
+
+  const note = [
+    "SMS form request via AI widget",
+    message ? `Message: ${message}` : null,
+  ].filter(Boolean).join(" | ");
+
+  const customerPayload = {
+    first_name: firstName,
+    last_name: lastName,
+    email: cleanEmail,
+    ...(phone ? { phone } : {}),
+    tags: "AI Agent,ai-lead,ai-widget,sms-form",
+    note,
+    accepts_marketing: false,
+    verified_email: false,
+  };
+
+  try {
+    const created = await shopifyFetch("customers.json", {
+      method: "POST",
+      body: JSON.stringify({ customer: customerPayload }),
+    });
+    console.log("[SMS Send] Customer created:", created.customer?.id);
+    return { action: "created", customer_id: created.customer?.id };
+  } catch (err) {
+    if (isEmailTakenError(err)) {
+      return { action: "skipped", reason: "existing_customer_unverified" };
+    }
+    if (!isPhoneValidationError(err) || !phone) throw err;
+
+    delete customerPayload.phone;
+    try {
+      const created = await shopifyFetch("customers.json", {
+        method: "POST",
+        body: JSON.stringify({ customer: customerPayload }),
+      });
+      console.log("[SMS Send] Customer created without phone:", created.customer?.id);
+      return { action: "created", customer_id: created.customer?.id };
+    } catch (retryErr) {
+      if (isEmailTakenError(retryErr)) {
+        return { action: "skipped", reason: "existing_customer_unverified" };
+      }
+      throw retryErr;
+    }
+  }
 }
 
 function limitKey(kind, value) {
@@ -125,7 +202,7 @@ module.exports = async function handler(req, res) {
     const body = req.body || {};
     const firstName = sanitizeInput(body.first_name, 80);
     const lastName = sanitizeInput(body.last_name, 80);
-    const email = sanitizeInput(body.email, 320);
+    const email = sanitizeInput(body.email, 320).toLowerCase();
     const message = sanitizeInput(body.message, 800);
     const to = toE164AustralianMobile(body.phone);
 
@@ -135,7 +212,7 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!EMAIL_RE.test(email)) {
       return res.status(400).json({ error: "Please enter a valid email address." });
     }
 
@@ -143,6 +220,20 @@ module.exports = async function handler(req, res) {
       return res.status(429).json({
         error: "Too many SMS requests. Please wait before trying again.",
       });
+    }
+
+    let leadResult = { action: "not_attempted" };
+    try {
+      leadResult = await createSmsLead({
+        firstName,
+        lastName,
+        email,
+        phone: to,
+        message,
+      });
+    } catch (err) {
+      console.error("[SMS Send] Customer create error:", err.message);
+      leadResult = { action: "skipped", reason: "shopify_error" };
     }
 
     const customerName = `${firstName} ${lastName}`.trim();
@@ -174,6 +265,7 @@ module.exports = async function handler(req, res) {
       message: "Thanks! We sent an SMS to your mobile number.",
       sid: twilioMessage.sid,
       status: twilioMessage.status,
+      lead: leadResult,
     });
   } catch (err) {
     console.error("[SMS Send] Error:", err.message);

@@ -1,4 +1,22 @@
-const { shopifyFetch, corsHeaders, cleanEnv, sanitizeInput } = require("../lib/shopify");
+const {
+  shopifyFetch,
+  corsHeaders,
+  cleanEnv,
+  sanitizeInput,
+  rateLimit,
+} = require("../lib/shopify");
+
+const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{1,63}$/;
+
+function isPhoneValidationError(err) {
+  const upstream = String(err?.upstream || "");
+  return err?.statusCode === 422 && /"phone"\s*:/i.test(upstream);
+}
+
+function isEmailTakenError(err) {
+  const upstream = String(err?.upstream || "");
+  return err?.statusCode === 422 && /"email"\s*:\s*\[.*already been taken/i.test(upstream);
+}
 
 // Public-facing endpoint — no Bearer auth required (called by storefront widget).
 // Accepts callback request form data, logs it as a Shopify draft order, then
@@ -10,6 +28,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
+  if (rateLimit(req, res)) return;
 
   const { name, phone, email, best_time, message } = req.body || {};
 
@@ -22,11 +41,12 @@ module.exports = async function handler(req, res) {
   }
 
   // Sanitise / truncate inputs
-  const cleanName    = String(name).trim().slice(0, 100);
+  const cleanName    = sanitizeInput(name, 100);
   const cleanPhone   = String(phone).trim().replace(/\s/g, "").slice(0, 30);
-  const cleanEmail   = String(email || "").trim().slice(0, 200);
-  const cleanMsg     = String(message || "").trim().slice(0, 500);
-  const cleanTime    = String(best_time || "").trim().slice(0, 100);
+  const emailInput   = sanitizeInput(email || "", 200).toLowerCase();
+  const cleanEmail   = EMAIL_RE.test(emailInput) ? emailInput : "";
+  const cleanMsg     = sanitizeInput(message || "", 500);
+  const cleanTime    = sanitizeInput(best_time || "", 100);
 
   // ---- 1. Log as Shopify draft order (CRM record) -----------------------
   let draftOrderId = null;
@@ -73,7 +93,7 @@ module.exports = async function handler(req, res) {
   if (cleanEmail || cleanPhone) {
     try {
       const nameParts = cleanName.split(/\s+/);
-      const callbackTags = ["ai-lead", "ai-widget", "callback-request"];
+      const callbackTags = ["AI Agent", "ai-lead", "ai-widget", "callback-request"];
       const callbackNote = [
         "SMS callback request via AI widget",
         cleanTime  ? `Best time: ${cleanTime}`  : null,
@@ -88,39 +108,51 @@ module.exports = async function handler(req, res) {
         const existing = search.customers?.[0];
 
         if (existing) {
-          const existingTags = existing.tags
-            ? existing.tags.split(",").map((t) => t.trim()).filter(Boolean)
-            : [];
-          const mergedTags = [...new Set([...existingTags, ...callbackTags])].join(",");
-          await shopifyFetch(`customers/${existing.id}.json`, {
-            method: "PUT",
-            body: JSON.stringify({
-              customer: {
-                id: existing.id,
-                tags: mergedTags,
-                note: callbackNote,
-                ...(cleanPhone && !existing.phone ? { phone: cleanPhone } : {}),
-              },
-            }),
-          });
-          console.log("[Callback] Customer updated:", existing.id);
+          // The public callback form cannot prove the requester owns this
+          // email address. Leave the Shopify customer untouched; the draft
+          // order above still gives the team the callback context.
+          console.log("[Callback] Existing customer left untouched:", existing.id);
         } else {
-          const created = await shopifyFetch("customers.json", {
-            method: "POST",
-            body: JSON.stringify({
-              customer: {
-                first_name: nameParts[0] || cleanName,
-                last_name:  nameParts.slice(1).join(" ") || "",
-                email:      cleanEmail,
-                ...(cleanPhone ? { phone: cleanPhone } : {}),
-                tags:       callbackTags.join(","),
-                note:       callbackNote,
-                accepts_marketing: false,
-                verified_email:    false,
-              },
-            }),
-          });
-          console.log("[Callback] Customer created:", created.customer?.id);
+          const customerPayload = {
+            first_name: nameParts[0] || cleanName,
+            last_name:  nameParts.slice(1).join(" ") || "",
+            email:      cleanEmail,
+            ...(cleanPhone ? { phone: cleanPhone } : {}),
+            tags:       callbackTags.join(","),
+            note:       callbackNote,
+            accepts_marketing: false,
+            verified_email:    false,
+          };
+          let created;
+          try {
+            created = await shopifyFetch("customers.json", {
+              method: "POST",
+              body: JSON.stringify({ customer: customerPayload }),
+            });
+          } catch (err) {
+            if (isEmailTakenError(err)) {
+              console.log("[Callback] Existing customer left untouched after create:", cleanEmail);
+            } else if (!isPhoneValidationError(err) || !cleanPhone) {
+              throw err;
+            } else {
+            delete customerPayload.phone;
+            try {
+              created = await shopifyFetch("customers.json", {
+                method: "POST",
+                body: JSON.stringify({ customer: customerPayload }),
+              });
+            } catch (retryErr) {
+              if (isEmailTakenError(retryErr)) {
+                console.log("[Callback] Existing customer left untouched after retry:", cleanEmail);
+                created = null;
+              } else {
+                throw retryErr;
+              }
+            }
+            if (created) console.log("[Callback] Customer created without duplicate phone:", created.customer?.id);
+            }
+          }
+          if (created) console.log("[Callback] Customer created:", created.customer?.id);
         }
       }
     } catch (err) {

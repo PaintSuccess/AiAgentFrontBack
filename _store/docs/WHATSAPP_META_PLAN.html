@@ -27,6 +27,8 @@
   .q { background: #fef9c3; border: 1px solid #fde047; border-radius: 4px; padding: 8px 12px; margin: 6px 0; }
   .provide { background: #fce7f3; border: 1px solid #f9a8d4; border-radius: 4px; padding: 8px 12px; margin: 6px 0; }
   .compare { background: #ede9fe; border: 1px solid #c4b5fd; border-radius: 4px; padding: 10px 14px; margin: 10px 0; }
+  .recommend { background: #ecfdf5; border: 1px solid #6ee7b7; border-radius: 4px; padding: 10px 14px; margin: 10px 0; }
+  .bad { background: #fef2f2; border: 1px solid #fecaca; border-radius: 4px; padding: 10px 14px; margin: 10px 0; }
   h1 { color: #1a1a1a; }
   .meta { color: #666; font-size: 12px; margin-bottom: 24px; }
 </style>
@@ -34,7 +36,7 @@
 <body>
 
 <h1>WhatsApp + Meta + Shopify Integration — Full Plan</h1>
-<p class="meta">Paint Access AI Agent — Generated 18 May 2026</p>
+<p class="meta">Paint Access AI Agent — Generated 18 May 2026; video-media architecture updated 2 June 2026; client WhatsApp Business update reviewed 9 June 2026</p>
 
 <h2>🎯 What You're Asking For</h2>
 <p>Full integration of WhatsApp Business with Meta and our AI bot:</p>
@@ -45,7 +47,12 @@
   <li><strong>Push back to Shopify</strong> as customers/orders/draft orders.</li>
   <li><strong>Tagging + source analytics</strong> (so we know WhatsApp is the lead source).</li>
   <li><strong>Downstream automation</strong> via Omnisend / email / SMS / Meta retargeting (Facebook + Instagram Custom Audiences).</li>
+  <li><strong>Short product videos in the funnel</strong> — 20–50 reusable clips for demo, testimonials, kit contents, batteries, objections, and checkout nudges.</li>
 </ol>
+
+<div class="recommend">
+<strong>9 June client update:</strong> WhatsApp Business should be included in the next phase, not treated as a later add-on. The client has Meta Business access and wants WhatsApp available both for automations/funnels and as an additional customer support channel for ATS/support-station users. The practical setup path now shown by the client is <strong>Twilio Console → Messaging → Senders → WhatsApp Senders → Create New Sender → Continue with Facebook</strong>, then choosing/creating the Paint Access WABA and verifying the number.
+</div>
 
 <hr>
 
@@ -53,7 +60,8 @@
 <table>
   <tr><th>Component</th><th>Status</th></tr>
   <tr><td>Twilio WhatsApp <strong>sandbox</strong> number</td><td class="status-partial">Sandbox only — recipients must opt in via a code first. Not usable for real customers.</td></tr>
-  <tr><td>Inbound webhook handler</td><td class="status-ok">Working — <code>/api/twilio/whatsapp-inbound</code> exists</td></tr>
+  <tr><td>Inbound webhook handler</td><td class="status-ok">Working — production-ready <code>/api/whatsapp/inbound</code> exists; legacy <code>/api/twilio/whatsapp-inbound</code> aliases to it</td></tr>
+  <tr><td>Outbound WhatsApp sender endpoint</td><td class="status-ok">Working — protected <code>/api/whatsapp/send</code> supports Twilio production first and Meta Cloud API later</td></tr>
   <tr><td>ElevenLabs agent (Jessica) — can already handle text turns</td><td class="status-ok">Working — already used by voice + chat widget</td></tr>
   <tr><td>Shopify backend (products, orders, inventory)</td><td class="status-ok">Working</td></tr>
   <tr><td>Vercel serverless infrastructure</td><td class="status-ok">Working — easy to add more endpoints</td></tr>
@@ -76,12 +84,13 @@
   <tr><td><strong>Meta Pixel + Conversion API</strong> on the storefront</td><td>For retargeting WhatsApp leads on Facebook/Instagram.</td></tr>
 </table>
 
-<h3>2. Provider Decision (Big Architectural Choice)</h3>
+<h3>2. Provider Decision (Updated)</h3>
 <div class="compare">
 <strong>Path A: Twilio production WhatsApp</strong>
 <ul>
   <li>✅ We already have a Twilio account + working webhook code.</li>
   <li>✅ Twilio handles Meta liaison, template submission, error handling.</li>
+  <li>✅ Matches the client's provided setup flow: create a Twilio WhatsApp Sender and continue through Facebook/Meta.</li>
   <li>❌ Higher per-message cost (~AUD $0.07–$0.12 per conversation vs Meta's ~$0.04).</li>
   <li>❌ Limited control over advanced WhatsApp features (catalogue, flows).</li>
 </ul>
@@ -103,11 +112,16 @@
 </ul>
 </div>
 
+<div class="recommend">
+<strong>Updated recommendation for the next phase:</strong> use <strong>Twilio production WhatsApp</strong> now because it matches the client's Meta invitation and setup instructions, reuses the existing Twilio/Vercel backend, and gets support + automation live fastest. Keep the backend provider-aware so Paint Access can migrate to direct Meta Cloud API later if message volume or advanced WhatsApp features justify it.
+</div>
+
 <h3>3. Backend (Vercel)</h3>
 <table>
-  <tr><th>Missing Endpoint / Component</th><th>Purpose</th></tr>
-  <tr><td><code>POST /api/whatsapp/inbound</code> (new, replacing the Twilio sandbox handler)</td><td>Receive customer messages from Meta Cloud API or Twilio production webhook.</td></tr>
-  <tr><td><code>POST /api/whatsapp/send</code></td><td>Server-side function for outbound messages (Jessica's replies, templates).</td></tr>
+  <tr><th>Endpoint / Component</th><th>Purpose</th></tr>
+  <tr><td><code>POST /api/whatsapp/inbound</code></td><td class="status-ok">Implemented. Receives customer messages from Twilio production webhook or Meta Cloud API.</td></tr>
+  <tr><td><code>POST /api/whatsapp/send</code></td><td class="status-ok">Implemented. Server-side function for outbound messages, Twilio templates via ContentSid, and optional Meta templates.</td></tr>
+  <tr><td><code>POST /api/whatsapp/status</code></td><td class="status-ok">Implemented. Receives Twilio WhatsApp delivery status callbacks for production sender observability.</td></tr>
   <tr><td><strong>Conversation state store</strong> (KV / Redis / Vercel KV / Shopify metafields)</td><td>WhatsApp is stateless from Meta's side. We must remember which funnel step each customer is on between messages.</td></tr>
   <tr><td><strong>Agent text bridge</strong></td><td>Route inbound WhatsApp messages into ElevenLabs agent's text mode (the agent's <code>conversation</code> API endpoint) instead of voice.</td></tr>
   <tr><td><code>POST /api/meta/capi-event</code></td><td>Server-side Meta Conversion API — fires events like <code>Lead</code>, <code>InitiateCheckout</code>, <code>Purchase</code> with customer email/phone hashed for matching.</td></tr>
@@ -145,6 +159,142 @@
 
 <hr>
 
+<h2>🎥 Video Funnel Media Architecture</h2>
+
+<div class="recommend">
+<strong>Recommended decision:</strong> keep one canonical video library in <strong>Cloudflare R2 + Cloudflare CDN</strong> (or AWS S3 + CloudFront if the client already standardises on AWS), store metadata in a small <strong>media registry</strong>, and let each channel adapter decide how to deliver the asset. For WhatsApp, send videos as native WhatsApp <code>video</code> messages using either a Meta <code>media_id</code> cache or the CDN <code>link</code>. Do not use Shopify Files as the source of truth for this funnel.
+</div>
+
+<h3>Why this is the right architecture</h3>
+<ul>
+  <li><strong>One source of truth.</strong> The same clip can be used by WhatsApp, the existing AI web funnel, landing pages, email, and future channels without uploading separate permanent copies everywhere.</li>
+  <li><strong>WhatsApp-native playback.</strong> The bot can send a <code>type: "video"</code> message. The user sees a preview in WhatsApp and watches inside the chat, instead of opening a web page.</li>
+  <li><strong>Future-proof.</strong> Meta <code>media_id</code> values are treated as a temporary delivery cache, not the permanent library. If an ID expires or fails, the backend re-uploads from R2/S3 or sends by CDN link.</li>
+  <li><strong>Cheap at scale.</strong> For many repeated 15–30 second clips, R2 avoids bandwidth surprises and keeps the system simpler than per-channel asset storage.</li>
+  <li><strong>Operational control.</strong> We can version files, validate encoding, track which funnel step uses which clip, replace a clip without changing the bot logic, and run health checks before campaigns.</li>
+</ul>
+
+<h3>Storage Options Compared</h3>
+<table>
+  <tr><th>Option</th><th>Use Case</th><th>Pros</th><th>Cons</th><th>Recommendation</th></tr>
+  <tr>
+    <td><strong>Shopify Files</strong></td>
+    <td>Simple product-page assets inside Shopify.</td>
+    <td>Easy for store admins; Shopify CDN works for storefront media.</td>
+    <td>Weak as an omnichannel media backend: limited workflow/versioning, less control over signed access, transcoding, validation, and API-driven WhatsApp reuse.</td>
+    <td class="status-no">Do not use as source of truth. OK only for store-page copies if needed.</td>
+  </tr>
+  <tr>
+    <td><strong>AWS S3 + CloudFront</strong></td>
+    <td>Enterprise-grade canonical storage.</td>
+    <td>Very stable, mature permissions, lifecycle rules, great tooling.</td>
+    <td>More setup; egress/CDN cost must be watched; heavier than needed for 20–50 short clips.</td>
+    <td class="status-partial">Good if the client already uses AWS.</td>
+  </tr>
+  <tr>
+    <td><strong>Cloudflare R2 + CDN</strong></td>
+    <td>Canonical video library for WhatsApp + AI funnel.</td>
+    <td>Low storage cost, no standard egress fees from R2, easy CDN, simple public/signed delivery.</td>
+    <td>Needs a small admin/upload workflow and metadata registry.</td>
+    <td class="status-ok">Best default for this project.</td>
+  </tr>
+  <tr>
+    <td><strong>WhatsApp Media ID only</strong></td>
+    <td>Temporary channel cache for delivery.</td>
+    <td>Fast to send after upload; avoids making Meta fetch the public URL every time.</td>
+    <td>Not permanent storage. Uploaded media IDs expire; cannot be the single library for web/email/AI channels.</td>
+    <td class="status-partial">Use as cache, not source of truth.</td>
+  </tr>
+</table>
+
+<h3>Recommended Media Pipeline</h3>
+<ol>
+  <li><strong>Upload canonical video</strong> to R2/S3 under a stable path like <code>whatsapp/dans-backpack/demo-spraying-v1.mp4</code>.</li>
+  <li><strong>Validate and encode</strong> before publishing: MP4, H.264 Main/Baseline, AAC audio, single audio stream, <code>-movflags faststart</code>, target under 16 MB.</li>
+  <li><strong>Create a media registry row</strong> with fields such as <code>asset_key</code>, <code>title</code>, <code>funnel_step</code>, <code>cdn_url</code>, <code>duration</code>, <code>size_bytes</code>, <code>sha256</code>, <code>whatsapp_media_id</code>, <code>media_id_expires_at</code>, and <code>status</code>.</li>
+  <li><strong>When the funnel chooses a video</strong>, the WhatsApp adapter checks whether a valid <code>whatsapp_media_id</code> exists. If yes, send by <code>id</code>. If not, upload the canonical R2/S3 file to WhatsApp, save the new ID, then send.</li>
+  <li><strong>Fallback path:</strong> if upload/cache fails, send the WhatsApp video message by HTTPS <code>link</code> from the CDN, so the user still receives an in-chat video message.</li>
+  <li><strong>Reuse the same registry</strong> for the existing AI funnel: the web/chat channel uses <code>cdn_url</code>, while WhatsApp uses <code>media_id</code> or <code>link</code>.</li>
+</ol>
+
+<pre>
+Video editor/export
+       │
+       ▼
+R2/S3 canonical storage ───► Cloudflare/CloudFront CDN ───► AI web funnel, landing pages, email
+       │
+       ▼
+Media registry database
+       │  asset_key: demo_spray_pattern
+       │  funnel_step: demo
+       │  cdn_url: https://media.paintaccess...
+       │  whatsapp_media_id: cached delivery ID
+       ▼
+WhatsApp bot /api/whatsapp/send-video
+       │
+       ├─ valid media_id? send native WhatsApp video by ID
+       ├─ no valid ID? upload from canonical storage, cache ID, send
+       └─ fallback: send native WhatsApp video by HTTPS link
+</pre>
+
+<h3>WhatsApp Video Rules to Design Around</h3>
+<ul>
+  <li><strong>Native attachment is supported.</strong> The Cloud API media object supports <code>id</code> or <code>link</code> for video. This is not just a plain URL message.</li>
+  <li><strong>Size limit:</strong> video messages should be kept under <strong>16 MB</strong>.</li>
+  <li><strong>Formats:</strong> MP4 (<code>video/mp4</code>) or 3GPP; for MP4 use H.264 video + AAC audio.</li>
+  <li><strong>Compatibility:</strong> avoid H.264 High profile with B-frames because it can fail on Android WhatsApp clients. Encode Main/Baseline and use faststart.</li>
+  <li><strong>Media IDs are temporary.</strong> Uploaded WhatsApp media persists for about 30 days, so we cache and refresh IDs instead of relying on them as permanent storage.</li>
+  <li><strong>Templates:</strong> if the bot initiates a message outside the 24-hour service window, the outbound message must be an approved template. Media can be used in approved template headers, but template copy/media rules should be tested during setup.</li>
+  <li><strong>Interactive flow limits:</strong> simple reply buttons are limited, so plan concise choices. For many branches, use list messages or stateful text commands rather than sending too many buttons.</li>
+</ul>
+
+<h3>Client-Facing Answer in Russian</h3>
+<div class="info">
+<p><strong>Короткий ответ:</strong> лучше не выбирать между Shopify Files и WhatsApp Media ID как постоянным хранилищем. Правильная архитектура — отдельная медиатека в Cloudflare R2 или AWS S3, а WhatsApp Media ID использовать только как кэш доставки.</p>
+
+<p><strong>Рекомендуемая схема:</strong></p>
+<ol>
+  <li>Все оригинальные ролики DAN’S Airless Backpack хранятся в одном месте: Cloudflare R2 + CDN. Альтернатива — AWS S3 + CloudFront, если вся инфраструктура уже в AWS.</li>
+  <li>В базе/таблице хранится реестр видео: ключ ролика, название, шаг воронки, CDN-ссылка, размер, длительность, версия, WhatsApp media_id и срок его действия.</li>
+  <li>WhatsApp-бот отправляет ролик как полноценное видео-вложение через WhatsApp Cloud API, а не как текстовую ссылку. Пользователь видит превью и смотрит видео прямо в чате.</li>
+  <li>Если для ролика уже есть актуальный WhatsApp media_id, бот отправляет его по ID. Если ID истек, backend автоматически загружает ролик заново из R2/S3 в WhatsApp и сохраняет новый ID.</li>
+  <li>Та же медиатека используется в существующей AI-воронке: WhatsApp берет media_id/link, веб-воронка берет CDN URL. Дублировать ролики в нескольких системах не нужно.</li>
+</ol>
+
+<p><strong>Ответы на вопросы клиента:</strong></p>
+<ul>
+  <li><strong>Где хранить видео?</strong> Cloudflare R2 + CDN как лучший вариант по цене и простоте. AWS S3 + CloudFront — хороший вариант, если уже используется AWS. Shopify Files — не лучший источник правды для омниканальной AI-воронки.</li>
+  <li><strong>Можно ли отправлять не ссылкой, а вложением?</strong> Да. WhatsApp Cloud API умеет отправлять видео как native video message через <code>video.id</code> или <code>video.link</code>. В чате будет превью, ролик будет проигрываться внутри WhatsApp.</li>
+  <li><strong>Нужно ли загружать напрямую в WhatsApp и использовать Media ID?</strong> Да, но как кэш. Media ID удобен для часто используемых роликов, но не является постоянным хранилищем. Основной файл должен оставаться в R2/S3.</li>
+  <li><strong>Самый быстрый, стабильный и дешевый вариант?</strong> R2/S3 как постоянное хранилище + автоматический кэш WhatsApp Media ID + fallback на CDN link. Это дает контроль, масштабирование и отсутствие зависимости от одного канала.</li>
+  <li><strong>20–50 видео — нормально?</strong> Да, это небольшой объем. Главное — держать каждый WhatsApp-ролик до 16 MB, правильно кодировать MP4 и вести реестр версий.</li>
+</ul>
+
+<p><strong>Итоговая рекомендация:</strong> строим не “WhatsApp-хранилище”, а общую video asset layer для всех каналов. WhatsApp получает оптимизированные ролики из этой библиотеки, AI-воронка использует те же asset keys, а замена или обновление видео делается один раз в центральной медиатеке.</p>
+</div>
+
+<h3>Implementation Tasks for Video Funnel</h3>
+<table>
+  <tr><th>Task</th><th>Notes</th></tr>
+  <tr><td>Create media bucket</td><td>Cloudflare R2 bucket such as <code>paintaccess-media</code>; public CDN domain such as <code>media.paintaccess.com.au</code> or signed URLs if private.</td></tr>
+  <tr><td>Add media registry</td><td>Start with JSON/DB table. Later expose an admin UI for upload, status, and funnel mapping.</td></tr>
+  <tr><td>Add encoder checklist</td><td>Use ffmpeg preset: H.264 Main/Baseline, AAC, 720p or lower if needed, under 16 MB, <code>-movflags faststart</code>.</td></tr>
+  <tr><td>Add <code>/api/media/assets</code></td><td>List and resolve assets by <code>asset_key</code> for all channels.</td></tr>
+  <tr><td>Add <code>/api/whatsapp/send-video</code></td><td>Given <code>to</code> + <code>asset_key</code>, send by valid media ID, refresh ID, or fallback to CDN link.</td></tr>
+  <tr><td>Add health checks</td><td>Before campaign launch, verify every file exists, has correct MIME type, is under 16 MB, and can be fetched by Meta.</td></tr>
+  <tr><td>Add analytics</td><td>Log <code>video_sent</code>, <code>asset_key</code>, funnel step, message ID, delivery status, and follow-up conversion.</td></tr>
+</table>
+
+<h3>Reference Links</h3>
+<ul>
+  <li>Meta WhatsApp Cloud API Postman collection — Sending Media Messages: <a href="https://www.postman.com/meta/whatsapp-business-platform/folder/8vl346e/sending-media-messages">https://www.postman.com/meta/whatsapp-business-platform/folder/8vl346e/sending-media-messages</a></li>
+  <li>Meta WhatsApp Cloud API Postman collection — Media Object: <a href="https://www.postman.com/meta/whatsapp-business-platform/folder/bde2x91/media-object">https://www.postman.com/meta/whatsapp-business-platform/folder/bde2x91/media-object</a></li>
+  <li>WhatsApp Developer Documentation mirror — Media and supported media types: <a href="https://support.chatarchitect.com/books/meta-whatsapp/page/media-developer-documentation/revisions/401">https://support.chatarchitect.com/books/meta-whatsapp/page/media-developer-documentation/revisions/401</a></li>
+  <li>WhatsApp Developer Documentation mirror — Video Messages: <a href="https://support.chatarchitect.com/books/meta-whatsapp/page/video-messages-developer-documentation">https://support.chatarchitect.com/books/meta-whatsapp/page/video-messages-developer-documentation</a></li>
+</ul>
+
+<hr>
+
 <h2>⚠️ Edge Cases, Bottlenecks &amp; Complications</h2>
 <ol>
   <li><strong>The 24-hour customer service window.</strong> Once a customer messages you, you can reply freely for 24h. After that, every outbound message MUST be a pre-approved template. Forgetting this kills automation flows.</li>
@@ -167,6 +317,9 @@
   <li><strong>iOS/Android quirks.</strong> Interactive buttons render differently. Test on both. Long messages get clipped on older Androids.</li>
   <li><strong>Catalogue sync (if used).</strong> Meta Catalogue must be kept in sync with Shopify products. Either via Meta's Shopify integration app or a custom feed. Stale prices = customer complaints.</li>
   <li><strong>Cost spiral.</strong> Each conversation triggers: WhatsApp API charge + ElevenLabs text API + Shopify API + (optional) vision/STT. Easy to hit $0.20–$0.50 per conversation if not careful.</li>
+  <li><strong>Video size failures.</strong> WhatsApp video delivery fails when files exceed supported limits or use unsupported encoding. Every funnel asset must pass a preflight check before it is mapped to a bot step.</li>
+  <li><strong>Expired WhatsApp media IDs.</strong> Media IDs should be cached with expiry and refreshed from the canonical R2/S3 file. Never hard-code a media ID as the only copy of a video.</li>
+  <li><strong>CDN access for Meta.</strong> If sending by <code>link</code>, Meta must be able to fetch the HTTPS URL. Private buckets need signed URLs that last long enough for Meta to retrieve the file.</li>
   <li><strong>Privacy / GDPR / Australian Privacy Act.</strong> Storing transcripts of WhatsApp conversations needs a clear privacy policy update.</li>
 </ol>
 
@@ -192,10 +345,11 @@
             │   ├─ Identify customer by phone                  │
             │   ├─ Load session state (KV store)               │
             │   ├─ If media: STT / vision pre-process          │
+            │   ├─ If funnel video: resolve media asset key     │
             │   ├─ Send text to ElevenLabs agent (text mode)   │
             │   ├─ Receive reply + tool calls                  │
             │   ├─ Persist updated session state               │
-            │   └─ POST reply back via Meta API                │
+            │   └─ POST text/video reply back via Meta API      │
             └──────────────────────┬───────────────────────────┘
                                    │
               ┌────────────────────┼────────────────────┬─────────────────────┐
@@ -213,6 +367,13 @@
    │ + email/SMS flows  │  │ WhatsApp        │  │ Custom Audience  │
    │                    │  │                 │  │ → retargeting    │
    └────────────────────┘  └─────────────────┘  └──────────────────┘
+
+Separate shared media layer:
+
+   ┌────────────────────┐     ┌──────────────────┐     ┌────────────────────┐
+   │ R2/S3 canonical    │────►│ Media registry   │────►│ WhatsApp media ID  │
+   │ video storage      │     │ asset_key map    │     │ cache / CDN link   │
+   └────────────────────┘     └──────────────────┘     └────────────────────┘
 </pre>
 
 <hr>
@@ -225,7 +386,8 @@
     <li>Create / verify Meta Business Account.</li>
     <li>Submit business verification documents (ABN, address).</li>
     <li>Choose &amp; reserve the WhatsApp phone number.</li>
-    <li>Decide provider: Twilio (recommended for fastest start) vs Meta direct (cheapest long-term).</li>
+    <li>Create the Twilio WhatsApp Sender and connect it via Continue with Facebook to the Paint Access Meta Business account.</li>
+    <li>Use Twilio for the first production phase; keep Meta direct as a later migration path.</li>
     <li>Submit WhatsApp Business display name for approval.</li>
   </ul>
 </div>
@@ -233,10 +395,11 @@
 <div class="phase">
   <strong>Phase 1 — Backend Plumbing</strong>
   <ul>
-    <li>Replace sandbox handler with production-ready <code>/api/whatsapp/inbound</code>.</li>
-    <li>Add <code>/api/whatsapp/send</code> with Meta/Twilio credentials in Vercel env.</li>
+    <li class="status-ok">Replace sandbox handler with production-ready <code>/api/whatsapp/inbound</code>.</li>
+    <li class="status-ok">Add <code>/api/whatsapp/send</code> with Meta/Twilio credentials in Vercel env.</li>
     <li>Add a KV-backed session store (Vercel KV or Upstash Redis).</li>
     <li>Add inbound media download + storage (Vercel Blob or S3).</li>
+    <li>Add the shared video media layer: R2/S3 bucket, CDN domain, media registry, and <code>/api/whatsapp/send-video</code>.</li>
   </ul>
 </div>
 
@@ -245,7 +408,8 @@
   <ul>
     <li>Create a WhatsApp-flavoured system prompt variant for Jessica.</li>
     <li>Add tools: <code>create_draft_order</code>, <code>send_whatsapp_template</code>, <code>save_lead</code>.</li>
-    <li>Define funnel: greet → qualify → recommend → quote → checkout link → follow-up.</li>
+    <li>Add tool: <code>send_funnel_video</code> that accepts <code>asset_key</code> and optional caption.</li>
+    <li>Define funnel: greet → video 1 → qualify → demo/review/battery/kit videos → recommend → quote → checkout link → follow-up.</li>
     <li>Approve initial templates: welcome, reminder, abandoned-cart, order confirmation.</li>
   </ul>
 </div>
@@ -283,7 +447,7 @@
 
 <h2>❓ Questions to Clarify Before Building</h2>
 
-<div class="q"><strong>Q1. Provider.</strong> Twilio (faster start, more expensive), Meta Cloud API direct (cheapest, more work), or 360dialog/MessageBird (BSP middle ground)? My recommendation: <strong>Meta Cloud API direct</strong> for long-term cost + feature access.</div>
+<div class="q"><strong>Q1. Provider.</strong> Updated from the client's setup instructions: use <strong>Twilio production WhatsApp</strong> first, connected through Meta/Facebook. Revisit direct Meta Cloud API later for lower long-term cost and advanced features.</div>
 <div class="q"><strong>Q2. WhatsApp phone number.</strong> New dedicated number, or one of your existing numbers? Important: it cannot have a personal WhatsApp registered. The existing Twilio sandbox number won't carry over to production.</div>
 <div class="q"><strong>Q3. Meta Business verification.</strong> Has Paint Access already done Meta Business verification (the document upload step)? If not, this is the longest blocker — can take a week.</div>
 <div class="q"><strong>Q4. Funnel scope.</strong> Pure support + Q&amp;A, or full sales (recommend → quote → payment link → close)? Recommendation: start with support + lead-capture, add the payment-link funnel in Phase 2 once approved.</div>
@@ -306,7 +470,7 @@
 <div class="provide"><strong>Meta Business Manager access</strong> — admin role on the Paint Access business account, or create one and add me as a partner.</div>
 <div class="provide"><strong>A dedicated phone number</strong> for WhatsApp that is NOT already in personal WhatsApp use.</div>
 <div class="provide"><strong>Business verification documents</strong> — ABN registration, business address proof, utility bill. Meta will need these.</div>
-<div class="provide"><strong>Provider decision</strong> — answer Q1 above.</div>
+<div class="provide"><strong>Twilio WhatsApp Sender approval</strong> — complete the Create New Sender flow, connect with Facebook/Meta, choose/create WABA, and verify the selected number.</div>
 <div class="provide"><strong>Answers to Q2–Q15</strong> — to finalise scope before building.</div>
 <div class="provide"><strong>Confirmation that we can add Meta Pixel + Conversion API</strong> code to the storefront theme.</div>
 <div class="provide"><strong>Omnisend admin access</strong> (if not already shared) — to define WhatsApp-source segments.</div>
@@ -325,7 +489,7 @@ This task <strong>directly reuses</strong> several pieces from the Lead Capture 
   <li>System prompt rules for lead capture (name, email, opt-in) — same rules, applied to a different channel.</li>
   <li>Consent &amp; PII handling — same legal framework.</li>
 </ul>
-Recommendation: build the Lead Capture plan first (it's smaller, no Meta dependencies), then this plan extends it to the WhatsApp channel.
+Updated recommendation: keep reusing the Lead Capture customer/tagging rules, but run WhatsApp Business setup in parallel now because Meta/Twilio sender approval is the longest external blocker.
 </div>
 
 </body>

@@ -1,7 +1,8 @@
 /**
  * Fetch wrapper for dashboard API calls.
  * Uses Shopify App Bridge session tokens when inside Shopify Admin.
- * Falls back to unauthenticated for direct access (dev mode).
+ * Production dashboard APIs require this token; direct unauthenticated access
+ * is only for explicit local/dev bypass on the backend.
  */
 export async function dashboardFetch(path, options = {}) {
   const headers = { "Content-Type": "application/json", ...options.headers };

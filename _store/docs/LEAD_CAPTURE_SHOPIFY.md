@@ -1,4 +1,12 @@
-# Lead Capture & Shopify Customer Sync — Build Plan
+# Lead Capture & Shopify Customer Sync
+
+## Current Status
+
+- `app/api/shopify/customer.js` exists and creates new Shopify customers from approved guest lead capture.
+- The live ElevenLabs agent has a `capture_lead` webhook tool attached.
+- The live prompt now requires the agent to call `capture_lead` before saying a guest was saved or added.
+- For privacy, the public AI flow does **not** mutate an existing Shopify customer record based only on a spoken/typed email address.
+- Logged-in customer note updates are **not** performed by `capture_lead`; that requires a separately verified customer/session path before it should write to private Shopify customer records.
 
 ## Problem
 
@@ -10,7 +18,7 @@
 
 ## Goals
 
-1. **Agent captures guest leads**: when `customer_id` is empty (not logged in), Jessica asks for name + email (+ phone if not already shared) early in the conversation and calls `capture_lead` tool → customer created/updated in Shopify with tag `ai-lead`.
+1. **Agent captures guest leads**: when `customer_id` is empty (not logged in), Jessica asks for permission + name + email (+ phone if useful) after a helpful exchange and calls `capture_lead` tool → new Shopify customer created with tag `ai-lead`.
 2. **Callback → Shopify customer**: when SMS callback is requested (widget form OR agent tool), the contact is upserted into Shopify customers automatically — separate from the draft order log.
 
 ---
@@ -25,8 +33,6 @@
 | `setup/create-tools.js` | Registers all ElevenLabs agent tools |
 | `setup/update-agent.js` | System prompt + first message |
 | Widget `dynamic-variables` | Already sends `customer_id`, `customer_email`, `customer_name` to agent |
-
-**No `app/api/shopify/customer.js` endpoint exists yet.**
 
 ---
 
@@ -49,11 +55,11 @@ Agent calls capture_lead { name, email, phone? }
 POST /api/shopify/customer  ← new Vercel endpoint
         │
         ├─ Search Shopify customers by email
-        ├─ If found: add tag ai-lead, update notes, return existing id
-        └─ If not found: create customer (tags: ai-lead, ai-widget)
+        ├─ If found: skip mutation (existing customer is unverified in public AI flow)
+        └─ If not found: create customer (tags: AI Agent, ai-lead, ai-widget)
         │
         ▼
-Agent: "Got it! I've saved your details."
+Agent: "Got it! I've saved your details." only when action is "created"
 ```
 
 ```
@@ -91,7 +97,7 @@ POST /api/callback  (existing)
 ```json
 {
   "customer_id": 123456789,
-  "action": "created" | "updated",
+  "action": "created" | "skipped",
   "email": "john@example.com"
 }
 ```
@@ -99,7 +105,7 @@ POST /api/callback  (existing)
 **Logic:**
 1. Validate: `name` and `email` required; reject clearly invalid email patterns.
 2. Search Shopify: `GET /admin/api/2024-10/customers/search.json?query=email:<email>`
-3. **If found**: `PUT /customers/<id>.json` — add tags, update note, update phone if provided.
+3. **If found**: return `action: "skipped", reason: "existing_customer_unverified"` and do not mutate the customer record.
 4. **If not found**: `POST /customers.json` — create with `first_name`, `last_name` (parsed from `name`), `email`, `phone`, `tags`, `note`.
 5. Never overwrite existing `accepts_marketing` — leave as-is (compliance).
 
@@ -203,7 +209,8 @@ When NOT to ask:
 - If they're just browsing and haven't engaged with a real question
 - In the same breath as asking for their order number (keep asks separate)
 
-After capture_lead succeeds: say "Perfect, I've saved your details." and continue naturally.
+After capture_lead returns action "created": say "Perfect, I've saved your details." and continue naturally.
+If it returns action "skipped" for an existing unverified customer, do not claim the customer record was changed.
 ```
 
 Run `node setup/update-agent.js` after editing.
@@ -235,9 +242,9 @@ Run `node setup/update-agent.js` after editing.
 
 4. Smoke test
    - Open https://www.paintaccess.com.au/?ai-widget=1 as a guest
-   - Ask about a product → agent helps → after 1-2 exchanges, agent asks for email
+   - Ask about a product → agent helps → after 1-2 exchanges, agent asks permission/details or responds correctly when asked to be added
    - Confirm Shopify customer created with tag 'ai-lead'
-   - Fill callback form → confirm Shopify customer created/updated
+   - Fill callback form → confirm Shopify customer created/updated through that callback path
 ```
 
 ---

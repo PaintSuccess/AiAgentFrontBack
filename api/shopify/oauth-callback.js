@@ -72,6 +72,8 @@ module.exports = async function handler(req, res) {
       `);
     }
 
+    console.log("[OAuth] Access token obtained with scope:", tokenData.scope || "(none)");
+
     return res.status(200).send(`
       <html>
       <head><title>Shopify OAuth Success</title></head>
@@ -85,9 +87,6 @@ module.exports = async function handler(req, res) {
       </body>
       </html>
     `);
-
-    // Log token server-side only (visible in Vercel function logs)
-    console.log("[OAuth] Access token obtained:", tokenData.access_token);
   } catch (err) {
     return res.status(500).send(`
       <h1>Error</h1>

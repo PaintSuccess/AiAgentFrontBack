@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Google Places + AI Voice Agent - Implementation Plan</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; max-width: 900px; margin: 40px auto; padding: 0 24px; color: #222; }
+  h1 { font-size: 22px; border-bottom: 2px solid #333; padding-bottom: 8px; color: #1a1a1a; }
+  h2 { font-size: 17px; margin-top: 32px; border-left: 4px solid #4285F4; padding-left: 10px; }
+  h3 { font-size: 14px; margin-top: 20px; color: #444; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  th { background: #f0f0f0; text-align: left; padding: 8px 10px; border: 1px solid #ccc; font-size: 13px; }
+  td { padding: 7px 10px; border: 1px solid #ccc; font-size: 13px; vertical-align: top; }
+  tr:nth-child(even) td { background: #fafafa; }
+  code, pre { background: #f4f4f4; border-radius: 4px; font-family: "Courier New", monospace; font-size: 12px; }
+  pre { padding: 14px 16px; overflow-x: auto; border: 1px solid #ddd; line-height: 1.5; }
+  code { padding: 1px 4px; }
+  ul, ol { margin: 6px 0 6px 20px; }
+  li { margin-bottom: 4px; }
+  .status-ok { color: #1a7f37; font-weight: bold; }
+  .status-partial { color: #d4a017; font-weight: bold; }
+  .status-no { color: #cf222e; font-weight: bold; }
+  .warn { background: #fff8c5; border-left: 4px solid #d4a017; padding: 10px 14px; margin: 12px 0; }
+  .info { background: #dbeafe; border-left: 4px solid #2563eb; padding: 10px 14px; margin: 12px 0; }
+  .phase { background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 10px 16px; margin: 10px 0; }
+  .phase strong { color: #15803d; }
+  .q { background: #fef9c3; border: 1px solid #fde047; border-radius: 4px; padding: 8px 12px; margin: 6px 0; }
+  .provide { background: #fce7f3; border: 1px solid #f9a8d4; border-radius: 4px; padding: 8px 12px; margin: 6px 0; }
+  .compare { background: #ede9fe; border: 1px solid #c4b5fd; border-radius: 4px; padding: 10px 14px; margin: 10px 0; }
+  .meta { color: #666; font-size: 12px; margin-bottom: 24px; }
+</style>
+</head>
+<body>
+
+<h1>Google Places + AI Voice Agent - Full Implementation Plan</h1>
+<p class="meta">Paint Access AI Agent - Generated 25 May 2026</p>
+
+<h2>What You're Asking For</h2>
+<p>During a live phone or website voice conversation, the AI agent should understand a request like:</p>
+<pre>Customer: "I need a painter near William Street Sydney."</pre>
+<p>The system should search Google Maps / Google Places in real time, find relevant nearby businesses, rank them, and return the best option to the agent so it can say something useful out loud.</p>
+
+<ol>
+  <li><strong>Extract intent</strong> - trade/service type, address/suburb, optional radius, urgency.</li>
+  <li><strong>Call Google Places</strong> - search for matching businesses near the address.</li>
+  <li><strong>Score results</strong> - combine distance, rating, review count, business status, and optional review recency signal.</li>
+  <li><strong>Return a short spoken answer</strong> - name, rating, review count, address, phone/website if available.</li>
+  <li><strong>Avoid overclaiming</strong> - Google cannot tell us which individual worker did a job last week; that needs CRM/job data later.</li>
+</ol>
+
+<div class="warn">
+  <strong>Important expectation:</strong> Google Places is a business-directory approximation. It can help choose "best nearby business" using public rating/review signals. It cannot guarantee availability, quality for a specific job, whether the business services that exact suburb, or which worker performed a recent job.
+</div>
+
+<hr>
+
+<h2>What We Already Have</h2>
+<table>
+  <tr><th>Component</th><th>Status</th><th>Reusable for this task?</th></tr>
+  <tr><td>ElevenLabs Conversational AI agent</td><td class="status-ok">Working</td><td>Yes - add a new server/webhook tool.</td></tr>
+  <tr><td>Vercel serverless backend</td><td class="status-ok">Working</td><td>Yes - host Google Places endpoint.</td></tr>
+  <tr><td>Existing webhook tool pattern with bearer auth</td><td class="status-ok">Working</td><td>Yes - same pattern as product/order/inventory tools.</td></tr>
+  <tr><td>Tool latency handling</td><td class="status-ok">Working</td><td>Yes - use pre-tool speech like "Let me check nearby options for you."</td></tr>
+  <tr><td>Shopify product/order/inventory tools</td><td class="status-ok">Working</td><td>Not directly, but shows the backend structure.</td></tr>
+  <tr><td>Google Maps Platform project/API key</td><td class="status-no">Unknown</td><td>Client must provide or create it.</td></tr>
+  <tr><td>CRM/job database for real contractor history</td><td class="status-no">Not available</td><td>Optional future phase.</td></tr>
+</table>
+
+<hr>
+
+<h2>Recommended Scope</h2>
+
+<h3>MVP - Best Nearby Business During Call</h3>
+<table>
+  <tr><th>Feature</th><th>Included?</th><th>Notes</th></tr>
+  <tr><td>Voice tool: <code>find_local_specialist</code></td><td class="status-ok">Yes</td><td>Agent calls it when customer asks for a local trade/service.</td></tr>
+  <tr><td>Text Search against Google Places</td><td class="status-ok">Yes</td><td>Best fit for natural queries like "painter near William Street Sydney".</td></tr>
+  <tr><td>Result ranking</td><td class="status-ok">Yes</td><td>Distance + rating + review count + business status.</td></tr>
+  <tr><td>Return business name, rating, reviews, address</td><td class="status-ok">Yes</td><td>Core fields for a spoken recommendation.</td></tr>
+  <tr><td>Phone/website</td><td class="status-partial">Optional</td><td>Available via Google fields, but may trigger higher-cost Place Details fields.</td></tr>
+  <tr><td>Fresh reviews/activity</td><td class="status-partial">Approximation only</td><td>Use limited review data if requested; Google does not expose a complete review timeline.</td></tr>
+  <tr><td>CRM-backed "who worked last week"</td><td class="status-no">No</td><td>Future phase once job/contractor data exists.</td></tr>
+</table>
+
+<h3>Better Production Version</h3>
+<ul>
+  <li>Add geocoding/address normalisation for vague spoken addresses.</li>
+  <li>Add caching by <code>service + suburb/address</code> for 1-24 hours to reduce cost and latency.</li>
+  <li>Add a fallback when Google returns weak results: ask for a suburb/postcode or broaden radius.</li>
+  <li>Add a small dashboard/log table so staff can see what the agent recommended.</li>
+  <li>Add CRM/job database ranking later: preferred partners, completed jobs, complaint history, internal quality score.</li>
+</ul>
+
+<hr>
+
+<h2>Estimated Build Time With AI Assistance</h2>
+<p>These estimates assume the current Paint Access codebase stays as-is, the Google Maps Platform key is ready, and the requirement is to recommend public businesses from Google Places, not to build a contractor marketplace.</p>
+
+<table>
+  <tr><th>Scope</th><th>Estimated Time</th><th>What It Includes</th></tr>
+  <tr>
+    <td><strong>Technical spike / proof of concept</strong></td>
+    <td><strong>0.5-1 day</strong></td>
+    <td>One backend endpoint, hard-coded test query, Google Places response shaping, local/manual test.</td>
+  </tr>
+  <tr>
+    <td><strong>MVP for live agent</strong></td>
+    <td><strong>2-3 working days</strong></td>
+    <td>Backend endpoint, ranking algorithm, ElevenLabs tool definition, prompt rules, auth, env vars, error handling, live call testing.</td>
+  </tr>
+  <tr>
+    <td><strong>Production-ready v1</strong></td>
+    <td><strong>4-7 working days</strong></td>
+    <td>MVP plus caching, logs, rate-limit guardrails, better address parsing, fallback prompts, test scripts, monitoring notes.</td>
+  </tr>
+  <tr>
+    <td><strong>Enhanced version with CRM/job data</strong></td>
+    <td><strong>2-4 additional weeks</strong></td>
+    <td>Internal database, partner/contractor profiles, historical job outcomes, staff override UI, feedback loop.</td>
+  </tr>
+</table>
+
+<div class="info">
+  <strong>Best practical estimate:</strong> 2-3 days for a usable AI-assisted MVP, 1 week for a cleaner production version. The biggest dependency is not coding speed; it is Google API access, billing, API quotas, and agreeing how the agent should phrase recommendations without implying endorsement or guaranteed availability.
+</div>
+
+<hr>
+
+<h2>Proposed Architecture</h2>
+<pre>
+Customer voice request
+  "I need a painter near William Street Sydney"
+          |
+          v
+ElevenLabs agent
+  - extracts service = painter
+  - extracts location = William Street Sydney
+  - calls tool: find_local_specialist
+          |
+          v
+Vercel backend
+  POST /api/google/places-specialist
+  - verifies Bearer API_SECRET_TOKEN
+  - normalises service + location
+  - calls Google Places Text Search
+  - optionally calls Place Details for top 3
+  - scores and ranks results
+  - returns compact JSON for voice
+          |
+          v
+Agent spoken response
+  "A strong nearby option is ABC Painting Sydney,
+   rated 4.8 from 126 reviews, at 12 Example Street.
+   I can give you their phone number if you want."
+</pre>
+
+<h3>Backend Endpoint Draft</h3>
+<pre>
+POST /api/google/places-specialist
+Authorization: Bearer API_SECRET_TOKEN
+
+Request:
+{
+  "service": "painter",
+  "location": "William Street Sydney",
+  "radius_meters": 5000,
+  "include_contact": true
+}
+
+Response:
+{
+  "found": true,
+  "best": {
+    "name": "Example Painting Sydney",
+    "rating": 4.8,
+    "review_count": 126,
+    "address": "12 Example St, Sydney NSW",
+    "phone": "+61 ...",
+    "website": "https://...",
+    "google_maps_url": "https://maps.google.com/...",
+    "reason": "High rating, strong review count, close to the requested area."
+  },
+  "alternatives": [...]
+}
+</pre>
+
+<hr>
+
+<h2>Google Places API Approach</h2>
+
+<h3>Option A - Text Search First (Recommended MVP)</h3>
+<div class="compare">
+  <strong>How it works:</strong> Send the whole natural query to Places Text Search, e.g. <code>painters near William Street Sydney NSW</code>.
+  <ul>
+    <li>Fastest to build.</li>
+    <li>Handles spoken, messy, human-style queries well.</li>
+    <li>Good for service categories that do not map cleanly to one place type.</li>
+    <li>Less precise control over exact radius unless we add location bias/restriction.</li>
+  </ul>
+</div>
+
+<h3>Option B - Geocode Then Nearby Search</h3>
+<div class="compare">
+  <strong>How it works:</strong> Convert address to lat/lng, then run Nearby Search around that coordinate.
+  <ul>
+    <li>Better distance control.</li>
+    <li>Useful when customer gives a specific street/suburb/postcode.</li>
+    <li>More moving parts: Geocoding + Places search + optional Details calls.</li>
+    <li>Trade categories may not always map perfectly to Google included types.</li>
+  </ul>
+</div>
+
+<h3>Recommendation</h3>
+<p>Start with <strong>Text Search</strong> for the MVP, because the voice agent receives natural language. Add Geocoding/Nearby Search only if the Text Search ranking is not good enough in testing.</p>
+
+<h3>Fields To Request Carefully</h3>
+<table>
+  <tr><th>Data</th><th>Google field</th><th>Notes</th></tr>
+  <tr><td>Place ID</td><td><code>id</code></td><td>Required for details/cache/dedupe.</td></tr>
+  <tr><td>Business name</td><td><code>displayName</code></td><td>Human-readable business name.</td></tr>
+  <tr><td>Address</td><td><code>formattedAddress</code></td><td>Good for agent speech.</td></tr>
+  <tr><td>Location</td><td><code>location</code></td><td>Used for distance calculation if needed.</td></tr>
+  <tr><td>Rating</td><td><code>rating</code></td><td>Important ranking signal; may be a higher-cost field.</td></tr>
+  <tr><td>Review count</td><td><code>userRatingCount</code></td><td>Important quality/confidence signal; may be a higher-cost field.</td></tr>
+  <tr><td>Phone</td><td><code>nationalPhoneNumber</code> / <code>internationalPhoneNumber</code></td><td>Only request if the agent needs contact details.</td></tr>
+  <tr><td>Website</td><td><code>websiteUri</code></td><td>Only request if needed.</td></tr>
+  <tr><td>Reviews</td><td><code>reviews</code></td><td>Expensive and limited; useful only as an activity approximation.</td></tr>
+  <tr><td>Google Maps link</td><td><code>googleMapsUri</code></td><td>Useful if SMS/email follow-up is added later.</td></tr>
+</table>
+
+<div class="warn">
+  <strong>Cost warning:</strong> Google Places uses field masks. Asking for contact data, rating counts, reviews, or review summaries can move the request into higher pricing tiers. The endpoint should request only the fields needed for the current conversation turn.
+</div>
+
+<hr>
+
+<h2>Ranking Logic</h2>
+<p>The AI should not simply read the first Google result. We should rank candidates with a deterministic score and give the agent a short explanation.</p>
+
+<pre>
+score =
+  rating_score        (0-40 points)
++ review_count_score  (0-25 points)
++ distance_score      (0-20 points)
++ activity_score      (0-10 points, optional)
++ business_status     (0-5 points)
+- penalties           (closed, too few reviews, weak match, too far)
+</pre>
+
+<table>
+  <tr><th>Signal</th><th>Rule</th></tr>
+  <tr><td>Rating</td><td>Prefer 4.5+; reject or de-prioritise below 4.0 unless there are no alternatives.</td></tr>
+  <tr><td>Review count</td><td>20 reviews minimum for confidence; 100+ reviews is stronger.</td></tr>
+  <tr><td>Distance</td><td>Prefer close to requested address, but do not choose a weak 5-review business over a strong nearby business.</td></tr>
+  <tr><td>Activity</td><td>If reviews are requested and timestamps exist, boost places with recent review activity. Do not over-weight this because Google exposes limited review data.</td></tr>
+  <tr><td>Open/closed status</td><td>Prefer operational businesses. If opening hours are available, mention if it may be closed now.</td></tr>
+  <tr><td>Category match</td><td>Prefer businesses whose name/types match the requested service: painter, painting contractor, decorator, etc.</td></tr>
+</table>
+
+<h3>Example Agent Response</h3>
+<pre>
+"A strong option near William Street is Sydney Professional Painting.
+They are rated 4.8 from 126 Google reviews and are listed at 12 Example Street, Sydney.
+Google does not confirm availability, so I would call them before booking. Would you like the phone number?"
+</pre>
+
+<hr>
+
+<h2>Phased Implementation Plan</h2>
+
+<div class="phase">
+  <strong>Phase 0 - Client/API Setup</strong>
+  <ul>
+    <li>Create or confirm a Google Cloud project.</li>
+    <li>Enable Google Maps Platform billing.</li>
+    <li>Enable Places API (New), and optionally Geocoding API.</li>
+    <li>Create a restricted server-side API key.</li>
+    <li>Add <code>GOOGLE_MAPS_API_KEY</code> to Vercel environment variables.</li>
+    <li>Set a daily/monthly budget alert in Google Cloud.</li>
+  </ul>
+</div>
+
+<div class="phase">
+  <strong>Phase 1 - Backend Endpoint</strong>
+  <ul>
+    <li>Add <code>api/google/places-specialist.js</code>.</li>
+    <li>Reuse existing bearer auth via <code>API_SECRET_TOKEN</code>.</li>
+    <li>Validate input: service, location, radius.</li>
+    <li>Call Google Places Text Search with a minimal field mask.</li>
+    <li>Shape response into compact JSON for the voice agent.</li>
+    <li>Add clear fallbacks when location or service is missing.</li>
+  </ul>
+</div>
+
+<div class="phase">
+  <strong>Phase 2 - Ranking + Contact Details</strong>
+  <ul>
+    <li>Score top candidates by rating, review count, distance, and business status.</li>
+    <li>Optionally call Place Details for the top 3 only when phone/website is requested.</li>
+    <li>Add result caching to reduce duplicate calls during repeated testing.</li>
+    <li>Return best result plus 2 alternatives for the agent to use if needed.</li>
+  </ul>
+</div>
+
+<div class="phase">
+  <strong>Phase 3 - ElevenLabs Tool + Prompt Rules</strong>
+  <ul>
+    <li>Create a new webhook tool: <code>find_local_specialist</code>.</li>
+    <li>Attach it to the current ElevenLabs agent.</li>
+    <li>Update the system prompt with rules: when to call the tool, how to ask for suburb/address, and how to avoid overclaiming.</li>
+    <li>Use pre-tool speech so the caller hears a natural filler while the API call runs.</li>
+  </ul>
+</div>
+
+<div class="phase">
+  <strong>Phase 4 - Testing</strong>
+  <ul>
+    <li>Test 20-30 realistic queries: painters, plasterers, cleaners, roofers, electricians, handymen.</li>
+    <li>Test vague locations: "near me", "Sydney CBD", "William Street", "Bondi", "Melbourne".</li>
+    <li>Test bad inputs: no trade, no location, impossible address, overseas address.</li>
+    <li>Run live voice tests for latency and phrasing.</li>
+    <li>Confirm the result does not sound like a guaranteed endorsement.</li>
+  </ul>
+</div>
+
+<div class="phase">
+  <strong>Phase 5 - Production Hardening</strong>
+  <ul>
+    <li>Add structured logs without leaking API keys or unnecessary personal data.</li>
+    <li>Add rate limits and timeout handling.</li>
+    <li>Add cache TTL and query normalisation.</li>
+    <li>Add budget protection: fail gracefully if Google quota/billing is unavailable.</li>
+    <li>Optional: add dashboard/report of recommendations made by the agent.</li>
+  </ul>
+</div>
+
+<hr>
+
+<h2>Bottlenecks, Edge Cases &amp; Complications</h2>
+<ol>
+  <li><strong>Google API billing and quotas.</strong> No API key/billing means no real implementation. Budget alerts are mandatory before live use.</li>
+  <li><strong>Field-mask pricing surprises.</strong> Rating, review count, phone, website, and reviews can cost more than basic place IDs/address fields. We must keep response fields tight.</li>
+  <li><strong>Voice latency.</strong> Live calls cannot tolerate 8-15 second silence. The endpoint should return in 2-4 seconds where possible, and the agent must speak a filler before tool execution.</li>
+  <li><strong>Ambiguous spoken addresses.</strong> "William Street Sydney" could mean a street, a business, or a region. The agent may need to ask for suburb/postcode if confidence is low.</li>
+  <li><strong>Trade taxonomy mismatch.</strong> Customer says "painter"; Google categories may include painting contractor, decorator, home goods, contractor, etc. Query expansion is needed.</li>
+  <li><strong>Review recency is not a full signal.</strong> Google may expose only limited review samples. We can approximate activity but cannot audit full freshness.</li>
+  <li><strong>Sponsored/SEO-biased results.</strong> Google ranking is not the same as Paint Access quality. Our ranking should be transparent and conservative.</li>
+  <li><strong>Fake or inflated reviews.</strong> High rating/review count is useful, but not a guarantee. The agent should say "Google lists..." rather than "the best painter is...".</li>
+  <li><strong>Availability not known.</strong> Google Places does not tell us whether the business can take a job today.</li>
+  <li><strong>Business service area mismatch.</strong> A business may appear nearby but not service the customer's exact address.</li>
+  <li><strong>Closed or moved businesses.</strong> Google data can lag. Filter by business status where available.</li>
+  <li><strong>Privacy and compliance.</strong> If customer address is sent to Google, privacy policy may need to mention third-party API processing.</li>
+  <li><strong>API key security.</strong> The key must stay server-side in Vercel env vars, restricted by API, and never exposed in storefront JavaScript.</li>
+  <li><strong>Too much information aloud.</strong> The agent should read one best result and ask whether the customer wants phone/website, not list five businesses.</li>
+  <li><strong>Cost creep during testing.</strong> Repeated test calls can generate Places charges. Use caching and test fixtures where possible.</li>
+  <li><strong>Legal/reputational risk.</strong> Paint Access may not want to recommend third-party trades without a disclaimer. Client must approve wording.</li>
+</ol>
+
+<hr>
+
+<h2>Client Requirements Before Build</h2>
+
+<div class="provide"><strong>Google Cloud project access</strong> with Google Maps Platform enabled, or permission for the developer to create/configure it.</div>
+<div class="provide"><strong>Server-side Google Maps API key</strong> restricted to Places API (New) and optionally Geocoding API.</div>
+<div class="provide"><strong>Billing enabled + budget alert</strong> in Google Cloud before live testing.</div>
+<div class="provide"><strong>Approved service categories</strong> - e.g. painter, plasterer, handyman, electrician, cleaner, roofer. Confirm which categories the agent is allowed to search.</div>
+<div class="provide"><strong>Geographic scope</strong> - Sydney only, NSW only, all Australia, or any location worldwide?</div>
+<div class="provide"><strong>Default search radius</strong> - recommended starting point: 5 km in metro areas, 15-25 km in regional areas.</div>
+<div class="provide"><strong>Recommendation wording approval</strong> - especially disclaimers like "Google lists this business highly; please confirm availability directly."</div>
+<div class="provide"><strong>Decision on phone/website</strong> - should the agent always fetch contact details, or only after customer asks? Fetching only on request is cheaper.</div>
+<div class="provide"><strong>Privacy policy approval</strong> - confirm whether sending customer-provided addresses to Google is acceptable under current policy.</div>
+<div class="provide"><strong>Test call scenarios</strong> - 10-20 real examples the client expects customers to say.</div>
+
+<hr>
+
+<h2>Questions To Clarify Before Building</h2>
+
+<div class="q"><strong>Q1. Business goal.</strong> Is Paint Access recommending independent trades to help customers, or should the agent only provide neutral "nearby options from Google" without endorsement?</div>
+<div class="q"><strong>Q2. Category list.</strong> Which specialist types are in scope for v1? Painter only, or multiple trades?</div>
+<div class="q"><strong>Q3. Geography.</strong> Should searches be limited to Australia, NSW, or Sydney?</div>
+<div class="q"><strong>Q4. Ranking preference.</strong> Should the system prefer highest rating, most reviews, closest distance, or a balanced score?</div>
+<div class="q"><strong>Q5. Minimum quality threshold.</strong> Should we hide businesses below 4.0 rating or below 20 reviews?</div>
+<div class="q"><strong>Q6. Contact details.</strong> Should the agent offer phone/website immediately, or ask first?</div>
+<div class="q"><strong>Q7. Review freshness.</strong> Is review recency important enough to pay for review fields, or is rating + review count enough for MVP?</div>
+<div class="q"><strong>Q8. CRM future.</strong> Will Paint Access later provide a list of preferred contractors/jobs so we can rank internal trusted partners above public Google results?</div>
+<div class="q"><strong>Q9. Logging.</strong> Should every recommendation be logged for staff review?</div>
+<div class="q"><strong>Q10. Escalation.</strong> If no good result is found, should the agent collect the customer's number for a human follow-up?</div>
+
+<hr>
+
+<h2>Ongoing Cost Estimate</h2>
+<table>
+  <tr><th>Item</th><th>Likely Monthly Cost</th><th>Notes</th></tr>
+  <tr><td>Google Places Text Search</td><td>Depends on call volume</td><td>Official pricing is pay-as-you-go and changes by SKU/fields. Budget alerts required.</td></tr>
+  <tr><td>Place Details for phone/website/reviews</td><td>Higher than basic search</td><td>Only call for top result or top 3, and only when needed.</td></tr>
+  <tr><td>Vercel backend</td><td>$0-$20+</td><td>Likely already covered unless traffic grows.</td></tr>
+  <tr><td>Database/cache</td><td>$0-$25</td><td>Can start with in-memory/simple cache; production can use Vercel KV/Upstash/Supabase.</td></tr>
+  <tr><td>Extra AI model usage</td><td>$0-$20</td><td>Not required if ranking is deterministic. Optional for query parsing.</td></tr>
+</table>
+
+<div class="info">
+  <strong>Cost control strategy:</strong> Use deterministic parsing first, request minimal fields, call Place Details only for top candidates, cache repeated searches, and set Google Cloud budget alerts before production.
+</div>
+
+<hr>
+
+<h2>Official Google References Checked</h2>
+<ul>
+  <li><a href="https://developers.google.com/maps/documentation/places/web-service/reference/rest/v1/places/searchText">Google Places API Text Search (New)</a></li>
+  <li><a href="https://developers.google.com/maps/documentation/places/web-service/place-details">Google Places API Place Details (New)</a></li>
+  <li><a href="https://developers.google.com/maps/documentation/places/web-service/data-fields">Google Places API Place Data Fields (New)</a></li>
+  <li><a href="https://developers.google.com/maps/documentation/places/web-service/usage-and-billing">Google Places API Usage and Billing</a></li>
+  <li><a href="https://developers.google.com/maps/billing-and-pricing/pricing">Google Maps Platform Pricing</a></li>
+</ul>
+
+<hr>
+
+<h2>Recommendation</h2>
+<div class="info">
+  <strong>Build order:</strong> Start with the MVP: one <code>find_local_specialist</code> tool, Text Search, deterministic ranking, and conservative spoken wording. Keep phone/website optional to control Google Places cost. Add review recency only after testing shows that rating + review count is not enough.
+</div>
+
+<p style="color:#888; font-size:0.85em;">Document generated 2026-05-25 for Paint Access.</p>
+
+</body>
+</html>

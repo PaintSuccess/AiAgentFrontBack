@@ -1,4 +1,22 @@
-import "dotenv/config";
+import fs from "node:fs";
+
+function loadDotEnv(path = ".env") {
+  if (!fs.existsSync(path)) return;
+  for (const line of fs.readFileSync(path, "utf8").split(/\r?\n/)) {
+    const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
+    if (!match || process.env[match[1]]) continue;
+    let value = match[2].trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    process.env[match[1]] = value;
+  }
+}
+
+loadDotEnv();
 
 const API_KEY = process.env.ELEVENLABS_API_KEY;
 const AGENT_ID = process.env.ELEVENLABS_AGENT_ID;
@@ -14,7 +32,7 @@ const toolDefs = [
       type: "webhook",
       name: "lookup_order",
       description:
-        "Look up a customer order status, tracking information, and fulfillment details. Use when a customer asks about their order, tracking, delivery status, or where their order is. Ask for their order number or email first.",
+        "Look up a customer's order status, tracking information, and fulfillment details. Use when a customer asks about their order, tracking, delivery status, or where their order is. For privacy, always collect BOTH the order number and the email used for that order before calling this tool.",
       // Speak a filler ("Let me check that for you…") + play typing sound
       // while the webhook runs. Without this the user hears ~5–10s of dead air
       // because the LLM blocks until the tool returns.
@@ -30,16 +48,17 @@ const toolDefs = [
         },
         request_body_schema: {
           type: "object",
+          required: ["order_number", "email"],
           properties: {
             order_number: {
               type: "string",
               description:
-                "The order number (e.g., 1001 or #1001). Preferred over email for exact lookup.",
+                "The order number (e.g., 1001 or #1001). Required.",
             },
             email: {
               type: "string",
               description:
-                "Customer email address. Use when order number is not available.",
+                "The email address used when placing that order. Required.",
             },
           },
         },
@@ -152,6 +171,37 @@ const toolDefs = [
     },
   },
   {
+    tool_config: {
+      type: "webhook",
+      name: "send_sms_notification",
+      description:
+        "Send a concise SMS with Paint Access links or follow-up details to an Australian mobile number. Use after a customer asks for links by SMS, or during a website voice/browser call when product links were discussed and a valid mobile number is already available. If the caller is on an office/landline number or no mobile is available, ask for their mobile first. Only send paintaccess.com.au links.",
+      api_schema: {
+        url: `${BACKEND_URL}/api/twilio/sms-notification`,
+        method: "POST",
+        request_headers: {
+          Authorization: `Bearer ${API_SECRET}`,
+        },
+        request_body_schema: {
+          type: "object",
+          required: ["to", "message"],
+          properties: {
+            to: {
+              type: "string",
+              description:
+                "Australian mobile number to receive the SMS, e.g. 0410609617 or +61410609617. Do not use landlines.",
+            },
+            message: {
+              type: "string",
+              description:
+                "Short SMS body containing useful Paint Access links. Links must be on paintaccess.com.au.",
+            },
+          },
+        },
+      },
+    },
+  },
+  {
     // Client-side tool. Signals the browser to close the widget after a
     // farewell. The widget JS schedules a 7-second countdown and optionally
     // calls endSession() after 1.5s if the built-in end_call doesn't fire.
@@ -223,10 +273,17 @@ const toolDefs = [
       type: "webhook",
       name: "capture_lead",
       description:
-        "Save a guest customer's contact details to the Paint Access CRM (Shopify). " +
-        "Call ONCE per conversation when a guest ({{customer_id}} is empty) shares their name AND email. " +
-        "Do NOT call for logged-in customers. Do NOT call more than once per session. " +
-        "After it succeeds, say 'Perfect, I've saved your details.' and continue naturally.",
+        "Save a new customer's contact details in the Paint Access CRM (Shopify) with the AI Agent source tag. " +
+        "Call ONCE per useful guest conversation after the customer has shared, or the session already provides, their name and email, " +
+        "and after they agree Paint Access may add them in the customer database for follow-up communication. " +
+        "If the customer asks to be registered, added to the user list, saved for follow-up, or contacted by the team, collect and confirm name plus email, then call this tool before claiming anything was saved. " +
+        "Never say details were saved, added, registered, or updated unless this tool has already returned action 'created'. " +
+        "This tool creates a Paint Access customer/contact record for follow-up; it does not create a website login account, password, or completed online account. Do not say the customer can now log in. " +
+        "For voice calls, if you ask the customer to confirm their email, phone, or name, wait for their next reply before calling this tool. Do not call this tool in the same turn as 'is that right?' or any confirmation question. " +
+        "This tool is not a goodbye action: after action 'created', speak the saved-for-follow-up message and ask whether they need anything else before checkout. Do not call end_conversation/end_call immediately after this tool unless the customer gives a new clear goodbye after the saved message. " +
+        "For security, if Shopify already has that email, the backend will not modify the existing customer from this public AI flow. " +
+        "For guests, first collect first name, last name, email, and phone if useful. Do NOT call for logged-in customers with a customer_id. Do NOT call more than once per session. " +
+        "After action 'created', say 'Perfect, I've saved your details so the Paint Access team can follow up. Would you like anything else before you check out?' and continue naturally. If action is 'skipped', do not claim the customer record was changed.",
       force_pre_tool_speech: false,
       api_schema: {
         url: `${BACKEND_URL}/api/shopify/customer`,

@@ -6,7 +6,7 @@ Paint Access (paintaccess.com.au) is Australia's leading online store for profes
 **Tagline:** Best SELECTION, Best PRICE, Best ADVICE
 
 ### Contact Information
-- **Phone:** 028-064-70-50
+- **Phone:** 02 5838 5959
 - **SMS:** +61410609617
 - **Email:** trade@PaintAccess.com.au
 - **Website:** www.paintaccess.com.au

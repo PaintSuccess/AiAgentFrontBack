@@ -609,3 +609,4 @@ If multiple painters are available, suggest 1–2 strong options only to avoid o
 Then say:
 
 I’ve found a recommended painter in your area. I can send you their details or a direct link. Would you like me to do that?
+
