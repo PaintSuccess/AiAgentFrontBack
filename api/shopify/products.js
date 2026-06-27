@@ -521,7 +521,7 @@ async function searchByCollection(handle) {
 }
 
 // ── Handler ──────────────────────────────────────────────────────────────────
-module.exports = async function handler(req, res) {
+async function handler(req, res) {
   corsHeaders(res, req);
   if (req.method === "OPTIONS") return res.status(200).end();
   if (rateLimit(req, res)) return;
@@ -588,4 +588,10 @@ module.exports = async function handler(req, res) {
     console.error("Product search error:", err);
     return res.status(500).json({ error: "Failed to search products." });
   }
-};
+}
+
+module.exports = handler;
+module.exports.searchProducts = searchProducts;
+module.exports.searchByCollection = searchByCollection;
+module.exports.shapeProduct = shapeProduct;
+module.exports.RESULT_LIMIT = RESULT_LIMIT;
