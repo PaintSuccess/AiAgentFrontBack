@@ -28,7 +28,7 @@ async function buildAgentReply(inbound) {
     channel: "whatsapp",
     customerName: inbound.profileName || "",
     customerPhone: inbound.from,
-    timeoutMs: 10000,
+    timeoutMs: 20000,
   });
 
   return reply || fallbackReply();
