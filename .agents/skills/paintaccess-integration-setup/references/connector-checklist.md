@@ -10,6 +10,7 @@ Expected tools:
 - `shopify_get_order`;
 - `shopify_get_fulfillment_readiness`;
 - `shopify_add_order_note`;
+- `shopify_remove_order_note_entry`;
 - `shopify_add_order_tag`;
 - `shopify_remove_order_tag`;
 - `shopify_set_ops_metafield`;

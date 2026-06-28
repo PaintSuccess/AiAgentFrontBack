@@ -24,6 +24,7 @@ const {
   prepareCancellation,
   prepareCustomerEmail,
   prepareFulfillment,
+  removeOrderNoteEntry,
   removeOrderTag,
   searchOrders,
   sendCustomerEmailViaShopify,
@@ -42,6 +43,7 @@ const TOOL_HANDLERS = {
   shopify_get_order: getOrder,
   shopify_get_fulfillment_readiness: getFulfillmentReadiness,
   shopify_add_order_note: addOrderNote,
+  shopify_remove_order_note_entry: removeOrderNoteEntry,
   shopify_add_order_tag: addOrderTag,
   shopify_remove_order_tag: removeOrderTag,
   shopify_set_ops_metafield: setOpsMetafield,
@@ -111,6 +113,22 @@ const tools = withSecurity([
         approval_reference: stringProp("Approval reference if the note records an approved action."),
       },
       ["summary"]
+    ),
+    annotations: { readOnlyHint: false, destructiveHint: false },
+  },
+  {
+    name: "shopify_remove_order_note_entry",
+    title: "Remove Shopify operations note entry",
+    description:
+      "Remove the latest matching PaintAccess Operations note entry from a known Shopify order. Use for correcting or reverting agent-added ops notes only.",
+    inputSchema: objectSchema(
+      {
+        ...orderIdentifierProps(),
+        note_type: stringProp("Optional controlled note type to match."),
+        summary_contains: stringProp("Text that must appear in the note entry to remove."),
+        reason: stringProp("Reason for removing the note entry."),
+      },
+      ["summary_contains"]
     ),
     annotations: { readOnlyHint: false, destructiveHint: false },
   },
@@ -479,6 +497,9 @@ function summarizeResult(result) {
   }
   if (result?.order_number && result?.note_added) {
     return `Added Operations Desk note to ${result.order_number}.`;
+  }
+  if (result?.order_number && result?.removed) {
+    return `Removed matching Operations Desk note entry from ${result.order_number}.`;
   }
   if (result?.order_number && result?.approval_required) {
     return `Prepared action for ${result.order_number}. Daniel approval required before final execution.`;

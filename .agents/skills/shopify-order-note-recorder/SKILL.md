@@ -13,6 +13,7 @@ Use this skill to record operational actions back into a Shopify order.
 - Know whether the user wants a note, tag, metafield, or all available safe markers.
 - Use the workspace app `PaintAccess Operations` first:
   - `shopify_add_order_note` for notes;
+  - `shopify_remove_order_note_entry` only to correct or revert a matching PaintAccess Operations note entry;
   - `shopify_add_order_tag` / `shopify_remove_order_tag` for tags;
   - `shopify_set_ops_metafield` for controlled `paintaccess_ops` state.
 - Use `shopify-graphql-safe-mutation` only if no MCP tool covers the requested safe action.

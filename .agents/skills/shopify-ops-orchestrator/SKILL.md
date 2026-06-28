@@ -23,6 +23,7 @@ Use these MCP tools by intent:
 - `shopify_get_order` for exact order inspection by order number, name, or GID.
 - `shopify_get_fulfillment_readiness` before tracking or fulfilment preparation.
 - `shopify_add_order_note` for operational notes and audit trail entries.
+- `shopify_remove_order_note_entry` only to correct or revert a matching PaintAccess Operations note entry.
 - `shopify_add_order_tag` / `shopify_remove_order_tag` for controlled workflow markers.
 - `shopify_set_ops_metafield` for controlled `paintaccess_ops` state.
 - `shopify_prepare_fulfillment` to prepare fulfilment data only; Daniel must approve final fulfilment.

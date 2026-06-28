@@ -529,6 +529,23 @@ Output:
 - updated note preview;
 - user errors.
 
+#### `shopify_remove_order_note_entry`
+
+Purpose: Remove the latest matching PaintAccess Operations note entry when correcting or reverting an agent-added note.
+
+Inputs:
+
+- `order_id`
+- `note_type`
+- `summary_contains`
+- `reason`
+
+Output:
+
+- success/failure;
+- removed entry preview;
+- user errors.
+
 #### `shopify_add_order_tag`
 
 Purpose: Add a controlled process tag.
