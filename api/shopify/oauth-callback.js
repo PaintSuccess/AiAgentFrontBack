@@ -73,6 +73,7 @@ module.exports = async function handler(req, res) {
     }
 
     console.log("[OAuth] Access token obtained with scope:", tokenData.scope || "(none)");
+    const token = tokenData.access_token || "";
 
     return res.status(200).send(`
       <html>
@@ -81,9 +82,11 @@ module.exports = async function handler(req, res) {
         <h1 style="color: green;">&#10004; OAuth Successful</h1>
         <p><strong>Scope:</strong> ${escapeHtml(tokenData.scope || "(none)")}</p>
         <p><strong>Expires in:</strong> ${tokenData.expires_in ? tokenData.expires_in + " seconds" : "Never (offline token)"}</p>
-        <p><strong>Token (first 8 chars):</strong> ${escapeHtml((tokenData.access_token || "").slice(0, 8))}...</p>
+        <p><strong>Token (first 8 chars):</strong> ${escapeHtml(token.slice(0, 8))}...</p>
+        <p>Copy this token into Vercel as <code>SHOPIFY_ACCESS_TOKEN</code>, then redeploy production.</p>
+        <textarea readonly style="width:100%; min-height:120px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace;">${escapeHtml(token)}</textarea>
         <hr>
-        <p style="color: #666;">The full access token has been logged server-side. Set it as SHOPIFY_ACCESS_TOKEN in your Vercel environment variables. <strong>Do not share this page.</strong></p>
+        <p style="color: #666;">Do not share this page. Close it after updating Vercel.</p>
       </body>
       </html>
     `);

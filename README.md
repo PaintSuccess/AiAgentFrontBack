@@ -7,6 +7,7 @@ Vercel serverless backend for the Paint Access AI support system. Acts as middle
 | Endpoint | Method | Purpose |
 |---|---|---|
 | `/api/shopify/order` | POST | Order lookup by number or email |
+| `/api/shopify/oauth-start` | GET | Shopify app reinstall/reauthorization helper for Admin API scopes |
 | `/api/shopify/products` | POST | Product search by name/brand/type |
 | `/api/shopify/inventory` | POST | Stock availability check |
 | `/api/email/send` | POST | Email request via Shopify Draft Order |
