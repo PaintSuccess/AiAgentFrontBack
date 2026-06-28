@@ -11,7 +11,7 @@ Use this skill to record operational actions back into a Shopify order.
 
 - Identify the order with high confidence.
 - Know whether the user wants a note, tag, metafield, or all available safe markers.
-- Use the workspace app `PaintAccess Shopify Operations` first:
+- Use the workspace app `PaintAccess Operations` first:
   - `shopify_add_order_note` for notes;
   - `shopify_add_order_tag` / `shopify_remove_order_tag` for tags;
   - `shopify_set_ops_metafield` for controlled `paintaccess_ops` state.
@@ -50,7 +50,7 @@ Use this skill to record operational actions back into a Shopify order.
    - `Payment processed`;
    - `Tracking received`;
    - `Fulfilment prepared`.
-4. Write the note/tag/metafield with the matching PaintAccess Shopify Operations MCP tool.
+4. Write the note/tag/metafield with the matching PaintAccess Operations MCP tool.
 5. Report whether the write succeeded. If only text was prepared, say that clearly.
 
 ## Duplicate prevention

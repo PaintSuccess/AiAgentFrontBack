@@ -1,5 +1,20 @@
 const { cleanEnv } = require("../../lib/shopify");
 const {
+  DEFAULT_SCOPES,
+  protectedResourceMetadata,
+  sendUnauthorized,
+  verifyMcpRequest,
+} = require("../../lib/mcp-auth");
+const {
+  driveCreateTextFile,
+  driveGetFile,
+  driveSearchFiles,
+  gmailCreateDraft,
+  gmailGetMessage,
+  gmailSearchMessages,
+  gmailSendEmail,
+} = require("../../lib/google-workspace");
+const {
   CONTROLLED_TAGS,
   OPS_METAFIELD_KEYS,
   addOrderNote,
@@ -7,16 +22,20 @@ const {
   getFulfillmentReadiness,
   getOrder,
   prepareCancellation,
+  prepareCustomerEmail,
   prepareFulfillment,
   removeOrderTag,
   searchOrders,
+  sendCustomerEmailViaShopify,
   setOpsMetafield,
 } = require("../../lib/shopify-ops");
 
 const MCP_PROTOCOL_VERSION = "2025-03-26";
 
 const SERVER_INSTRUCTIONS =
-  "PaintAccess Shopify Operations MCP exposes narrow Shopify operations for ChatGPT Workspace Agents. Use read tools first, write only to known orders, never claim Gmail/Drive actions here, and treat cancellation, refund, payment, email send, and final fulfilment as approval-required.";
+  "PaintAccess Operations MCP exposes narrow Shopify, Gmail, and Google Drive operations for ChatGPT Workspace Agents. Use read tools first, write only to known orders/resources, and treat cancellation, refund, payment, email send, and final fulfilment as approval-required.";
+
+const SECURITY_SCHEMES = [{ type: "oauth2", scopes: DEFAULT_SCOPES }];
 
 const TOOL_HANDLERS = {
   shopify_search_orders: searchOrders,
@@ -28,9 +47,18 @@ const TOOL_HANDLERS = {
   shopify_set_ops_metafield: setOpsMetafield,
   shopify_prepare_fulfillment: prepareFulfillment,
   shopify_prepare_cancellation: prepareCancellation,
+  shopify_prepare_customer_email: prepareCustomerEmail,
+  shopify_send_customer_email: sendCustomerEmailViaShopify,
+  gmail_search_messages: gmailSearchMessages,
+  gmail_get_message: gmailGetMessage,
+  gmail_create_draft: gmailCreateDraft,
+  gmail_send_email: gmailSendEmail,
+  drive_search_files: driveSearchFiles,
+  drive_get_file: driveGetFile,
+  drive_create_text_file: driveCreateTextFile,
 };
 
-const tools = [
+const tools = withSecurity([
   {
     name: "shopify_search_orders",
     title: "Search Shopify orders",
@@ -167,7 +195,168 @@ const tools = [
     ),
     annotations: { readOnlyHint: false, destructiveHint: false },
   },
-];
+  {
+    name: "shopify_prepare_customer_email",
+    title: "Prepare Shopify email template",
+    description:
+      "Prepare a PaintAccess email from Shopify order details. Does not send. Use before Gmail draft/send or Shopify native email send.",
+    inputSchema: objectSchema(
+      {
+        ...orderIdentifierProps(),
+        template_type: enumProp("Template type.", [
+          "order_processing",
+          "stock_delay",
+          "supplier_po",
+          "tracking_update",
+          "cancellation_reply",
+          "custom",
+        ]),
+        recipient_type: enumProp("Recipient type.", ["customer", "supplier", "internal"]),
+        supplier: stringProp("Supplier name for supplier PO emails."),
+        custom_message: stringProp("Optional custom message to include."),
+      },
+      ["template_type"]
+    ),
+    annotations: { readOnlyHint: true, destructiveHint: false },
+  },
+  {
+    name: "shopify_send_customer_email",
+    title: "Send Shopify native email",
+    description:
+      "Send a customer/supplier email through Shopify's draft-order invoice email pattern. Requires approval_reference. Creates a Shopify draft order audit record.",
+    inputSchema: objectSchema(
+      {
+        ...orderIdentifierProps(),
+        to: stringProp("Recipient email. Defaults to order customer email when omitted."),
+        template_type: enumProp("Template type.", [
+          "order_processing",
+          "stock_delay",
+          "supplier_po",
+          "tracking_update",
+          "cancellation_reply",
+          "custom",
+        ]),
+        recipient_type: enumProp("Recipient type.", ["customer", "supplier", "internal"]),
+        supplier: stringProp("Supplier name for supplier PO emails."),
+        subject: stringProp("Optional subject override."),
+        body_text: stringProp("Optional body override."),
+        custom_message: stringProp("Optional custom message to include."),
+        approval_reference: stringProp("Required approval reference from Daniel before sending."),
+      },
+      ["template_type", "approval_reference"]
+    ),
+    annotations: { readOnlyHint: false, destructiveHint: true },
+  },
+  {
+    name: "gmail_search_messages",
+    title: "Search Gmail messages",
+    description:
+      "Search the backend-authorized PaintAccess Gmail mailbox for supplier confirmations, tracking messages, customer replies, or order threads.",
+    inputSchema: objectSchema({
+      query: stringProp("Gmail search query."),
+      order_number: stringProp("Order number to include in search."),
+      from: stringProp("Sender filter."),
+      to: stringProp("Recipient filter."),
+      subject: stringProp("Subject filter."),
+      after: stringProp("After date, e.g. 2026/06/01."),
+      before: stringProp("Before date, e.g. 2026/06/30."),
+      max_results: numberProp("Maximum messages, 1-25."),
+    }),
+    annotations: { readOnlyHint: true, destructiveHint: false },
+  },
+  {
+    name: "gmail_get_message",
+    title: "Get Gmail message",
+    description: "Read one backend-authorized Gmail message by ID and return headers, snippet, and text preview.",
+    inputSchema: objectSchema(
+      {
+        message_id: stringProp("Gmail message ID."),
+      },
+      ["message_id"]
+    ),
+    annotations: { readOnlyHint: true, destructiveHint: false },
+  },
+  {
+    name: "gmail_create_draft",
+    title: "Create Gmail draft",
+    description:
+      "Create a Gmail draft in the backend-authorized PaintAccess mailbox. Does not send email.",
+    inputSchema: objectSchema(
+      {
+        to: stringProp("Recipient email address."),
+        cc: stringProp("Optional CC recipients."),
+        bcc: stringProp("Optional BCC recipients."),
+        subject: stringProp("Email subject."),
+        body_text: stringProp("Plain text email body."),
+      },
+      ["to", "subject", "body_text"]
+    ),
+    annotations: { readOnlyHint: false, destructiveHint: false },
+  },
+  {
+    name: "gmail_send_email",
+    title: "Send Gmail email",
+    description:
+      "Send an email from the backend-authorized PaintAccess Gmail mailbox. Requires approval_reference.",
+    inputSchema: objectSchema(
+      {
+        to: stringProp("Recipient email address."),
+        cc: stringProp("Optional CC recipients."),
+        bcc: stringProp("Optional BCC recipients."),
+        subject: stringProp("Email subject."),
+        body_text: stringProp("Plain text email body."),
+        approval_reference: stringProp("Required approval reference from Daniel before sending."),
+      },
+      ["to", "subject", "body_text", "approval_reference"]
+    ),
+    annotations: { readOnlyHint: false, destructiveHint: true },
+  },
+  {
+    name: "drive_search_files",
+    title: "Search Google Drive files",
+    description:
+      "Search backend-authorized Google Drive files for PO templates, supplier documents, attachments, or shared operations files.",
+    inputSchema: objectSchema({
+      query: stringProp("Full-text search query."),
+      name_contains: stringProp("Filename substring."),
+      mime_type: stringProp("Exact MIME type."),
+      folder_id: stringProp("Drive folder ID."),
+      max_results: numberProp("Maximum files, 1-25."),
+    }),
+    annotations: { readOnlyHint: true, destructiveHint: false },
+  },
+  {
+    name: "drive_get_file",
+    title: "Get Google Drive file",
+    description:
+      "Read metadata and optional text/export preview for one backend-authorized Google Drive file.",
+    inputSchema: objectSchema(
+      {
+        file_id: stringProp("Google Drive file ID."),
+        include_content: booleanProp("Whether to include text/export preview. Defaults true."),
+        export_mime_type: stringProp("Export MIME type for Google Docs files, defaults text/plain."),
+      },
+      ["file_id"]
+    ),
+    annotations: { readOnlyHint: true, destructiveHint: false },
+  },
+  {
+    name: "drive_create_text_file",
+    title: "Create Google Drive text file",
+    description:
+      "Create a small text/markdown/plain file in backend-authorized Google Drive for PO drafts or operation notes.",
+    inputSchema: objectSchema(
+      {
+        name: stringProp("Filename."),
+        content: stringProp("File content."),
+        mime_type: stringProp("MIME type, defaults text/plain."),
+        folder_id: stringProp("Optional target folder ID."),
+      },
+      ["name", "content"]
+    ),
+    annotations: { readOnlyHint: false, destructiveHint: false },
+  },
+]);
 
 module.exports = async function handler(req, res) {
   setCors(res);
@@ -175,11 +364,12 @@ module.exports = async function handler(req, res) {
 
   if (req.method === "GET") {
     return res.status(200).json({
-      name: "PaintAccess Shopify Operations MCP",
-      version: "1.0.0",
+      name: "PaintAccess Operations MCP",
+      version: "1.1.0",
       endpoint: "/api/mcp/shopify",
       tools: tools.map((tool) => tool.name),
       instructions: SERVER_INSTRUCTIONS,
+      auth: protectedResourceMetadata(req),
     });
   }
 
@@ -187,12 +377,9 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  if (!verifyMcpAccess(req)) {
-    return res.status(401).json({
-      error: "Unauthorized",
-      message:
-        "Missing or invalid MCP token. Configure SHOPIFY_MCP_TOKEN and add ?token=... to the private connector URL, or implement OAuth before broad rollout.",
-    });
+  const auth = verifyMcpRequest(req);
+  if (!auth.ok) {
+    return sendUnauthorized(req, res, auth.reason);
   }
 
   const message = req.body || {};
@@ -225,9 +412,9 @@ async function handleJsonRpc(message) {
         protocolVersion: MCP_PROTOCOL_VERSION,
         capabilities: { tools: {} },
         serverInfo: {
-          name: "paintaccess-shopify-operations",
-          title: "PaintAccess Shopify Operations",
-          version: "1.0.0",
+          name: "paintaccess-operations",
+          title: "PaintAccess Operations",
+          version: "1.1.0",
         },
         instructions: SERVER_INSTRUCTIONS,
       });
@@ -279,6 +466,11 @@ function toolResult(result) {
 
 function summarizeResult(result) {
   if (result?.orders) return `Found ${result.orders.length} Shopify order(s).`;
+  if (result?.messages) return `Found ${result.messages.length} Gmail message(s).`;
+  if (result?.files) return `Found ${result.files.length} Google Drive file(s).`;
+  if (result?.draft_id) return `Created Gmail draft ${result.draft_id}.`;
+  if (result?.sent && result?.provider) return `Sent email via ${result.provider}.`;
+  if (result?.subject && result?.body_text) return `Prepared email template: ${result.subject}.`;
   if (result?.order_number && result?.ok === false) {
     return result.message || `Action not completed for ${result.order_number}.`;
   }
@@ -293,33 +485,6 @@ function summarizeResult(result) {
   }
   if (result?.order_number) return `Retrieved ${result.order_number}.`;
   return "Tool completed.";
-}
-
-function verifyMcpAccess(req) {
-  const expected = cleanEnv("SHOPIFY_MCP_TOKEN");
-  const allowUnauthenticated = cleanEnv("SHOPIFY_MCP_ALLOW_UNAUTHENTICATED") === "true";
-  if (!expected) return allowUnauthenticated;
-
-  const bearer = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "").trim();
-  const queryToken = getQueryParam(req, "token");
-  const provided = bearer || queryToken;
-  return Boolean(provided) && safeEqual(provided, expected);
-}
-
-function safeEqual(a, b) {
-  const left = Buffer.from(String(a));
-  const right = Buffer.from(String(b));
-  if (left.length !== right.length) return false;
-  return require("crypto").timingSafeEqual(left, right);
-}
-
-function getQueryParam(req, name) {
-  try {
-    const url = new URL(req.url || "", `https://${req.headers.host || "localhost"}`);
-    return url.searchParams.get(name) || "";
-  } catch {
-    return "";
-  }
 }
 
 function jsonRpcResult(id, result) {
@@ -370,4 +535,15 @@ function objectSchema(properties, required = []) {
     properties,
     required,
   };
+}
+
+function withSecurity(toolList) {
+  return toolList.map((tool) => ({
+    ...tool,
+    securitySchemes: SECURITY_SCHEMES,
+    _meta: {
+      ...(tool._meta || {}),
+      securitySchemes: SECURITY_SCHEMES,
+    },
+  }));
 }

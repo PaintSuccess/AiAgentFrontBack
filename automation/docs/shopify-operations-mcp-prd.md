@@ -1,4 +1,4 @@
-# PaintAccess Shopify Operations MCP PRD
+# PaintAccess Operations MCP PRD
 
 ## Document status
 
@@ -11,11 +11,11 @@
 
 ## Summary
 
-PaintAccess needs a ChatGPT-based Operations Desk that can coordinate Shopify order operations, supplier purchase orders, Gmail drafts, Google Drive files, customer communication, internal notes, payment approvals, supplier tracking, and fulfilment preparation.
+PaintAccess needs a ChatGPT-based Operations Desk that can coordinate Shopify order operations, supplier purchase orders, Gmail drafts/sends, Google Drive files, customer communication, internal notes, payment approvals, supplier tracking, and fulfilment preparation.
 
-The client will use ChatGPT's built-in Gmail and Google Drive apps for email and file access. The missing capability is Shopify: the built-in Shopify ChatGPT app is useful but too limited for operational workflows such as writing order notes, adding process tags, preparing fulfilment, controlling supplier workflow state, or handling admin-only fields.
+User testing showed that ChatGPT's built-in Gmail and Google Drive app authorizations were unreliable for this agent workflow. Gmail and Google Drive should now be handled by the PaintAccess backend and exposed through the same custom MCP as Shopify.
 
-This PRD defines a custom PaintAccess Shopify Operations MCP that exposes narrow, safe Shopify operational tools to ChatGPT Workspace Agents. The MCP should be backed by the existing PaintAccess backend where practical, using Shopify Admin GraphQL/API credentials stored in backend secrets. Gmail and Google Drive credentials should remain inside ChatGPT built-in app authorization and should not be duplicated in the PaintAccess backend unless a future requirement proves it necessary.
+This PRD defines a custom PaintAccess Operations MCP that exposes narrow, safe Shopify, Gmail, and Google Drive operational tools to ChatGPT Workspace Agents. The MCP is backed by the existing PaintAccess backend, using Shopify Admin credentials and Google OAuth credentials stored only in backend/runtime secrets.
 
 ## Problem
 
@@ -44,7 +44,7 @@ The built-in Shopify ChatGPT app does not expose enough write/control operations
 ## Goals
 
 1. Enable ChatGPT Workspace Agents to perform safe Shopify operations through narrow tools.
-2. Keep Gmail and Google Drive handled by ChatGPT built-in apps, not backend OAuth.
+2. Keep Gmail and Google Drive handled by backend OAuth tools in the PaintAccess Operations MCP.
 3. Store Shopify credentials only in approved backend secret storage.
 4. Preserve the skill-based Operations Desk model now merged into the existing backend repository.
 5. Require Daniel/client approval before sensitive actions.
@@ -55,7 +55,7 @@ The built-in Shopify ChatGPT app does not expose enough write/control operations
 
 ## Non-goals
 
-1. Do not replace ChatGPT built-in Gmail or Google Drive apps in phase 1.
+1. Do not rely on ChatGPT built-in Gmail or Google Drive apps as the production path.
 2. Do not expose arbitrary Shopify CLI execution to agents.
 3. Do not expose arbitrary GraphQL mutation execution to normal Operations Desk users.
 4. Do not rely on browser automation for Shopify Admin production workflows.
@@ -151,18 +151,16 @@ Use this hybrid architecture:
 
 ```text
 ChatGPT Workspace Agent
-  -> built-in Gmail app
-  -> built-in Google Drive app
-  -> PaintAccess Shopify Operations MCP
+  -> PaintAccess Operations MCP
       -> PaintAccess backend
           -> Shopify Admin GraphQL/API
+          -> Gmail API
+          -> Google Drive API
           -> audit log
           -> approval state
 ```
 
-Gmail and Google Drive remain ChatGPT-owned app connections. The PaintAccess backend should not store Gmail or Drive OAuth tokens in phase 1.
-
-Shopify admin access should be provided by a custom PaintAccess Shopify Operations MCP because the built-in Shopify ChatGPT app does not expose the required operational control.
+Shopify, Gmail, and Google Drive operational access are provided by the custom PaintAccess Operations MCP because the built-in ChatGPT apps did not expose the required reliable operational control.
 
 ## ChatGPT agent model
 
@@ -174,9 +172,9 @@ Allowed:
 
 - read orders;
 - prepare PO summaries;
-- use built-in Gmail to search/read emails;
-- use built-in Gmail to draft emails;
-- use built-in Google Drive to read/write PO files if authorized;
+- use backend Gmail tools to search/read emails;
+- use backend Gmail tools to draft/send emails after approval;
+- use backend Google Drive tools to read/write PO files if authorized;
 - add safe Shopify internal notes and tags through MCP;
 - prepare fulfilment details without final completion;
 - produce approval requests for Daniel.
@@ -386,13 +384,13 @@ Forbidden phase 1:
 - executing cancellation;
 - deleting order.
 
-### FR9: Gmail integration via ChatGPT app
+### FR9: Gmail integration via backend MCP
 
-Gmail must be handled by ChatGPT's built-in Gmail app in phase 1.
+Gmail must be handled by backend-authorized MCP tools in the PaintAccess Operations MCP.
 
-The MCP should not store Gmail credentials.
+The MCP must not store Gmail credentials in Git. Google OAuth credentials must be stored only in Vercel/runtime secrets.
 
-The Operations Desk skills should instruct the agent to use Gmail app actions for:
+The Operations Desk skills should instruct the agent to use MCP actions for:
 
 - supplier email search;
 - supplier Sales Confirmation search;
@@ -400,11 +398,11 @@ The Operations Desk skills should instruct the agent to use Gmail app actions fo
 - Gmail draft creation;
 - email send only after approval where the app supports confirmation.
 
-When a Gmail action is completed, the agent should record the result in Shopify through the Shopify MCP when appropriate.
+When a Gmail action is completed, the agent should record the result in Shopify through the Shopify MCP tools when appropriate.
 
-### FR10: Google Drive integration via ChatGPT app
+### FR10: Google Drive integration via backend MCP
 
-Google Drive must be handled by ChatGPT's built-in Google Drive app in phase 1.
+Google Drive must be handled by backend-authorized MCP tools in the PaintAccess Operations MCP.
 
 Use Drive for:
 
@@ -413,7 +411,7 @@ Use Drive for:
 - supplier attachment files;
 - shared operations checklists.
 
-The MCP should not store Drive credentials.
+The MCP must not store Drive credentials in Git. Google OAuth credentials must be stored only in Vercel/runtime secrets.
 
 ### FR11: Agent reports
 
@@ -863,7 +861,7 @@ PO draft prepared for IQuip:
 - 38EWS x1
 - 38EHB60 x1
 
-Gmail draft prepared via Gmail app.
+Gmail draft prepared via PaintAccess Operations MCP.
 Shopify note added: PO draft prepared, waiting for Daniel approval to send.
 
 Approval needed: send supplier email.
@@ -946,7 +944,7 @@ Deliverables:
 
 - agent skill updates if needed;
 - end-to-end order to PO draft workflow;
-- Gmail app draft plus Shopify note/tag coordination;
+- Gmail MCP draft plus Shopify note/tag coordination;
 - supplier confirmation check workflow;
 - tracking received workflow.
 
@@ -989,8 +987,8 @@ Acceptance:
 
 The implementation is successful when:
 
-1. ChatGPT Operations Desk can use built-in Gmail and Drive apps while Shopify actions go through PaintAccess MCP.
-2. The backend does not store Gmail/Drive credentials.
+1. ChatGPT Operations Desk can use one PaintAccess Operations MCP for Shopify, Gmail, and Drive workflows.
+2. The backend stores Gmail/Drive credentials only in approved runtime secrets, never in Git.
 3. Shopify writes are limited to approved narrow tools.
 4. Read-only Monitor cannot write.
 5. Sensitive actions require Daniel approval.
@@ -1001,14 +999,15 @@ The implementation is successful when:
 
 ## Risks
 
-### Built-in app limitations
+### Backend Google OAuth limitations
 
-ChatGPT Gmail/Drive apps may not expose every desired action or may behave differently by workspace/account policy.
+Backend Google OAuth may be missing scopes, revoked, or blocked by Google account policy.
 
 Mitigation:
 
-- start with app-supported search/read/draft flows;
-- add backend Google OAuth only if a proven gap blocks the workflow.
+- expose explicit missing-configuration errors from MCP tools;
+- keep Gmail send approval-gated;
+- document revocation and reauthorization steps.
 
 ### Shopify plugin limitations
 
@@ -1073,5 +1072,5 @@ Mitigation:
 - Test with known historical orders.
 - Test Read-only Monitor cannot write.
 - Test Operations Desk note/tag write on a safe order.
-- Test Gmail app draft plus Shopify note workflow.
+- Test Gmail MCP draft plus Shopify note workflow.
 - Document production runbook.

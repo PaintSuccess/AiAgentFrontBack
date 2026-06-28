@@ -2,7 +2,7 @@
 
 ## Shopify
 
-Use the workspace app `PaintAccess Shopify Operations`, backed by the repo MCP endpoint.
+Use the workspace app `PaintAccess Operations`, backed by the repo MCP endpoint.
 
 Expected tools:
 
@@ -18,7 +18,7 @@ Expected tools:
 
 ## Gmail
 
-Use Daniel/user-owned ChatGPT Gmail app connection. Do not store Gmail OAuth credentials in the backend by default.
+Use backend-authorized Gmail tools in the PaintAccess Operations MCP. Store Google OAuth credentials only in Vercel/runtime secrets.
 
 Needed abilities:
 
@@ -30,7 +30,7 @@ Needed abilities:
 
 ## Google Drive
 
-Use Daniel/user-owned ChatGPT Google Drive app connection. Needed only if PO files or attachments are stored/generated in Drive.
+Use backend-authorized Google Drive tools in the PaintAccess Operations MCP. Needed only if PO files or attachments are stored/generated in Drive.
 
 Needs access to:
 

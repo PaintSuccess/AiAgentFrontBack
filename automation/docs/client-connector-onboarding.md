@@ -8,7 +8,7 @@ The repository can store the automation architecture, skills, setup checklists, 
 
 The repository must not store connected accounts, OAuth tokens, refresh tokens, passwords, API keys, or plugin authorizations.
 
-When Daniel or the client pulls this repository, the skills and documentation come with it, but live account access still needs to be authorized in the correct runtime. Shopify is authorized once through the backend MCP secrets. Gmail and Google Drive are authorized by Daniel in ChatGPT Apps.
+When Daniel or the client pulls this repository, the skills and documentation come with it, but live account access still needs to be authorized in the correct runtime. Shopify is authorized once through backend MCP secrets. Gmail and Google Drive are authorized through backend Google OAuth secrets and exposed to ChatGPT through the same PaintAccess Operations MCP.
 
 ## What Git can safely store
 
@@ -34,9 +34,9 @@ When Daniel or the client pulls this repository, the skills and documentation co
 
 Minimum production connector set:
 
-- Workspace app `PaintAccess Shopify Operations` for Shopify Admin/API operations.
-- Daniel/user-owned ChatGPT Gmail app for message search, draft creation, confirmations, and tracking.
-- Daniel/user-owned ChatGPT Google Drive app only if PO files/templates/attachments are stored in Drive.
+- Workspace app `PaintAccess Operations` for Shopify Admin/API, Gmail, and Drive operations.
+- Backend-authorized Gmail tools in `PaintAccess Operations` for message search, draft creation, confirmations, tracking, and approved sending.
+- Backend-authorized Google Drive tools in `PaintAccess Operations` only if PO files/templates/attachments are stored in Drive.
 - GitHub connector for repository operations.
 
 ## Expected setup flow
@@ -44,8 +44,8 @@ Minimum production connector set:
 1. Pull the repository.
 2. Open the workspace in Codex.
 3. Confirm the Shopify MCP endpoint is deployed and `SHOPIFY_MCP_TOKEN`, `SHOPIFY_STORE`, and `SHOPIFY_ACCESS_TOKEN` are set in Vercel/runtime secrets.
-4. Publish/enable the ChatGPT workspace app `PaintAccess Shopify Operations`.
-5. Daniel connects Gmail and Google Drive from ChatGPT Apps using the correct Google account when those apps are needed.
+4. Publish/enable the ChatGPT workspace app `PaintAccess Operations`.
+5. Configure backend Google OAuth env secrets when Gmail or Drive tools are needed: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`.
 6. Test read-only operations first:
    - find a Shopify order;
    - find a Gmail message;
@@ -55,16 +55,16 @@ Minimum production connector set:
    - add Shopify note;
    - prepare fulfilment without completing it.
 
-## Google app flow
+## Google backend flow
 
 Default path:
 
-1. Daniel opens ChatGPT in the PaintAccess workspace.
-2. Daniel opens Apps and connects Gmail.
-3. Daniel connects Google Drive only if Drive files/templates are needed.
-4. The Operations Desk agent uses those apps only when Daniel's ChatGPT account/session has access.
+1. Create or use a Google OAuth client for the PaintAccess operations Google account.
+2. Authorize Gmail and Drive scopes for the account that should own drafts/files.
+3. Store the resulting refresh token only in Vercel/runtime secrets.
+4. The Operations Desk agent uses Gmail/Drive only through the PaintAccess Operations MCP.
 
-Do not create a custom Google Cloud OAuth app or store Google refresh tokens in the backend unless Daniel explicitly changes the architecture.
+Do not put Google passwords, OAuth client secrets, access tokens, or refresh tokens in Git.
 
 ## Revoking access
 
@@ -90,7 +90,7 @@ Portable through Git:
 Not portable through Git:
 
 - account sessions;
-- OAuth grants and ChatGPT app authorizations;
+- OAuth grants and ChatGPT MCP app authorizations;
 - connector authorization state;
 - refresh tokens;
 - plugin installs tied to a specific user/workspace.

@@ -9,7 +9,7 @@ Use this skill before reading or acting on Gmail messages for order workflows.
 
 ## Connector rule
 
-Use Gmail only through Daniel/user-owned ChatGPT Gmail app authorization. Do not ask for Google passwords, OAuth client secrets, access tokens, or refresh tokens. If the Gmail app is not connected in the current ChatGPT account/session, return the exact search query to run manually and state that no Gmail message was read.
+Use Gmail through the PaintAccess Operations MCP backend tools: `gmail_search_messages` and `gmail_get_message`. Do not ask for Google passwords, OAuth client secrets, access tokens, or refresh tokens. If the backend Google credentials are not configured, return the exact search query to run manually and state that no Gmail message was read.
 
 ## Core rules
 

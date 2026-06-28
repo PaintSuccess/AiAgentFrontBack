@@ -15,7 +15,7 @@ Create a clear internal order note that helps staff complete the cancellation/re
 
 - A specific order must be identified with high confidence.
 - Use `shopify-order-lookup-safe` first if order identity is uncertain.
-- Use `shopify_prepare_cancellation` from `PaintAccess Shopify Operations` when a cancellation/refund action needs structured review.
+- Use `shopify_prepare_cancellation` from `PaintAccess Operations` when a cancellation/refund action needs structured review.
 - Use `shopify_add_order_note` through `shopify-order-note-recorder` for internal reminders.
 
 ## Workflow

@@ -13,9 +13,9 @@ Do not perform risky Shopify changes until the target resource is identified wit
 
 ## Shopify MCP rule
 
-Use the workspace app `PaintAccess Shopify Operations` as the default Shopify operations surface. It is backed by the repo endpoint `api/mcp/shopify.js` and exposes narrow tools for order lookup, readiness checks, notes, tags, ops metafields, fulfilment preparation, and cancellation preparation.
+Use the workspace app `PaintAccess Operations` as the default operations surface. It is backed by the repo endpoint `api/mcp/shopify.js` and exposes narrow tools for Shopify order lookup, readiness checks, notes, tags, ops metafields, fulfilment preparation, cancellation preparation, email templates, Gmail, and Google Drive.
 
-Do not rely on the generic Shopify ChatGPT app for these pipelines; it is too limited for PaintAccess operational writes. Do not ask Daniel to connect Shopify credentials in Gmail/Drive or any Google app. Gmail and Google Drive remain Daniel-owned ChatGPT Apps and are used only when Daniel has connected them in his own ChatGPT account.
+Do not rely on the generic Shopify ChatGPT app for these pipelines; it is too limited for PaintAccess operational writes. Gmail and Google Drive should also use the PaintAccess Operations MCP backend, not personal ChatGPT Apps, unless the user explicitly chooses a temporary fallback.
 
 Use these MCP tools by intent:
 
@@ -27,6 +27,10 @@ Use these MCP tools by intent:
 - `shopify_set_ops_metafield` for controlled `paintaccess_ops` state.
 - `shopify_prepare_fulfillment` to prepare fulfilment data only; Daniel must approve final fulfilment.
 - `shopify_prepare_cancellation` to prepare cancellation/refund review only; Daniel must approve final cancellation/refund.
+- `shopify_prepare_customer_email` to compose customer/supplier email copy from Shopify order details.
+- `shopify_send_customer_email` to send through Shopify's draft-order invoice email pattern only after Daniel approval.
+- `gmail_search_messages`, `gmail_get_message`, `gmail_create_draft`, and `gmail_send_email` for backend-authorized Gmail work.
+- `drive_search_files`, `drive_get_file`, and `drive_create_text_file` for backend-authorized Google Drive work.
 
 ## Routing
 
@@ -37,7 +41,7 @@ Use this sequence:
    - cancellation/refund reminder;
    - stock-delay customer communication;
    - customer reply drafting;
-   - Gmail draft creation;
+   - Gmail search, draft creation, or send;
    - supplier PO automation;
    - supplier Sales Confirmation check;
    - payment approval/process recording;
@@ -65,10 +69,11 @@ Use this sequence:
 
 1. `shopify-order-lookup-safe`
 2. `supplier-po-automation`
-3. `operations-stage-notifier` to report order reviewed and PO readiness
+3. `shopify_prepare_customer_email` to create the supplier/customer email template when needed
 4. `gmail-draft-safe` if a supplier email draft or send step is requested
-5. `shopify-order-note-recorder` to record PO sent/drafted status when applicable
-6. `shopify-flow-skill-evolver`
+5. `operations-stage-notifier` to report order reviewed and PO readiness
+6. `shopify-order-note-recorder` to record PO sent/drafted status when applicable
+7. `shopify-flow-skill-evolver`
 
 ### Supplier Sales Confirmation received
 
@@ -98,9 +103,10 @@ Use this sequence:
 
 1. `shopify-order-lookup-safe`
 2. `shopify-stock-delay-customer-workflow`
-3. `gmail-draft-safe` if a Gmail draft should be created
-4. `shopify-order-note-recorder` to store the action and email copy
-5. `shopify-flow-skill-evolver`
+3. `shopify_prepare_customer_email` for the customer-facing template
+4. `gmail-draft-safe` if a Gmail draft should be created, or `shopify_send_customer_email` if Daniel approved Shopify-native sending
+5. `shopify-order-note-recorder` to store the action and email copy
+6. `shopify-flow-skill-evolver`
 
 ### Customer/supplier email copied into Shopify note
 
@@ -112,7 +118,7 @@ Use this sequence:
 ### Any Shopify write without a dedicated tool
 
 1. `shopify-order-lookup-safe` or equivalent resource lookup
-2. Prefer the narrow `PaintAccess Shopify Operations` MCP tool
+2. Prefer the narrow `PaintAccess Operations` MCP tool
 3. Use `shopify-graphql-safe-mutation` only after confirming no MCP tool covers the requested action
 3. `shopify-flow-skill-evolver`
 
@@ -123,7 +129,7 @@ Use this sequence:
 - If only a screenshot is provided and the order number is not visible, ask for the order number or another reliable identifier.
 - For refunds/cancellations, prefer adding an internal reminder and giving manual Admin steps unless an approved tool safely supports the action.
 - Do not invent supplier mappings. Use existing mappings or ask for confirmation.
-- Do not claim a Gmail draft or Shopify note was created unless the relevant connector/tool confirms it.
+- Do not claim a Gmail draft, Drive file, Shopify email, or Shopify note was created unless the relevant MCP tool confirms it.
 - Do not claim the generic Shopify app can complete admin-panel tasks. If a needed Shopify Admin action is not represented by the MCP, prepare a manual admin checklist or propose a backend/MCP extension.
 
 See `references/flow-routing.md`.

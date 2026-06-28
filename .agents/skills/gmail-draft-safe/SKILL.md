@@ -9,7 +9,7 @@ Use this skill for PaintAccess Gmail draft creation from Shopify operations.
 
 ## Connector rule
 
-Use Gmail only through Daniel/user-owned ChatGPT Gmail app authorization. Do not use backend Google OAuth by default, and do not ask for Google passwords, OAuth client secrets, access tokens, or refresh tokens. If the Gmail app is not connected in the current ChatGPT account/session, prepare the email text only and clearly state that no Gmail draft was created.
+Use Gmail through the PaintAccess Operations MCP backend tools: `gmail_create_draft` for drafts and `gmail_send_email` only after Daniel approval. Do not ask for Google passwords, OAuth client secrets, access tokens, or refresh tokens. If backend Google credentials are not configured, prepare the email text only and clearly state that no Gmail draft was created.
 
 ## Core rules
 
@@ -31,7 +31,7 @@ Use Gmail only through Daniel/user-owned ChatGPT Gmail app authorization. Do not
    - `supplier-po-automation` for supplier PO emails;
    - `shopify-stock-delay-customer-workflow` for stock-delay customer emails;
    - `customer-email-reply-drafter` for other customer replies.
-4. Create Gmail draft only if Daniel's connected ChatGPT Gmail app is available.
+4. Create Gmail draft with `gmail_create_draft` when backend Google credentials are available.
 5. Return draft status and the exact subject/body.
 6. Route to `shopify-order-note-recorder` when the email should be copied into Shopify.
 

@@ -17,20 +17,13 @@ approval_policy:
     - "completing final Shopify fulfilment"
 tools:
   apps:
-    - name: "Gmail"
-      authentication: "Daniel/user-owned ChatGPT App connection"
-      notes: "Daniel connects Gmail from ChatGPT Apps. Do not store Google OAuth credentials in the backend by default."
-      write_actions: "Always ask before sending. Draft creation may be allowed only when the connected ChatGPT Gmail app supports it."
-    - name: "Google Drive"
-      authentication: "Daniel/user-owned ChatGPT App connection"
-      notes: "Use only if Daniel has connected Drive in ChatGPT and PO templates, generated files, or attachments are stored there."
     - name: "GitHub"
       authentication: "End-user or admin-owned"
       notes: "For repository maintenance, issues, PRs, and docs updates."
   custom_mcps:
-    - name: "PaintAccess Shopify Operations MCP"
+    - name: "PaintAccess Operations MCP"
       required: true
-      reason: "Built-in apps may not expose the narrow Shopify write actions we need."
+      reason: "Built-in apps do not reliably expose the Shopify, Gmail, and Drive actions required for PaintAccess operations."
       desired_tools:
         - "shopify_get_order"
         - "shopify_search_orders"
@@ -41,6 +34,15 @@ tools:
         - "shopify_set_ops_metafield"
         - "shopify_prepare_fulfillment"
         - "shopify_prepare_cancellation"
+        - "shopify_prepare_customer_email"
+        - "shopify_send_customer_email"
+        - "gmail_search_messages"
+        - "gmail_get_message"
+        - "gmail_create_draft"
+        - "gmail_send_email"
+        - "drive_search_files"
+        - "drive_get_file"
+        - "drive_create_text_file"
 skills:
   core:
     - "shopify-ops-orchestrator"

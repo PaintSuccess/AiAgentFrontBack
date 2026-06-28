@@ -5,7 +5,7 @@ description: perform safe shopify admin graphql write operations when no dedicat
 
 # Shopify GraphQL Safe Mutation
 
-Use this skill only for Shopify writes that are not covered by the `PaintAccess Shopify Operations` MCP. Prefer MCP tools first: `shopify_add_order_note`, `shopify_add_order_tag`, `shopify_remove_order_tag`, `shopify_set_ops_metafield`, `shopify_prepare_fulfillment`, and `shopify_prepare_cancellation`.
+Use this skill only for Shopify writes that are not covered by the `PaintAccess Operations` MCP. Prefer MCP tools first: `shopify_add_order_note`, `shopify_add_order_tag`, `shopify_remove_order_tag`, `shopify_set_ops_metafield`, `shopify_prepare_fulfillment`, `shopify_prepare_cancellation`, `shopify_prepare_customer_email`, and `shopify_send_customer_email`.
 
 ## Mandatory workflow
 

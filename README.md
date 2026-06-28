@@ -16,6 +16,9 @@ Vercel serverless backend for the Paint Access AI support system. Acts as middle
 | `/api/whatsapp/send` | POST | Protected outbound WhatsApp send endpoint for support replies/templates |
 | `/api/whatsapp/status` | POST | Twilio WhatsApp delivery status callback receiver |
 | `/api/twilio/whatsapp-inbound` | POST | Backward-compatible Twilio WhatsApp webhook alias |
+| `/api/mcp/shopify` | GET/POST | PaintAccess Operations MCP for ChatGPT agents: Shopify, Gmail, Drive, and approval-gated email tools |
+| `/.well-known/oauth-protected-resource` | GET | OAuth protected resource metadata for ChatGPT MCP authorization |
+| `/.well-known/oauth-authorization-server` | GET | OAuth authorization server metadata for ChatGPT MCP authorization |
 | `/api/webhooks/elevenlabs-post-call` | POST | ElevenLabs completed conversation transcript webhook |
 | `/api/webhooks/elevenlabs-twilio-personalization` | POST | ElevenLabs inbound Twilio call personalization webhook |
 | `/api/dashboard/communication` | GET | Unified communication detail for chat, voice, SMS, and WhatsApp |
@@ -28,6 +31,16 @@ Set in Vercel Dashboard → Settings → Environment Variables:
 |---|---|
 | `SHOPIFY_STORE` | Shopify store domain (e.g., `zgmzge-0d.myshopify.com`) |
 | `SHOPIFY_ACCESS_TOKEN` | Shopify Admin API access token |
+| `SHOPIFY_ADMIN_API_VERSION` | Shopify Admin API version for operations tools, defaults to `2026-04` |
+| `SHOPIFY_MCP_TOKEN` | Legacy/private MCP bearer token fallback |
+| `MCP_OAUTH_TOKEN_SECRET` | Signing secret for ChatGPT OAuth-issued MCP access tokens |
+| `MCP_OAUTH_PIN` | Optional PIN required on the ChatGPT app authorization screen |
+| `MCP_OAUTH_AUTO_APPROVE` | Optional `true` only for tightly controlled testing; defaults to explicit consent |
+| `PUBLIC_BASE_URL` | Public app origin used in OAuth metadata |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID for backend Gmail/Drive tools |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret for backend Gmail/Drive tools |
+| `GOOGLE_REFRESH_TOKEN` | Google refresh token for the PaintAccess mailbox/Drive account |
+| `GOOGLE_WORKSPACE_EMAIL` | Optional label for the authorized Google account |
 | `ELEVENLABS_API_KEY` | ElevenLabs API key |
 | `ELEVENLABS_AGENT_ID` | ElevenLabs agent ID |
 | `API_SECRET_TOKEN` | Bearer token for endpoint auth |

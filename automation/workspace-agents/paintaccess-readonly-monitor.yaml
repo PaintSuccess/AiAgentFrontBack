@@ -10,17 +10,10 @@ reasoning_effort: "medium"
 approval_policy:
   writes: "disabled"
 tools:
-  apps:
-    - name: "Gmail"
-      authentication: "Daniel/user-owned ChatGPT App connection"
-      action_constraints: "Read/search only"
-    - name: "Google Drive"
-      authentication: "Daniel/user-owned ChatGPT App connection"
-      action_constraints: "Read only"
   custom_mcps:
-    - name: "PaintAccess Shopify Operations MCP"
+    - name: "PaintAccess Operations MCP"
       required: true
-      action_constraints: "Use only shopify_search_orders, shopify_get_order, and shopify_get_fulfillment_readiness. Do not call note/tag/metafield/prepare tools."
+      action_constraints: "Use only shopify_search_orders, shopify_get_order, shopify_get_fulfillment_readiness, gmail_search_messages, gmail_get_message, drive_search_files, and drive_get_file. Do not call note/tag/metafield/draft/send/prepare-write tools."
 skills:
   core:
     - "shopify-ops-orchestrator"

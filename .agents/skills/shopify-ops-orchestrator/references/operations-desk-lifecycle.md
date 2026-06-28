@@ -14,7 +14,7 @@ Inputs:
 
 Primary Shopify tool:
 
-- `PaintAccess Shopify Operations` MCP via `shopify_search_orders` or `shopify_get_order`.
+- `PaintAccess Operations` MCP via `shopify_search_orders` or `shopify_get_order`.
 
 Actions:
 

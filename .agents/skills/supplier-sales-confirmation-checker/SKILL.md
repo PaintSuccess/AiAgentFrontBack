@@ -10,7 +10,7 @@ Use this skill after the supplier sends a Sales Confirmation.
 ## Preconditions
 
 - Identify the Shopify order with high confidence through `shopify_get_order` or `shopify_search_orders`.
-- Find the supplier confirmation email with `gmail-message-finder-safe` only when Daniel's ChatGPT Gmail app is connected.
+- Find the supplier confirmation email with `gmail-message-finder-safe` through backend Gmail tools.
 - Have the prepared PO or reconstructed PO details from `supplier-po-automation`.
 
 ## Check list
