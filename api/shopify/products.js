@@ -25,7 +25,9 @@ const STOP_WORDS = new Set([
   "have", "has", "want", "need", "looking", "look", "show", "give", "tell",
   "please", "thanks", "hello", "hi", "hey", "some", "any", "this", "that",
   "these", "those", "what", "which", "where", "best", "good", "buy", "get",
-  "find", "search", "with", "without", "about",
+  "find", "search", "with", "without", "about", "product", "products", "link",
+  "links", "url", "urls", "can", "could", "would", "should", "send", "grab",
+  "also", "same", "other",
 ]);
 
 // Detect Shopify SKU/style codes like "16W120", "17M362", "ZSP4"
@@ -39,6 +41,7 @@ const PRODUCT_SEARCH_QUERY = `
         node {
           title
           handle
+          onlineStoreUrl
           vendor
           productType
           tags
@@ -73,6 +76,7 @@ const COLLECTION_SEARCH_QUERY = `
           node {
             title
             handle
+            onlineStoreUrl
             vendor
             productType
             tags
@@ -306,6 +310,8 @@ function scoreProduct(product, tokens, fullPhrase) {
   // All tokens land in title
   if (tokens.length > 1 && tokensInTitle === tokens.length) score += 24;
   if (tokens.length > 1 && tokensInAnyField === tokens.length) score += 12;
+  if (tokens.length === 2 && tokensInAnyField < 2) return 0;
+  if (tokens.length >= 3 && tokensInAnyField < 2) return 0;
   // Contiguous phrase in title (e.g. "angle sash brush")
   if (tokens.length > 1 && title.includes(tokens.join(" "))) score += 18;
   // Full normalized phrase in title
@@ -354,7 +360,7 @@ function shapeProduct(p) {
 
   return {
     name: p.title,
-    url: `${STORE_URL}/products/${p.handle}`,
+    url: p.onlineStoreUrl || `${STORE_URL}/products/${p.handle}`,
     vendor: p.vendor || null,
     price:
       minP == null
@@ -425,6 +431,7 @@ async function searchProducts(rawQuery) {
   const add = (nodes) => {
     for (const n of nodes) {
       if (n.status && n.status !== "ACTIVE") continue;
+      if (!n.onlineStoreUrl) continue;
       if (!seen.has(n.handle)) seen.set(n.handle, n);
     }
   };
@@ -492,10 +499,20 @@ async function searchProducts(rawQuery) {
   const pool = Array.from(seen.values());
   if (pool.length === 0) return { products: [], tokens, expandedTokens, strategies };
 
-  const fullPhrase = tokens.join(" ");
+  const scoringTokens =
+    tokens.length > 1
+      ? tokens.filter((tok) => pool.some((p) => scoreProduct(p, [tok], tok) > 0))
+      : tokens;
+  const activeTokens = scoringTokens.length ? scoringTokens : tokens;
+  const fullPhrase = activeTokens.join(" ");
   const scored = pool
-    .map((p) => ({ p, score: scoreProduct(p, tokens, fullPhrase) }))
+    .map((p) => ({ p, score: scoreProduct(p, activeTokens, fullPhrase) }))
+    .filter(({ score }) => score > 0)
     .sort((a, b) => b.score - a.score);
+
+  if (scored.length === 0) {
+    return { products: [], tokens, expandedTokens, strategies };
+  }
 
   if (SEARCH_DEBUG) {
     console.info("[ProductSearch]", {
@@ -517,7 +534,9 @@ async function searchProducts(rawQuery) {
 
 async function searchByCollection(handle) {
   const data = await shopifyGraphQL(COLLECTION_SEARCH_QUERY, { handle });
-  return (data.collectionByHandle?.products?.edges || []).map((e) => e.node);
+  return (data.collectionByHandle?.products?.edges || [])
+    .map((e) => e.node)
+    .filter((p) => p.onlineStoreUrl);
 }
 
 // ── Handler ──────────────────────────────────────────────────────────────────

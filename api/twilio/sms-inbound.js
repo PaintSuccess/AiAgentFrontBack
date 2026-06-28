@@ -1,22 +1,8 @@
 const crypto = require("crypto");
 const { corsHeaders, rateLimit, cleanEnv } = require("../../lib/shopify");
 const { askElevenLabsTextAgent } = require("../../lib/elevenlabs-text");
-
-const TWILIO_ACCOUNT_SID = cleanEnv("TWILIO_ACCOUNT_SID");
-const TWILIO_AUTH_TOKEN = cleanEnv("TWILIO_AUTH_TOKEN");
-const TWILIO_SMS_FROM = normalizePhoneEnv(
-  cleanEnv("TWILIO_MOBILE_NUMBER") ||
-    cleanEnv("TWILIO_PHONE_NUMBER") ||
-    cleanEnv("TWILIO_SYDNEY_NUMBER")
-);
-const TWILIO_HISTORY_LOOKUP_TIMEOUT_MS = 2500;
-
-function normalizePhoneEnv(value) {
-  const raw = String(value || "").trim();
-  if (!raw) return "";
-  if (!raw.startsWith("+")) return raw;
-  return `+${raw.replace(/\D/g, "")}`;
-}
+const { getCustomerContextByPhone } = require("../../lib/shopify-customer-context");
+const { loadTwilioTextHistory } = require("../../lib/twilio-text-history");
 
 // Validate Twilio webhook signature to prevent spoofed requests
 function verifyTwilioSignature(req) {
@@ -47,65 +33,6 @@ function verifyTwilioSignature(req) {
   return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
 }
 
-function twilioAuthHeader() {
-  return `Basic ${Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString("base64")}`;
-}
-
-function messageTime(message) {
-  const value = message.date_sent || message.date_created || message.date_updated;
-  const time = new Date(value || 0).getTime();
-  return Number.isFinite(time) ? time : 0;
-}
-
-async function fetchTwilioMessages(params) {
-  const query = new URLSearchParams({ PageSize: "12", ...params });
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TWILIO_HISTORY_LOOKUP_TIMEOUT_MS);
-
-  let response;
-  try {
-    response = await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json?${query.toString()}`,
-      {
-        headers: { Authorization: twilioAuthHeader() },
-        signal: controller.signal,
-      }
-    );
-  } finally {
-    clearTimeout(timer);
-  }
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Twilio messages lookup failed: ${response.status} ${text.slice(0, 200)}`);
-  }
-
-  const data = await response.json();
-  return Array.isArray(data.messages) ? data.messages : [];
-}
-
-async function loadSmsConversationHistory({ from, to, currentSid }) {
-  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !from) return [];
-
-  const businessNumber = normalizePhoneEnv(to) || TWILIO_SMS_FROM;
-  if (!businessNumber) return [];
-
-  const [inbound, outbound] = await Promise.all([
-    fetchTwilioMessages({ From: from, To: businessNumber }),
-    fetchTwilioMessages({ From: businessNumber, To: from }),
-  ]);
-
-  return [...inbound, ...outbound]
-    .filter((message) => message.sid !== currentSid)
-    .filter((message) => String(message.body || "").trim())
-    .sort((a, b) => messageTime(a) - messageTime(b))
-    .slice(-12)
-    .map((message) => ({
-      role: String(message.direction || "").startsWith("outbound") ? "agent" : "customer",
-      text: message.body,
-    }));
-}
-
 module.exports = async function handler(req, res) {
   corsHeaders(res, req);
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -133,15 +60,23 @@ module.exports = async function handler(req, res) {
 
     let replyText = "Thanks for contacting Paint Access! We're processing your message. For immediate help, call us at 02 5838 5959 or visit paintaccess.com.au";
     let conversationHistory = [];
+    let customerContext = null;
 
     try {
-      conversationHistory = await loadSmsConversationHistory({
-        from,
-        to,
+      conversationHistory = await loadTwilioTextHistory({
+        customerPhone: from,
         currentSid: messageSid,
+        currentFrom: from,
+        currentTo: to,
       });
     } catch (err) {
       console.error("[SMS] Conversation history lookup failed:", err.message);
+    }
+
+    try {
+      customerContext = await getCustomerContextByPhone(from);
+    } catch (err) {
+      console.error("[SMS] Customer context lookup failed:", err.message);
     }
 
     try {
@@ -149,6 +84,12 @@ module.exports = async function handler(req, res) {
         text: body,
         channel: "sms",
         customerPhone: from,
+        customerName: customerContext?.customer_name || "",
+        customerEmail: customerContext?.customer_email || "",
+        customerContextSummary: customerContext?.customer_context_summary || "",
+        customerId: customerContext?.customer_id || "",
+        customerTags: customerContext?.customer_tags || "",
+        customerRecentOrders: customerContext?.customer_recent_orders || "",
         conversationHistory,
       });
       if (agentReply) replyText = agentReply;

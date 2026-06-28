@@ -175,7 +175,7 @@ const toolDefs = [
       type: "webhook",
       name: "send_sms_notification",
       description:
-        "Send a concise SMS with Paint Access links or follow-up details to an Australian mobile number. Use after a customer asks for links by SMS, or during a website voice/browser call when product links were discussed and a valid mobile number is already available. If the caller is on an office/landline number or no mobile is available, ask for their mobile first. Only send paintaccess.com.au links.",
+        "Website widget and voice/browser only: send a concise SMS with Paint Access links or follow-up details to an Australian mobile number. Never use this tool when the current channel is SMS or WhatsApp; those channels must receive product links directly in the same channel. If the caller is on an office/landline number or no mobile is available, ask for their mobile first. Only send paintaccess.com.au links.",
       api_schema: {
         url: `${BACKEND_URL}/api/twilio/sms-notification`,
         method: "POST",

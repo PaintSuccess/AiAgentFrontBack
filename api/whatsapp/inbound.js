@@ -1,6 +1,8 @@
 const { corsHeaders, rateLimit, cleanEnv } = require("../../lib/shopify");
 const { askElevenLabsTextAgent } = require("../../lib/elevenlabs-text");
 const { upsertWhatsAppLead } = require("../../lib/shopify-whatsapp-leads");
+const { getCustomerContextByPhone } = require("../../lib/shopify-customer-context");
+const { loadTwilioTextHistory } = require("../../lib/twilio-text-history");
 const {
   parseWhatsAppInbound,
   sendWhatsAppMessage,
@@ -9,109 +11,11 @@ const {
   verifyTwilioSignature,
 } = require("../../lib/whatsapp");
 
-const TWILIO_ACCOUNT_SID = cleanEnv("TWILIO_ACCOUNT_SID");
-const TWILIO_AUTH_TOKEN = cleanEnv("TWILIO_AUTH_TOKEN");
-const TWILIO_SMS_FROM = normalizePhoneEnv(
-  cleanEnv("TWILIO_MOBILE_NUMBER") ||
-    cleanEnv("TWILIO_PHONE_NUMBER") ||
-    cleanEnv("TWILIO_SYDNEY_NUMBER")
-);
-const TWILIO_HISTORY_LOOKUP_TIMEOUT_MS = 2500;
-
 function fallbackReply() {
   return "Thanks for contacting Paint Access. I can help with products, stock, orders, or painting advice. For urgent help, call 02 5838 5959.";
 }
 
-function normalizePhoneEnv(value) {
-  const raw = String(value || "").trim();
-  if (!raw) return "";
-  if (!raw.startsWith("+")) return raw;
-  return `+${raw.replace(/\D/g, "")}`;
-}
-
-function twilioAuthHeader() {
-  return `Basic ${Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString("base64")}`;
-}
-
-function messageTime(message) {
-  const value = message.date_sent || message.date_created || message.date_updated;
-  const time = new Date(value || 0).getTime();
-  return Number.isFinite(time) ? time : 0;
-}
-
-async function fetchTwilioMessages(params) {
-  const query = new URLSearchParams({ PageSize: "12", ...params });
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TWILIO_HISTORY_LOOKUP_TIMEOUT_MS);
-
-  let response;
-  try {
-    response = await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json?${query.toString()}`,
-      {
-        headers: { Authorization: twilioAuthHeader() },
-        signal: controller.signal,
-      }
-    );
-  } finally {
-    clearTimeout(timer);
-  }
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Twilio messages lookup failed: ${response.status} ${text.slice(0, 200)}`);
-  }
-
-  const data = await response.json();
-  return Array.isArray(data.messages) ? data.messages : [];
-}
-
-function historyRole(message) {
-  return String(message.direction || "").startsWith("outbound") ? "agent" : "customer";
-}
-
-function historyText(message) {
-  return String(message.body || "")
-    .replace(/^Paint Access WhatsApp reply \(sent by SMS because WhatsApp delivery failed\):\s*/i, "")
-    .trim();
-}
-
-async function loadTwilioWhatsAppHistory(inbound) {
-  if (inbound.provider !== "twilio" || !TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) return [];
-
-  const from = String(inbound.raw?.From || "").trim();
-  const to = String(inbound.raw?.To || "").trim();
-  const currentSid = String(inbound.raw?.MessageSid || inbound.raw?.SmsMessageSid || "");
-  if (!from || !to) return [];
-
-  const customerSms = normalizePhoneEnv(inbound.from);
-  const lookups = [
-    fetchTwilioMessages({ From: from, To: to }),
-    fetchTwilioMessages({ From: to, To: from }),
-  ];
-
-  if (customerSms && TWILIO_SMS_FROM) {
-    lookups.push(fetchTwilioMessages({ From: TWILIO_SMS_FROM, To: customerSms }));
-  }
-
-  const results = await Promise.all(lookups);
-  return results
-    .flat()
-    .filter((message) => message.sid !== currentSid)
-    .filter((message) => historyText(message))
-    .filter((message) => {
-      const status = String(message.status || "").toLowerCase();
-      return historyRole(message) !== "agent" || !["failed", "undelivered"].includes(status);
-    })
-    .sort((a, b) => messageTime(a) - messageTime(b))
-    .slice(-12)
-    .map((message) => ({
-      role: historyRole(message),
-      text: historyText(message),
-    }));
-}
-
-async function buildAgentReply(inbound, conversationHistory = []) {
+async function buildAgentReply(inbound, conversationHistory = [], customerContext = null) {
   const text =
     inbound.text ||
     `[Customer sent a ${inbound.messageType || "WhatsApp"} message. Ask them to send text if the attachment cannot be processed yet.]`;
@@ -124,8 +28,13 @@ async function buildAgentReply(inbound, conversationHistory = []) {
   const reply = await askElevenLabsTextAgent({
     text: prompt,
     channel: "whatsapp",
-    customerName: inbound.profileName || "",
+    customerName: customerContext?.customer_name || inbound.profileName || "",
+    customerEmail: customerContext?.customer_email || "",
     customerPhone: inbound.from,
+    customerContextSummary: customerContext?.customer_context_summary || "",
+    customerId: customerContext?.customer_id || "",
+    customerTags: customerContext?.customer_tags || "",
+    customerRecentOrders: customerContext?.customer_recent_orders || "",
     conversationHistory,
     timeoutMs: 20000,
   });
@@ -192,15 +101,27 @@ module.exports = async function handler(req, res) {
 
     let replyText = fallbackReply();
     let conversationHistory = [];
+    let customerContext = null;
 
     try {
-      conversationHistory = await loadTwilioWhatsAppHistory(inbound);
+      conversationHistory = await loadTwilioTextHistory({
+        customerPhone: inbound.from,
+        currentSid: inbound.raw?.MessageSid || inbound.raw?.SmsMessageSid || "",
+        currentFrom: inbound.raw?.From || "",
+        currentTo: inbound.raw?.To || "",
+      });
     } catch (err) {
       console.error("[WhatsApp] Conversation history lookup failed:", err.message);
     }
 
     try {
-      replyText = await buildAgentReply(inbound, conversationHistory);
+      customerContext = await getCustomerContextByPhone(inbound.from);
+    } catch (err) {
+      console.error("[WhatsApp] Customer context lookup failed:", err.message);
+    }
+
+    try {
+      replyText = await buildAgentReply(inbound, conversationHistory, customerContext);
     } catch (err) {
       console.error("[WhatsApp] ElevenLabs text agent error:", err.message);
     }
