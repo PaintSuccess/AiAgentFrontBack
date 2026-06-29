@@ -1,5 +1,6 @@
 const { cleanEnv } = require("../../lib/shopify");
 const {
+  GOOGLE_CLOUD_SCOPE,
   createState,
   escapeHtml,
   getGoogleRedirectUri,
@@ -37,15 +38,19 @@ module.exports = async function handler(req, res) {
     );
   }
 
+  const mode =
+    String(req.query.mode || "").trim() === "enable_services"
+      ? "google_services_enable"
+      : "google_workspace";
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: getGoogleRedirectUri(req),
     response_type: "code",
-    scope: getGoogleScopes(),
+    scope: mode === "google_services_enable" ? GOOGLE_CLOUD_SCOPE : getGoogleScopes(),
     access_type: "offline",
     prompt: "consent",
     include_granted_scopes: "true",
-    state: createState({ mode: "google_workspace" }),
+    state: createState({ mode }),
   });
 
   const loginHint = cleanEnv("GOOGLE_WORKSPACE_EMAIL");

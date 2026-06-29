@@ -1,7 +1,10 @@
 const { cleanEnv } = require("../../lib/shopify");
 const {
+  enableGoogleProjectServices,
   escapeHtml,
   exchangeGoogleCode,
+  getGoogleCloudProjectId,
+  getGoogleProjectServices,
   htmlPage,
   triggerDeployHook,
   upsertVercelEnv,
@@ -43,6 +46,31 @@ module.exports = async function handler(req, res) {
 
   try {
     const tokenData = await exchangeGoogleCode({ code, req });
+    if (stateCheck.data?.mode === "google_services_enable") {
+      const enableResult = await enableGoogleProjectServices({
+        accessToken: tokenData.access_token,
+        projectId: getGoogleCloudProjectId(),
+        services: getGoogleProjectServices(),
+      });
+      const body = `<h1>Google project services setup ${enableResult.ok ? "started" : "failed"}</h1>
+        <div class="card">
+          <p><strong>Project:</strong> ${escapeHtml(enableResult.projectId || "(missing)")}</p>
+          <p><strong>Services:</strong> ${escapeHtml(
+            enableResult.results.map((item) => `${item.service}: ${item.ok ? "ok" : `failed (${item.status})`}`).join(", ")
+          )}</p>
+          <p><strong>Scopes:</strong> ${escapeHtml(tokenData.scope || "(none)")}</p>
+        </div>
+        <details>
+          <summary>Technical result</summary>
+          <pre>${escapeHtml(JSON.stringify(enableResult, null, 2))}</pre>
+        </details>
+        <p class="muted">Google may need a few minutes to propagate newly enabled APIs.</p>`;
+
+      return res
+        .status(enableResult.ok ? 200 : 502)
+        .send(htmlPage("Google project services setup", body, enableResult.ok ? "#116329" : "#b42318"));
+    }
+
     const refreshToken = tokenData.refresh_token || "";
     const workspaceEmail = cleanEnv("GOOGLE_WORKSPACE_EMAIL");
 
