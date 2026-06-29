@@ -4,6 +4,7 @@
  */
 const crypto = require("crypto");
 const { cleanEnv } = require("../../lib/shopify");
+const { triggerDeployHook, upsertVercelEnv } = require("../../lib/vercel-env");
 
 module.exports = async function handler(req, res) {
   res.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -74,6 +75,20 @@ module.exports = async function handler(req, res) {
 
     console.log("[OAuth] Access token obtained with scope:", tokenData.scope || "(none)");
     const token = tokenData.access_token || "";
+    const storeResult = await upsertVercelEnv(
+      {
+        SHOPIFY_ACCESS_TOKEN: token,
+        ...(tokenData.scope ? { SHOPIFY_APP_SCOPES: tokenData.scope } : {}),
+      },
+      {
+        targets: cleanEnv("SHOPIFY_OAUTH_VERCEL_TARGETS") || cleanEnv("VERCEL_ENV_TARGETS") || "production",
+        comment: "Updated by PaintAccess Shopify OAuth callback.",
+      }
+    );
+    const deployResult = storeResult.ok
+      ? await triggerDeployHook(["SHOPIFY_OAUTH_DEPLOY_HOOK_URL"])
+      : { skipped: true };
+    const stored = storeResult.ok && !storeResult.skipped;
 
     return res.status(200).send(`
       <html>
@@ -83,8 +98,20 @@ module.exports = async function handler(req, res) {
         <p><strong>Scope:</strong> ${escapeHtml(tokenData.scope || "(none)")}</p>
         <p><strong>Expires in:</strong> ${tokenData.expires_in ? tokenData.expires_in + " seconds" : "Never (offline token)"}</p>
         <p><strong>Token (first 8 chars):</strong> ${escapeHtml(token.slice(0, 8))}...</p>
-        <p>Copy this token into Vercel as <code>SHOPIFY_ACCESS_TOKEN</code>, then redeploy production.</p>
-        <textarea readonly style="width:100%; min-height:120px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace;">${escapeHtml(token)}</textarea>
+        <p><strong>Vercel auto-store:</strong> ${stored ? "completed" : "not completed"}</p>
+        <p><strong>Deploy hook:</strong> ${
+          deployResult.skipped ? "not configured" : deployResult.ok ? "triggered" : "failed"
+        }</p>
+        ${
+          stored
+            ? "<p>The token was written to Vercel. If no deploy hook is configured, redeploy production so the running backend picks up the new env var.</p>"
+            : `<p>Copy this token into Vercel as <code>SHOPIFY_ACCESS_TOKEN</code>, then redeploy production.</p>
+               <textarea readonly style="width:100%; min-height:120px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace;">${escapeHtml(token)}</textarea>`
+        }
+        <details>
+          <summary>Technical result</summary>
+          <pre>${escapeHtml(JSON.stringify({ storeResult, deployResult }, null, 2))}</pre>
+        </details>
         <hr>
         <p style="color: #666;">Do not share this page. Close it after updating Vercel.</p>
       </body>

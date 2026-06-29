@@ -7,7 +7,8 @@ Vercel serverless backend for the Paint Access AI support system. Acts as middle
 | Endpoint | Method | Purpose |
 |---|---|---|
 | `/api/shopify/order` | POST | Order lookup by number or email |
-| `/api/shopify/oauth-start` | GET | Shopify app reinstall/reauthorization helper for Admin API scopes |
+| `/api/shopify/oauth-start` | GET | Shopify app reinstall/reauthorization helper for Admin API scopes; can auto-store the new token in Vercel |
+| `/api/google/oauth-start` | GET | Google Gmail/Drive authorization helper; can auto-store the refresh token in Vercel |
 | `/api/shopify/products` | POST | Product search by name/brand/type |
 | `/api/shopify/inventory` | POST | Stock availability check |
 | `/api/email/send` | POST | Email request via Shopify Draft Order |
@@ -42,6 +43,11 @@ Set in Vercel Dashboard → Settings → Environment Variables:
 | `GOOGLE_CLIENT_SECRET` | Google OAuth client secret for backend Gmail/Drive tools |
 | `GOOGLE_REFRESH_TOKEN` | Google refresh token for the PaintAccess mailbox/Drive account |
 | `GOOGLE_WORKSPACE_EMAIL` | Optional label for the authorized Google account |
+| `GOOGLE_OAUTH_ADMIN_PIN` | Optional PIN required to start Google Gmail/Drive authorization |
+| `VERCEL_API_TOKEN` | Optional. Enables OAuth callbacks to upsert refreshed tokens into Vercel env vars |
+| `VERCEL_PROJECT_ID_OR_NAME` | Optional. Vercel project id/name used with `VERCEL_API_TOKEN` |
+| `VERCEL_TEAM_ID` / `VERCEL_TEAM_SLUG` | Optional. Required only when the Vercel project belongs to a team and the API token needs team routing |
+| `VERCEL_DEPLOY_HOOK_URL` | Optional. Triggered after token upsert so production picks up new env vars |
 | `ELEVENLABS_API_KEY` | ElevenLabs API key |
 | `ELEVENLABS_AGENT_ID` | ElevenLabs agent ID |
 | `API_SECRET_TOKEN` | Bearer token for endpoint auth |
@@ -91,3 +97,19 @@ Set `WHATSAPP_PROVIDER=twilio` and `TWILIO_WHATSAPP_NUMBER` to the approved send
 ## Deploy
 
 Connected to Vercel via GitHub. Push to `main` → auto-deploys.
+
+## Admin OAuth Helpers
+
+Google Gmail/Drive:
+
+```text
+https://ai-agent-front-back.vercel.app/api/google/oauth-start?pin=YOUR_PIN
+```
+
+Shopify Admin API:
+
+```text
+https://ai-agent-front-back.vercel.app/api/shopify/oauth-start
+```
+
+If `VERCEL_API_TOKEN` and `VERCEL_PROJECT_ID_OR_NAME` are configured, the callback writes `GOOGLE_REFRESH_TOKEN` or `SHOPIFY_ACCESS_TOKEN` directly into Vercel. If a deploy hook is configured, it also triggers redeploy. Otherwise the callback page shows the token for manual entry.
