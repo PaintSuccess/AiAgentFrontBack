@@ -27,6 +27,7 @@ Use these MCP tools by intent:
 - `shopify_add_order_tag` / `shopify_remove_order_tag` for controlled workflow markers.
 - `shopify_set_ops_metafield` for controlled `paintaccess_ops` state.
 - `shopify_prepare_fulfillment` to prepare fulfilment data only; Daniel must approve final fulfilment.
+- `shopify_complete_fulfillment` to complete final fulfilment with tracking only after explicit approval. Prefer this for marked test orders; for live orders require a clear Daniel approval reference and `allow_live_order`.
 - `shopify_prepare_cancellation` to prepare cancellation/refund review only; Daniel must approve final cancellation/refund.
 - `shopify_prepare_customer_email` to compose customer/supplier email copy from Shopify order details.
 - `shopify_send_customer_email` to send through Shopify's draft-order invoice email pattern only after Daniel approval.
@@ -98,6 +99,7 @@ Use this sequence:
 2. `supplier-tracking-fulfillment-prep`
 3. `operations-stage-notifier` to report tracking received and fulfilment readiness
 4. `shopify-order-note-recorder` to record carrier/tracking/fulfilment status
+5. Use `shopify_complete_fulfillment` only when final fulfilment is explicitly approved. For test orders, use fake tracking only when the user asked for a fulfilment-status test and keep `notify_customer` false unless specifically testing customer notification.
 5. `shopify-flow-skill-evolver`
 
 ### Order stock delay customer email
@@ -115,6 +117,17 @@ Use this sequence:
 2. `shopify-order-note-recorder`
 3. `shopify-graphql-safe-mutation` only if `shopify_add_order_note` is unavailable or insufficient
 4. `shopify-flow-skill-evolver`
+
+### Shopify note change with customer notification
+
+Use this when the user asks to add an order note and notify/email the customer/client, or when testing the note-notification pipeline.
+
+1. `shopify-order-lookup-safe` to confirm the exact order, customer email, and any test-order markers.
+2. `shopify-order-note-recorder` to write the internal note using `shopify_add_order_note`.
+3. `gmail-draft-safe` to create a Gmail draft with the customer-safe note-change notification.
+4. `gmail_send_email` only after explicit approval. For test orders addressed to `gluked@gmail.com`, a user request to send the test notification is enough approval if the agent reports the recipient, subject, and body before/while sending.
+5. Report the Shopify note result, Gmail draft id, Gmail send id/status, and any skipped approval-gated steps.
+6. `shopify-flow-skill-evolver`
 
 ### Any Shopify write without a dedicated tool
 

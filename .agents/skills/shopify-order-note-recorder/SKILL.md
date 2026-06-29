@@ -40,7 +40,14 @@ Use this skill to record operational actions back into a Shopify order.
    - current status;
    - next action;
    - copy of email or PO when requested.
-3. If marking a process, choose a tag/status phrase such as:
+3. If the note should notify the customer about a note/status change, prepare a customer email notification before or immediately after the note write:
+   - use the order customer email from `shopify_get_order`;
+   - for test orders tagged `PaintAccess Ops Test`, `AI Agent Test`, `TEST ORDER - DO NOT FULFILL`, or `DO NOT PROCESS`, send only to the test order email, usually `gluked@gmail.com`;
+   - subject format: `Update on your PaintAccess order {order_number}`;
+   - body should briefly say the order has an operations update, include the customer-safe summary, and avoid internal-only details such as supplier costs, payment approval notes, or manager instructions;
+   - create the draft with `gmail_create_draft`;
+   - send with `gmail_send_email` only when the user explicitly asked to send and supplied or confirmed an approval reference. For test-order pipeline tests, a user request such as "send this test notification" counts as approval when the recipient is `gluked@gmail.com`.
+4. If marking a process, choose a tag/status phrase such as:
    - `PO sent`;
    - `PO sent - {Supplier}`;
    - `PO draft prepared`;
@@ -51,11 +58,29 @@ Use this skill to record operational actions back into a Shopify order.
    - `Payment processed`;
    - `Tracking received`;
    - `Fulfilment prepared`.
-4. Write the note/tag/metafield with the matching PaintAccess Operations MCP tool.
-5. Report whether the write succeeded. If only text was prepared, say that clearly.
+5. Write the note/tag/metafield with the matching PaintAccess Operations MCP tool.
+6. When a customer notification was requested, report all three states separately:
+   - Shopify note/tag/metafield write result;
+   - Gmail draft result;
+   - Gmail send result, or the fact that send was skipped pending approval.
+7. If only text was prepared, say that clearly.
 
 ## Duplicate prevention
 
 Before sending supplier POs or marking a workflow complete, check existing order tags/notes/metafields when available through `shopify_get_order`. If a matching `PO sent` marker already exists, stop and ask before sending again.
+
+## Customer notification after order note change
+
+Use this subflow when the user asks to "notify the customer", "email the client", "send note-change notification", or when a test pipeline explicitly asks to verify note + Gmail behavior:
+
+1. Read the order with `shopify_get_order`.
+2. Add the internal note with `shopify_add_order_note`.
+3. Compose a customer-safe email from the note summary:
+   - no internal manager instructions;
+   - no supplier private details unless the user explicitly approved sharing them;
+   - for test orders, mention it is a PaintAccess AI operations test if appropriate.
+4. Create the Gmail draft with `gmail_create_draft`.
+5. Send with `gmail_send_email` only after explicit approval. Include `approval_reference`.
+6. If the email was sent, optionally add a second internal note confirming the notification was sent, but only if the user asked for a full audit trail.
 
 See `references/note-templates.md`.

@@ -19,6 +19,7 @@ const {
   OPS_METAFIELD_KEYS,
   addOrderNote,
   addOrderTag,
+  completeFulfillment,
   getFulfillmentReadiness,
   getOrder,
   prepareCancellation,
@@ -48,6 +49,7 @@ const TOOL_HANDLERS = {
   shopify_remove_order_tag: removeOrderTag,
   shopify_set_ops_metafield: setOpsMetafield,
   shopify_prepare_fulfillment: prepareFulfillment,
+  shopify_complete_fulfillment: completeFulfillment,
   shopify_prepare_cancellation: prepareCancellation,
   shopify_prepare_customer_email: prepareCustomerEmail,
   shopify_send_customer_email: sendCustomerEmailViaShopify,
@@ -197,6 +199,26 @@ const tools = withSecurity([
       ["tracking_number"]
     ),
     annotations: { readOnlyHint: false, destructiveHint: false },
+  },
+  {
+    name: "shopify_complete_fulfillment",
+    title: "Complete Shopify fulfilment",
+    description:
+      "Complete final Shopify fulfilment for a known order with tracking. Requires approval_reference. Blocks non-test orders unless allow_live_order is true. Defaults notify_customer to false.",
+    inputSchema: objectSchema(
+      {
+        ...orderIdentifierProps(),
+        tracking_number: stringProp("Tracking number to attach to the fulfilment."),
+        tracking_company: stringProp("Carrier/company name."),
+        tracking_url: stringProp("Tracking URL."),
+        notify_customer: booleanProp("Whether Shopify should notify the customer. Defaults false."),
+        approval_reference: stringProp("Required approval reference before completing fulfilment."),
+        allow_live_order: booleanProp("Only true after Daniel explicitly approves final fulfilment on a non-test order."),
+        message: stringProp("Optional internal fulfilment message."),
+      },
+      ["tracking_number", "approval_reference"]
+    ),
+    annotations: { readOnlyHint: false, destructiveHint: true },
   },
   {
     name: "shopify_prepare_cancellation",
@@ -488,6 +510,7 @@ function summarizeResult(result) {
   if (result?.files) return `Found ${result.files.length} Google Drive file(s).`;
   if (result?.draft_id) return `Created Gmail draft ${result.draft_id}.`;
   if (result?.sent && result?.provider) return `Sent email via ${result.provider}.`;
+  if (result?.fulfilled && result?.fulfillment?.id) return `Completed fulfilment for ${result.order_number}.`;
   if (result?.subject && result?.body_text) return `Prepared email template: ${result.subject}.`;
   if (result?.order_number && result?.ok === false) {
     return result.message || `Action not completed for ${result.order_number}.`;

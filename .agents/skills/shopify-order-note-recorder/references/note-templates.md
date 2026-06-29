@@ -85,3 +85,28 @@ Daniel, reminder: {customer} {source} requesting cancellation and refund for ord
 ## Manual write fallback
 
 If Shopify write tools are unavailable, prepare the note text and tell the user it was not added automatically.
+
+## Customer note-change notification
+
+Use this email shape when an internal note/status update should be mirrored to the customer.
+
+```text
+Subject: Update on your PaintAccess order #{order_number}
+
+Hi {customer_first_name},
+
+We have an update for your PaintAccess order #{order_number}:
+
+{customer_safe_update_summary}
+
+No action is required from you unless we specifically ask for confirmation.
+
+Kind regards,
+PaintAccess Team
+```
+
+For test orders, keep the recipient as the test email on the order, usually `gluked@gmail.com`, and use a clearly test-only subject such as:
+
+```text
+Subject: TEST Update on your PaintAccess order #{order_number}
+```
