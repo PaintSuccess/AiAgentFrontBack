@@ -52,6 +52,13 @@ Minimum:
 
 Important: do not put Gmail or Drive OAuth credentials into Git or agent instructions. Store Google OAuth values only in Vercel/runtime secrets. Shopify, Gmail, and Drive operational control now comes from the custom MCP because the generic/built-in apps do not expose the reliable actions PaintAccess needs.
 
+Admin authorization helpers:
+
+- Google Gmail/Drive: `https://ai-agent-front-back.vercel.app/api/google/oauth-start?pin=...`
+- Shopify Admin API: `https://ai-agent-front-back.vercel.app/api/shopify/oauth-start`
+
+The callback pages can auto-store refreshed tokens into Vercel when Vercel API/deploy-hook env vars are configured. If auto-store is not configured, the callback shows the token for manual Vercel entry.
+
 ## Recommended authentication model
 
 Use this split:
@@ -177,6 +184,7 @@ Recommended for PaintAccess:
 - Shopify uses the workspace MCP app and backend Shopify token.
 - Gmail and Google Drive use the same workspace MCP app and backend Google OAuth token.
 - Do not store Google OAuth tokens in this repository or agent instructions.
+- After Shopify app scopes change, reauthorize via `/api/shopify/oauth-start` so `SHOPIFY_ACCESS_TOKEN` receives the new scopes.
 
 ### 8. Configure schedules
 
