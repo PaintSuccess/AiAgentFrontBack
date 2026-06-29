@@ -20,14 +20,15 @@ const SEARCH_DEBUG = process.env.PRODUCT_SEARCH_DEBUG === "1";
 
 // Words to drop from natural-language input ("I need a brush" → "brush")
 const STOP_WORDS = new Set([
-  "i", "im", "me", "my", "we", "you", "your", "a", "an", "the", "of", "for",
-  "and", "or", "to", "in", "on", "at", "is", "are", "be", "do", "does", "did",
+  "i", "im", "am", "me", "my", "we", "you", "your", "a", "an", "the", "of", "for",
+  "and", "or", "to", "in", "on", "at", "is", "it", "are", "be", "do", "does", "did",
   "have", "has", "want", "need", "looking", "look", "show", "give", "tell",
   "please", "thanks", "hello", "hi", "hey", "some", "any", "this", "that",
   "these", "those", "what", "which", "where", "best", "good", "buy", "get",
   "find", "search", "with", "without", "about", "product", "products", "link",
   "links", "url", "urls", "can", "could", "would", "should", "send", "grab",
-  "also", "same", "other",
+  "also", "same", "other", "only", "not", "just", "codex", "live", "test",
+  "interest", "interested", "share",
 ]);
 
 // Detect Shopify SKU/style codes like "16W120", "17M362", "ZSP4"
@@ -107,6 +108,7 @@ const COLLECTION_SEARCH_QUERY = `
 function normalizeQuery(raw) {
   return String(raw || "")
     .toLowerCase()
+    .replace(/['’]\s*s\b/g, "s")
     .replace(/[^a-z0-9\s-]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
