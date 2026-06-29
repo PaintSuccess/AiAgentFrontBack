@@ -4,6 +4,7 @@ const { cleanEnv } = require("../../lib/shopify");
 const DEFAULT_SCOPES = [
   "read_products",
   "read_inventory",
+  "read_locations",
   "read_orders",
   "write_orders",
   "read_assigned_fulfillment_orders",
