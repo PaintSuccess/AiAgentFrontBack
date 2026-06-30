@@ -89,6 +89,7 @@ If Shopify write tools are unavailable, prepare the note text and tell the user 
 ## Customer note-change notification
 
 Use this email shape when an internal note/status update should be mirrored to the customer.
+Prefer `shopify_send_customer_email` with `delivery_method: "order_invoice"` after approval, so Shopify sends the message with the store's branded order email template, logo, contact details, and footer. Keep the custom message short and customer-safe; do not add a plain signature unless the user explicitly asks for it.
 
 ```text
 Subject: Update on your PaintAccess order #{order_number}
@@ -100,10 +101,6 @@ We have an update for your PaintAccess order #{order_number}:
 {customer_safe_update_summary}
 
 No action is required from you unless we specifically ask for confirmation.
-
-Kind regards,
-Daniel
-PaintAccess
 ```
 
 For test orders, keep the recipient as the test email on the order, usually `gluked@gmail.com`, and use a clearly test-only subject such as:

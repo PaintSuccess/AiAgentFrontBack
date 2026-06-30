@@ -5,7 +5,7 @@ description: create or prepare safe PaintAccess Gmail drafts for customers or su
 
 # Gmail Draft Safe
 
-Use this skill for PaintAccess Gmail draft creation from Shopify operations.
+Use this skill for PaintAccess Gmail draft creation from Shopify operations. For customer order-status or note-change notifications, prefer `shopify_send_customer_email` through the PaintAccess Operations MCP unless the user explicitly asks for Gmail or Shopify native sending is unavailable.
 
 ## Connector rule
 
@@ -17,6 +17,7 @@ Use Gmail through the PaintAccess Operations MCP backend tools: `gmail_create_dr
 - Do not send email unless the user explicitly asks to send and the available Gmail tool supports it.
 - If sending, confirm recipient, subject, and body unless the user has already approved those exact details.
 - Do not claim a draft or sent email exists unless the Gmail tool confirms it.
+- Do not use Gmail as the default channel for customer note/status notifications; Shopify native email carries the store branding/footer.
 
 ## Workflow
 

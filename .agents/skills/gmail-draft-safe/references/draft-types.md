@@ -15,7 +15,7 @@ Required fields:
 
 ## Customer stock-delay draft
 
-Use when items are out of stock or delayed.
+Use only when items are out of stock or delayed and the user specifically wants Gmail. Otherwise use Shopify native sending with `shopify_send_customer_email` and `delivery_method: "order_invoice"` so the message uses the store's branded template.
 
 Required fields:
 
@@ -44,7 +44,7 @@ After a confirmed draft, provide the email subject and body to `shopify-order-no
 
 ## Customer tracking update draft
 
-Use when tracking was received and a customer update is required.
+Use when tracking was received and a Gmail customer update is specifically required. For actual fulfilment/tracking notifications, prefer `shopify_complete_fulfillment` with `notify_customer: true` after approval, because Shopify sends the branded fulfilment email.
 
 Required fields:
 

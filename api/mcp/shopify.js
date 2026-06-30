@@ -263,11 +263,15 @@ const tools = withSecurity([
     name: "shopify_send_customer_email",
     title: "Send Shopify native email",
     description:
-      "Send a customer/supplier email through Shopify's draft-order invoice email pattern. Requires approval_reference. Creates a Shopify draft order audit record.",
+      "Send a customer email through Shopify's branded native notification layer. Defaults to existing-order invoice email for customers and draft-order invoice only for supplier/fallback use. Requires approval_reference.",
     inputSchema: objectSchema(
       {
         ...orderIdentifierProps(),
         to: stringProp("Recipient email. Defaults to order customer email when omitted."),
+        delivery_method: enumProp("Shopify delivery method. order_invoice uses the existing order invoice notification template; draft_order_invoice uses the legacy draft-order invoice fallback.", [
+          "order_invoice",
+          "draft_order_invoice",
+        ]),
         template_type: enumProp("Template type.", [
           "order_processing",
           "stock_delay",
@@ -281,6 +285,8 @@ const tools = withSecurity([
         subject: stringProp("Optional subject override."),
         body_text: stringProp("Optional body override."),
         custom_message: stringProp("Optional custom message to include."),
+        include_plain_signature: booleanProp("Only true if the custom message should include the plain PaintAccess signoff. Defaults false for Shopify templates because Shopify adds branded footer/logo."),
+        fallback_to_draft_order_invoice: booleanProp("If true, try the draft-order invoice fallback when the existing-order invoice send returns Shopify user errors."),
         approval_reference: stringProp("Required approval reference from Daniel before sending."),
       },
       ["template_type", "approval_reference"]

@@ -10,6 +10,7 @@
 - "notify Daniel", "send notification", "ready for review", "approval required" -> Operations Desk notification flow.
 - "out of stock", "back in stock", "delay", "customer update" -> stock-delay customer workflow.
 - "create Gmail draft", "draft email", "send supplier email" -> Gmail draft flow, with send confirmation before sending.
+- "notify customer", "email client", "send order update", "note-change notification" -> Shopify native order email flow, with Daniel approval before sending.
 - "add note", "write inside order", "remark" -> order note flow, using `shopify_add_order_note` from the PaintAccess Operations MCP.
 - "PO sent", "already emailed", "copy of email", "record this in Shopify" -> order note/status recorder.
 - "reply to customer", "write email" -> customer email draft flow.
@@ -41,8 +42,9 @@ User provides an order number or asks to check recent orders.
 
 1. Identify the order.
 2. Draft a customer delay email with apology, item/out-of-stock reason, expected restock timing, no-action-needed line, and confirmation request.
-3. Create a Gmail draft if Gmail is available and requested.
-4. Add a Shopify order note with date, action taken, reason, expected timing, current status, and copy of the customer email using `shopify_add_order_note`.
+3. Send through `shopify_send_customer_email` with `delivery_method: "order_invoice"` only after Daniel approval, so Shopify applies the branded order email template.
+4. Create a Gmail draft only if Gmail is available and requested instead of Shopify native sending.
+5. Add a Shopify order note with date, action taken, reason, expected timing, current status, and copy of the customer email using `shopify_add_order_note`.
 
 ### Fully automated external workflow
 
@@ -56,7 +58,8 @@ Use the workspace app `PaintAccess Operations` for Shopify, Gmail, and Drive wor
 - fulfilment checks: `shopify_get_fulfillment_readiness`;
 - audit notes: `shopify_add_order_note`;
 - workflow markers: `shopify_add_order_tag`, `shopify_remove_order_tag`, `shopify_set_ops_metafield`;
-- prepared final actions: `shopify_prepare_fulfillment`, `shopify_prepare_cancellation`.
+- prepared final actions: `shopify_prepare_fulfillment`, `shopify_prepare_cancellation`;
+- customer notifications: `shopify_prepare_customer_email`, `shopify_send_customer_email` with `delivery_method: "order_invoice"`.
 
 Use `shopify-graphql-safe-mutation` only as an escalation path when the MCP does not expose a safe narrow tool for the action.
 

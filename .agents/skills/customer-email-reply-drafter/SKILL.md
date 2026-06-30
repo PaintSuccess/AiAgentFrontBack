@@ -32,7 +32,7 @@ PaintAccess
 
 ## Stock-delay reply
 
-Use `shopify-stock-delay-customer-workflow` when the message is part of the full workflow: Shopify order lookup, Gmail draft, and Shopify note recording.
+Use `shopify-stock-delay-customer-workflow` when the message is part of the full workflow: Shopify order lookup, Shopify-native or Gmail customer email, and Shopify note recording.
 
 For drafting only, include:
 

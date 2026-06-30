@@ -12,6 +12,8 @@ Order #44478 for Michael Briffa used this pattern for Timbabuild products:
 
 ## Email template
 
+When sending with `shopify_send_customer_email` and `delivery_method: "order_invoice"`, use the body text below as the custom message and omit the plain signoff. Shopify adds the branded logo/contact/footer from the store notification template. Include the plain signoff only for Gmail drafts.
+
 ```text
 Subject: Update on your PaintAccess order #{order_number}
 
@@ -24,10 +26,6 @@ We sincerely apologise, but we currently do not have the {product_or_brand} prod
 You do not need to do anything at this stage. Please let us know if this is okay with you.
 
 Thank you for your patience and understanding.
-
-Kind regards,
-Daniel
-PaintAccess
 ```
 
 ## Shopify note template

@@ -30,7 +30,7 @@ Use these MCP tools by intent:
 - `shopify_complete_fulfillment` to complete final fulfilment with tracking only after explicit approval. Prefer this for marked test orders; for live orders require a clear Daniel approval reference and `allow_live_order`.
 - `shopify_prepare_cancellation` to prepare cancellation/refund review only; Daniel must approve final cancellation/refund.
 - `shopify_prepare_customer_email` to compose customer/supplier email copy from Shopify order details.
-- `shopify_send_customer_email` to send through Shopify's draft-order invoice email pattern only after Daniel approval.
+- `shopify_send_customer_email` to send approved customer emails through Shopify's branded native templates. Use `delivery_method: "order_invoice"` for existing-order customer updates, and `delivery_method: "draft_order_invoice"` only for supplier/fallback cases.
 - `gmail_search_messages`, `gmail_get_message`, `gmail_create_draft`, and `gmail_send_email` for backend-authorized Gmail work.
 - `drive_search_files`, `drive_get_file`, and `drive_create_text_file` for backend-authorized Google Drive work.
 
@@ -107,7 +107,7 @@ Use this sequence:
 1. `shopify-order-lookup-safe`
 2. `shopify-stock-delay-customer-workflow`
 3. `shopify_prepare_customer_email` for the customer-facing template
-4. `gmail-draft-safe` if a Gmail draft should be created, or `shopify_send_customer_email` if Daniel approved Shopify-native sending
+4. `shopify_send_customer_email` with `delivery_method: "order_invoice"` if Daniel approved Shopify-native sending, or `gmail-draft-safe` only when Gmail is requested as the channel
 5. `shopify-order-note-recorder` to store the action and email copy
 6. `shopify-flow-skill-evolver`
 
@@ -124,10 +124,11 @@ Use this when the user asks to add an order note and notify/email the customer/c
 
 1. `shopify-order-lookup-safe` to confirm the exact order, customer email, and any test-order markers.
 2. `shopify-order-note-recorder` to write the internal note using `shopify_add_order_note`.
-3. `gmail-draft-safe` to create a Gmail draft with the customer-safe note-change notification.
-4. `gmail_send_email` only after explicit approval. For test orders addressed to `gluked@gmail.com`, a user request to send the test notification is enough approval if the agent reports the recipient, subject, and body before/while sending.
-5. Report the Shopify note result, Gmail draft id, Gmail send id/status, and any skipped approval-gated steps.
-6. `shopify-flow-skill-evolver`
+3. `shopify_prepare_customer_email` to prepare the customer-safe message if the copy is not already prepared.
+4. `shopify_send_customer_email` with `delivery_method: "order_invoice"` only after explicit approval. For test orders addressed to `gluked@gmail.com`, a user request to send the test notification is enough approval if the agent reports the recipient, subject, body/custom message, and Shopify provider before/while sending.
+5. Use Gmail only as a fallback or if the user explicitly asks for Gmail.
+6. Report the Shopify note result, Shopify email provider/result, and any skipped approval-gated steps.
+7. `shopify-flow-skill-evolver`
 
 ### Any Shopify write without a dedicated tool
 

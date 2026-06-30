@@ -36,7 +36,7 @@ Runtime secrets:
 ## Shopify MCP setup
 
 1. Deploy the repo endpoint `api/mcp/shopify.js`.
-2. Confirm the Shopify app active version includes required Admin API scopes for MCP operations: `read_orders`, `write_orders`, `read_customers`, `write_customers`, `read_draft_orders`, `write_draft_orders`, `read_fulfillments`, `write_fulfillments`, `read_merchant_managed_fulfillment_orders`, `write_merchant_managed_fulfillment_orders`, `read_products`, and `read_inventory`.
+2. Confirm the Shopify app active version includes required Admin API scopes for MCP operations: `read_orders`, `write_orders` for order notes and `orderInvoiceSend`, `read_customers`, `write_customers`, `read_draft_orders`, `write_draft_orders` for the draft-order invoice fallback, `read_fulfillments`, `write_fulfillments`, `read_merchant_managed_fulfillment_orders`, `write_merchant_managed_fulfillment_orders`, `read_products`, and `read_inventory`.
 3. Open `https://ai-agent-front-back.vercel.app/api/shopify/oauth-start` and approve app reauthorization in Shopify Admin.
 4. On callback, confirm whether Vercel auto-store completed. If not, copy the displayed token into Vercel as `SHOPIFY_ACCESS_TOKEN`.
 5. Redeploy production if no deploy hook was triggered.
