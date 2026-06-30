@@ -53,6 +53,7 @@ Skills:
 Actions:
 
 1. Find supplier Sales Confirmation email in Gmail.
+   - If the confirmation or PO is stored in Drive, use `drive-file-finder-safe` with separate narrow searches.
 2. Compare supplier-confirmed products, quantities, prices, shipping charge, total, backorders, unavailable items, substitutions, and changes against PO and Shopify order.
 3. Notify Daniel with a clear match/mismatch summary.
 4. Add confirmation details to Shopify notes with `shopify_add_order_note`.
@@ -60,6 +61,7 @@ Actions:
 Skills:
 
 - `gmail-message-finder-safe`
+- `drive-file-finder-safe`
 - `supplier-sales-confirmation-checker`
 - `operations-stage-notifier`
 - `shopify-order-note-recorder`
@@ -87,6 +89,7 @@ Skills:
 Actions:
 
 1. Find supplier tracking email in Gmail.
+   - If tracking, packing slips, or attachments are stored in Drive, use `drive-file-finder-safe` with separate narrow searches.
 2. Identify Shopify order, supplier, carrier, tracking number, and shipped products when provided.
 3. Prepare customer update/draft if required.
 4. Record tracking with `shopify_add_order_note` and use `shopify_prepare_fulfillment` to prepare fulfilment when tools allow.
@@ -99,6 +102,7 @@ Approval gate:
 Skills:
 
 - `gmail-message-finder-safe`
+- `drive-file-finder-safe`
 - `supplier-tracking-fulfillment-prep`
 - `customer-email-reply-drafter`
 - `shopify-order-note-recorder`

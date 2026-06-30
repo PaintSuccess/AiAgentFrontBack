@@ -10,6 +10,7 @@
 - "notify Daniel", "send notification", "ready for review", "approval required" -> Operations Desk notification flow.
 - "out of stock", "back in stock", "delay", "customer update" -> stock-delay customer workflow.
 - "create Gmail draft", "draft email", "send supplier email" -> Gmail draft flow, with send confirmation before sending.
+- "Drive", "Google Drive", "find PO file", "order document", "attachment", "shared file" -> Drive file finder flow, with separate narrow Drive searches.
 - "notify customer", "email client", "send order update", "note-change notification" -> Shopify native order email flow, with Daniel approval before sending.
 - "add note", "write inside order", "remark" -> order note flow, using `shopify_add_order_note` from the PaintAccess Operations MCP.
 - "PO sent", "already emailed", "copy of email", "record this in Shopify" -> order note/status recorder.
@@ -60,6 +61,7 @@ Use the workspace app `PaintAccess Operations` for Shopify, Gmail, and Drive wor
 - workflow markers: `shopify_add_order_tag`, `shopify_remove_order_tag`, `shopify_set_ops_metafield`;
 - prepared final actions: `shopify_prepare_fulfillment`, `shopify_prepare_cancellation`;
 - customer notifications: `shopify_prepare_customer_email`, `shopify_send_customer_email` with `delivery_method: "order_invoice"`.
+- Drive lookup: `drive_search_files` with separate exact/narrow searches, then `drive_get_file` only for a selected or high-confidence candidate.
 
 Use `shopify-graphql-safe-mutation` only as an escalation path when the MCP does not expose a safe narrow tool for the action.
 

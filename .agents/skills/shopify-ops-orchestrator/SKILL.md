@@ -1,6 +1,6 @@
 ---
 name: shopify-ops-orchestrator
-description: coordinate repeatable paintaccess shopify operations by selecting and sequencing other shopify skills. use when a user asks for an end-to-end Operations Desk workflow involving new Shopify orders, order lookup, cancellation/refund reminders, stock-delay customer emails, gmail drafts, supplier purchase orders, supplier routing, sales confirmation checks, payment approval, tracking, fulfilment preparation, shopify notes/tags/metafields, notifications, or post-operation skill improvement.
+description: coordinate repeatable paintaccess shopify operations by selecting and sequencing other shopify skills. use when a user asks for an end-to-end Operations Desk workflow involving new Shopify orders, order lookup, cancellation/refund reminders, stock-delay customer emails, gmail drafts, google drive file lookup, supplier purchase orders, supplier routing, sales confirmation checks, payment approval, tracking, fulfilment preparation, shopify notes/tags/metafields, notifications, or post-operation skill improvement.
 ---
 
 # Shopify Ops Orchestrator
@@ -44,6 +44,7 @@ Use this sequence:
    - stock-delay customer communication;
    - customer reply drafting;
    - Gmail search, draft creation, or send;
+   - Google Drive file search or read;
    - supplier PO automation;
    - supplier Sales Confirmation check;
    - payment approval/process recording;
@@ -80,11 +81,12 @@ Use this sequence:
 ### Supplier Sales Confirmation received
 
 1. `gmail-message-finder-safe` to find the supplier confirmation email
-2. `supplier-sales-confirmation-checker`
-3. `operations-stage-notifier` to report match/mismatch, shipping, total, and issues
-4. `shopify-order-note-recorder` to record confirmation details and payment status
-5. `supplier-payment-approval-recorder` when Daniel approval or payment processing is needed
-6. `shopify-flow-skill-evolver`
+2. `drive-file-finder-safe` if the confirmation or PO is expected in Google Drive instead of Gmail
+3. `supplier-sales-confirmation-checker`
+4. `operations-stage-notifier` to report match/mismatch, shipping, total, and issues
+5. `shopify-order-note-recorder` to record confirmation details and payment status
+6. `supplier-payment-approval-recorder` when Daniel approval or payment processing is needed
+7. `shopify-flow-skill-evolver`
 
 ### Payment approval or supplier processing
 
@@ -96,11 +98,21 @@ Use this sequence:
 ### Supplier tracking received
 
 1. `gmail-message-finder-safe` to find the supplier tracking email
-2. `supplier-tracking-fulfillment-prep`
-3. `operations-stage-notifier` to report tracking received and fulfilment readiness
-4. `shopify-order-note-recorder` to record carrier/tracking/fulfilment status
-5. Use `shopify_complete_fulfillment` only when final fulfilment is explicitly approved. For test orders, use fake tracking only when the user asked for a fulfilment-status test and keep `notify_customer` false unless specifically testing customer notification.
-5. `shopify-flow-skill-evolver`
+2. `drive-file-finder-safe` if tracking, packing slip, or shipment attachment is expected in Google Drive
+3. `supplier-tracking-fulfillment-prep`
+4. `operations-stage-notifier` to report tracking received and fulfilment readiness
+5. `shopify-order-note-recorder` to record carrier/tracking/fulfilment status
+6. Use `shopify_complete_fulfillment` only when final fulfilment is explicitly approved. For test orders, use fake tracking only when the user asked for a fulfilment-status test and keep `notify_customer` false unless specifically testing customer notification.
+7. `shopify-flow-skill-evolver`
+
+### Google Drive file lookup
+
+Use this when the user asks to find PO files, supplier attachments, Drive records, order documents, or files related to an order.
+
+1. `shopify-order-lookup-safe` when the request is order-related.
+2. `drive-file-finder-safe` to search Drive with separate narrow queries.
+3. `drive_get_file` only when one candidate is clearly relevant or the user selects it.
+4. Route extracted content to the matching downstream skill.
 
 ### Order stock delay customer email
 

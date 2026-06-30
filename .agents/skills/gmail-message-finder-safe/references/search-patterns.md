@@ -2,6 +2,8 @@
 
 Use exact identifiers first.
 
+These patterns are for Gmail only. For Google Drive, use `drive-file-finder-safe` and run separate narrow Drive searches; do not reuse Gmail `OR` query patterns in Drive.
+
 ## Sales Confirmation
 
 Search ideas:

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Drive File Finder Safe"
+  short_description: "Finds Drive files without broad queries."
+  default_prompt: "Use $drive-file-finder-safe to find PaintAccess Google Drive files for this order."
