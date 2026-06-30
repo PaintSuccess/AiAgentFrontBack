@@ -58,6 +58,7 @@ You do not need to do anything at this stage. Please let us know if this is okay
 Thank you for your patience and understanding.
 
 Kind regards,
+Daniel
 PaintAccess
 ```
 

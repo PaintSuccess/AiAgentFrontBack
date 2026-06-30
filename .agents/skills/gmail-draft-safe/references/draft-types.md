@@ -11,7 +11,7 @@ Required fields:
 - item list with SKU and quantity;
 - delivery address when required;
 - request for confirmation;
-- PaintAccess sign-off.
+- PaintAccess sign-off: `Kind regards,\nDaniel\nPaintAccess`.
 
 ## Customer stock-delay draft
 
@@ -54,3 +54,4 @@ Required fields:
 - tracking number;
 - shipped items if relevant;
 - concise status update.
+- PaintAccess sign-off: `Kind regards,\nDaniel\nPaintAccess`.

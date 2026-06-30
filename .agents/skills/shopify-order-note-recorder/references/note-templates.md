@@ -102,7 +102,8 @@ We have an update for your PaintAccess order #{order_number}:
 No action is required from you unless we specifically ask for confirmation.
 
 Kind regards,
-PaintAccess Team
+Daniel
+PaintAccess
 ```
 
 For test orders, keep the recipient as the test email on the order, usually `gluked@gmail.com`, and use a clearly test-only subject such as:

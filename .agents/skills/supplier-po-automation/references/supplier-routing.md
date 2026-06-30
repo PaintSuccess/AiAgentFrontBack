@@ -94,5 +94,6 @@ Delivery address:
 Please confirm availability and send through order confirmation.
 
 Kind regards,
+Daniel
 PaintAccess
 ```
