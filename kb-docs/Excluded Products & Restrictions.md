@@ -1,80 +1,66 @@
-<!-- ElevenLabs KB Doc | id: iLprP0WEHUQH8rbxIqJG | usage_mode: prompt -->
+<!-- ElevenLabs KB Doc | id: YyJzX0Gm875wmW7KIv14 | usage_mode: prompt -->
 # Excluded Products & Restrictions
 
-## Products NOT to Recommend
-(Add products here that should NOT be recommended by the bot)
+## Availability Priority
 
-Example format:
-- SKU: XXXX - Product Name - Reason (discontinued, recalled, etc.)
+When Shopify product tools are available, product availability must be based on Shopify results, not guesses.
 
-## Out-of-Stock Items to Redirect
-(Add items that are permanently out of stock and what to suggest instead)
+The agent must not rely only on inventory quantity. For PaintAccess, products may still be orderable when inventory quantity is zero or negative if Shopify allows selling when out of stock.
 
-## Restricted Items
-(Add items that require special handling, licenses, or cannot be shipped to certain areas)
+Treat a product as available when:
 
-## Price-Sensitive Items
-(Add items where pricing should not be discussed and customer should contact trade@PaintAccess.com.au)
-Вот чистый, структурированный документ — готовый для копирования:
+- Shopify/product tools show the product can be purchased.
+- The website has an active Add to Cart button.
+- "Sell when out of stock" / "Continue selling when out of stock" is enabled.
 
----
-Excluded Products & Restrictions
+Treat a product as unavailable only when:
 
-As we currently work directly with customers and operate through distributed warehousing, some orders may be fulfilled directly from supplier warehouses. Because of this, delivery times can occasionally be slightly longer than expected.
+- Shopify/product tools show purchasing is blocked, or
+- The Add to Cart button is disabled and selling when out of stock is not enabled.
 
-Certain product categories may require special handling. Products such as ZipWall and Norglass, as well as other items classified as dangerous goods, may incur additional shipping charges and, in some cases, slight delivery delays. This is due to strict courier regulations and liability requirements when transporting such materials.
+## Brands Currently Not Available For Purchase
 
-At this stage, only a limited number of brands are unavailable for purchase. These include Uni-Pro and Rust-Oleum, as we are currently finalising supplier arrangements. These products may be visible on the website but cannot be purchased, as the purchase option is disabled.
+At this stage, only these brands are known to require unavailable-brand handling:
 
-All other brands and products on our website are fully available. If a product has an active “Add to Cart” button, it is in stock and available for purchase. This includes all DAN’S, Graco, and other listed brands.
+- Uni-Pro
+- Rust-Oleum
 
-If you are interested in trying the DAN’S Airless Backpack, it is available for demonstration at Inspirations Paint Chatswood in Sydney, which is our official distributor location.
+These products may be visible on the website while supplier arrangements are being finalised. If purchase is disabled, do not recommend them as available to buy.
 
-📍 Address: Cnr Pacific Hwy & Nelson St, Chatswood NSW 2067, Australia
+All other brands, including DAN'S, Graco, ZipWall, Norglass, Mirka, Taubmans, Zinsser, Oldfields, and iQuip, must be treated as available unless Shopify/product tools confirm purchase is blocked.
 
-The store is conveniently located and offers easy access, with a large customer car park available on-site. This makes it easy to visit, test equipment, and receive professional advice from experienced staff.
+## Dangerous Goods And Special Handling
 
-Additionally, if you require consultation on any airless sprayer models, you are welcome to contact us directly. Our team is available to assist you with product selection and technical questions.
+Some products may require special delivery handling, additional shipping charges, or slightly longer delivery time. This can include:
 
-Regarding PaintAccess operations, we are currently based in Sydney and are in the process of expanding. While we do operate a warehouse in Sydney, it is not open to the public at this stage. However, our distribution network is well established, allowing us to efficiently supply products across Australia.
+- ZipWall
+- Norglass
+- Other dangerous goods or restricted-transport products
 
-For businesses interested in developing their own brand, we also offer support with sourcing high-quality brushes, rollers, and accessories. You are welcome to contact us directly to request samples and discuss private label opportunities.
+Do not describe these products as unavailable unless purchasing is explicitly blocked. Say they may require extra freight handling or confirmation.
 
-## Product Availability Rule for Shopify API
+## Distributed Warehousing
 
-When the AI agent is connected to Shopify via API, it must follow these rules strictly when determining product availability.
+PaintAccess works directly with customers and uses distributed warehousing. Some orders may ship directly from supplier warehouses, so delivery times can occasionally be slightly longer than expected.
 
-The agent must not rely only on stock quantity (e.g. 0 or negative stock levels).
+## DAN'S Demonstration Location
 
-If the setting “Sell when out of stock” (Continue selling when out of stock) is ON, the product must be treated as available for purchase, regardless of inventory numbers (including 0 or negative values).
+Customers interested in trying the DAN'S Airless Backpack can be directed to the official distributor location:
 
-This means:
+- Inspirations Paint Chatswood
+- Cnr Pacific Hwy & Nelson St
+- Chatswood NSW 2067, Australia
 
-Even if stock shows 0, negative, or unavailable,
-If “Sell when out of stock” is ON,
-→ the product is available and can be sold
+Mention this only when the customer asks about demonstrations, trying the backpack, or seeing the equipment in person.
 
-The agent must prioritise this rule over all inventory indicators.
+## Sydney Warehouse
 
-Additionally:
+PaintAccess is based in Sydney and is expanding. It may operate warehouse/distribution facilities in Sydney, but the warehouse is not open to the public unless the team confirms otherwise.
 
-If the Add to Cart button is active → the product is available
-If “Sell when out of stock” is ON → the product is available
+## Private Label And Sourcing
 
-Only the following brands are currently unavailable:
+If a business asks about developing its own brand of brushes, rollers, or accessories, explain that PaintAccess may be able to help with sourcing and samples. Offer to connect them with the team.
 
-Uni-Pro
-Rust-Oleum
+## Price-Sensitive Or Escalation Cases
 
-All other brands, including DAN’S, Graco, ZipWall, Norglass, and others, must be treated as available unless:
-
-The Add to Cart button is disabled, AND
-“Sell when out of stock” is OFF
-
-Important:
-ZipWall, Norglass, and other dangerous goods products may have:
-
-Additional shipping charges
-Slight delivery delays
-
-However, they must NOT be described as unavailable unless purchasing is explicitly blocked.
+For pricing negotiation, bulk/trade pricing, unusual freight questions, restricted products, or uncertain availability, ask for the customer's details and escalate to trade@PaintAccess.com.au.

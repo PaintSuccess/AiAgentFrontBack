@@ -1,16 +1,19 @@
 # KB Docs — ElevenLabs Knowledge Base Local Mirror
 Agent ID: agent_1001kn99pk1xefprh4gb665f6j3p
-Last synced: 2026-06-30 20:06
+Last synced: 2026-06-30 20:12
+
+Variant 3 refactor published to ElevenLabs: 2026-06-30 20:12
 
 | File | ElevenLabs Doc ID | usage_mode |
 |------|------------------|------------|
-| Bot Behavior Rules.md | nbb6fb64F7ZBvmro9Nsl | prompt |
+| Bot Behavior Rules.md | 554lZXFr3AS3RYT7VBWD | prompt |
 | Product Knowledge & Painting Guides.md | jzhZn0lbuIURjxAeVIDf | auto |
-| Paint Sprayers Trouble-Shoot.md | aBEgdkiaVTYH16z8XwCn | auto |
-| Product Recommendation Rules.md | FveOsMV3CB6lQjiwaput | prompt |
-| Excluded Products & Restrictions.md | iLprP0WEHUQH8rbxIqJG | prompt |
+| Paint Sprayers Trouble-Shoot.md | kpbiVeRo1xUDHcx0WLNN | auto |
+| Product Recommendation Rules.md | KmkN4LtOYl2c1fqyHLaw | prompt |
+| Product Recommendation Details.md | 8k7aHXxI2TAzsoLdui4x | auto |
+| Excluded Products & Restrictions.md | YyJzX0Gm875wmW7KIv14 | prompt |
 | Company Information.md | rVqMNfjLnuc0Q5qMydnB | prompt |
-| Conversation & Estimation Logic paint calculation.md | Ke8gBcBEnppeOdFppI5U | prompt |
+| Conversation & Estimation Logic paint calculation.md | 0K7kSe1CLkZrGZLFX2A8 | auto |
 
 ## Sync commands
 

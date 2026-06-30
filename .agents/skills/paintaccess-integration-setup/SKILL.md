@@ -46,6 +46,27 @@ Runtime secrets:
 9. Attach the app to the Operations Desk agent.
 10. Restrict final fulfilment, cancellation, refund, email sending, and supplier payment actions behind Daniel approval.
 
+## ElevenLabs KB workflow
+
+The live ElevenLabs Knowledge Base is mirrored in `kb-docs/`. Treat those files as production customer-facing agent knowledge.
+
+Before inspecting or editing KB files:
+
+1. Run `.\kb-docs\sync-pull.ps1` from the repo root `app/`.
+2. Check `git status --short -- kb-docs`.
+3. If live KB changes are not already in Git, commit and push a backup snapshot before publishing a new KB change.
+
+When changing KB:
+
+1. Edit the correct KB document locally; do not paste rules into an unrelated doc.
+2. Keep always-loaded `prompt` docs compact. Put long product detail, troubleshooting, and estimation flows in `auto` retrieval docs where possible.
+3. Push the KB update to ElevenLabs through the dashboard API/direct ElevenLabs API.
+4. Immediately run `.\kb-docs\sync-pull.ps1` again to mirror the exact live state and new document IDs.
+5. Update `kb-docs/README.md` when document IDs or `usage_mode` values change, because the pull script updates file headers but not the README table.
+6. Commit and push the exact published KB mirror to GitHub every time a KB change is deployed to ElevenLabs.
+
+Do not leave deployed KB changes only in ElevenLabs. Git history is the rollback/audit trail.
+
 ## Security rules
 
 - Never ask for or store a Google password.

@@ -1,4 +1,4 @@
-<!-- ElevenLabs KB Doc | id: Ke8gBcBEnppeOdFppI5U | usage_mode: prompt -->
+<!-- ElevenLabs KB Doc | id: 0K7kSe1CLkZrGZLFX2A8 | usage_mode: auto -->
 # PAINTACCESS AI VOICE AGENT KNOWLEDGE BASE AND CALL SCRIPT
 
 ## PURPOSE OF THE AGENT

@@ -1,4 +1,4 @@
-<!-- ElevenLabs KB Doc | id: aBEgdkiaVTYH16z8XwCn | usage_mode: auto -->
+<!-- ElevenLabs KB Doc | id: kpbiVeRo1xUDHcx0WLNN | usage_mode: auto -->
 # Airless & HVLP Paint Sprayer Troubleshooting Knowledge Base for AI Phone Agent
 
 ## 1. Purpose of this document
@@ -862,18 +862,10 @@ The agent should tag the call outcome as one of these:
 
 ---
 
-## 23. Placeholder links to add later
+## 23. Video guide links
 
-Add the exact URLs before uploading this to the AI agent knowledge base:
+Do not mention or promise a specific video link unless a real PaintAccess-approved URL is available from tools, Shopify content, or the team.
 
-D-A-N-S Airless Backpack priming video: [ADD LINK]
+If the customer asks for a video and no approved link is available, say:
 
-D-A-N-S compact/wheeled inlet and outlet cleaning video: [ADD LINK]
-
-Graco Magnum / Project Painter Plus priming video: [ADD LINK]
-
-Graco professional inlet valve cleaning video: [ADD LINK]
-
-Wagner airless troubleshooting video/manual link: [ADD LINK]
-
-HVLP cleaning and troubleshooting guide: [ADD LINK]
+“I can ask the team to send the right guide for your exact model. What model sprayer do you have?”
