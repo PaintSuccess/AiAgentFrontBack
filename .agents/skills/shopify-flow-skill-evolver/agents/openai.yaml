@@ -1,5 +1,6 @@
 interface:
   display_name: "Shopify Flow Skill Evolver"
-  short_description: "Evaluates completed operations and improves skills only when useful."
+  short_description: "Turns proven workflows into safer reusable skills."
   icon: "🛒"
   brand_color: "#95BF47"
+  default_prompt: "Use $shopify-flow-skill-evolver to decide whether this completed workflow should update or create a reusable PaintAccess skill."

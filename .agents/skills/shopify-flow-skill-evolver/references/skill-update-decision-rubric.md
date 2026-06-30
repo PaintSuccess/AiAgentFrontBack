@@ -26,6 +26,20 @@ Score each candidate change from 0 to 2.
 - 1: improves wording/template consistency
 - 2: materially improves completeness or customer-facing quality
 
+## Repeatability
+
+- 0: one-off situation
+- 1: likely to recur but rare
+- 2: common workflow or explicitly requested reusable pipeline
+
 ## Rule
 
 Update or create a skill only when total score is at least 2 and the improvement is reusable.
+
+Prefer a backlog observation over a skill edit when the evidence is weak, the workflow was not completed successfully, or the missing behavior depends on secrets/account setup rather than skill knowledge.
+
+## Live Agent Safety
+
+- Local skill files are source of truth for development, not proof that ChatGPT agents are updated.
+- Upload/install into live agents only after the user approves or the current task explicitly asks to update agents.
+- Always report whether the live agent has the changed skill copy.
