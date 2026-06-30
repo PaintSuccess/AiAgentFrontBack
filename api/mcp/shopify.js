@@ -198,7 +198,7 @@ const tools = withSecurity([
       },
       ["tracking_number"]
     ),
-    annotations: { readOnlyHint: false, destructiveHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false },
   },
   {
     name: "shopify_complete_fulfillment",
@@ -233,7 +233,7 @@ const tools = withSecurity([
       },
       ["reason"]
     ),
-    annotations: { readOnlyHint: false, destructiveHint: false },
+    annotations: { readOnlyHint: true, destructiveHint: false },
   },
   {
     name: "shopify_prepare_customer_email",

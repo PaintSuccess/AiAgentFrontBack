@@ -5,7 +5,7 @@ description: handle paintaccess shopify cancellation or refund reminder requests
 
 # Shopify Order Cancellation Reminder
 
-Use this skill when the user wants an internal Shopify reminder/note for cancellation, refund, or deletion.
+Use this skill when the user wants a cancellation/refund assessment or an internal Shopify reminder/note for cancellation, refund, or deletion.
 
 ## Objective
 
@@ -15,7 +15,7 @@ Create a clear internal order note that helps staff complete the cancellation/re
 
 - A specific order must be identified with high confidence.
 - Use `shopify-order-lookup-safe` first if order identity is uncertain.
-- Use `shopify_prepare_cancellation` from `PaintAccess Operations` when a cancellation/refund action needs structured review.
+- Use `shopify_prepare_cancellation` from `PaintAccess Operations` when a cancellation/refund action needs structured review. This is prepare-only and must not cancel, refund, restock, email, tag, or note the order.
 - Use `shopify_add_order_note` through `shopify-order-note-recorder` for internal reminders.
 
 ## Workflow
@@ -25,7 +25,7 @@ Create a clear internal order note that helps staff complete the cancellation/re
    - paid/unpaid;
    - fulfilled/unfulfilled;
    - cancelled/open.
-3. Do not directly refund/cancel. Prepare the cancellation/refund review and internal note; Daniel must approve/perform the final action unless rules change.
+3. Do not directly refund/cancel. Prepare the cancellation/refund review first; Daniel must approve/perform the final action unless rules change.
 4. Draft an internal note with:
    - staff name if provided;
    - customer name/company;
@@ -33,8 +33,8 @@ Create a clear internal order note that helps staff complete the cancellation/re
    - requested action;
    - order number;
    - product/reason if known.
-5. Add/update the order note with `shopify_add_order_note`.
-6. Tell the user the reminder was added and state whether manual cancellation/refund remains.
+5. Add/update the order note with `shopify_add_order_note` only if the user requested a reminder/note write or approved that write after the prepare-only review.
+6. Tell the user whether this was prepare-only or whether a reminder was added, and state whether manual cancellation/refund remains.
 
 ## Default note template
 

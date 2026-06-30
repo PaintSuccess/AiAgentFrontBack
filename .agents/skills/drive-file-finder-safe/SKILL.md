@@ -18,6 +18,8 @@ Do not ask for Google passwords, OAuth client secrets, access tokens, or refresh
 - Start with exact identifiers, especially the numeric order number without `#`.
 - Do not use a combined Drive query such as `#44542 OR 44542`.
 - Run separate narrow searches for each useful identifier.
+- Keep the first pass bounded to 3-5 high-confidence searches. Use broad customer/test terms only as a clearly labeled fallback after exact order/PO/confirmation searches return zero matches.
+- Mark results from broad fallback terms as low confidence unless the filename or content preview contains the exact order number, PO number, tracking number, supplier, or customer email.
 - Treat zero matches as a valid result, not an authorization failure.
 - Do not create, delete, rename, move, or share Drive files from this skill.
 - Do not claim a Drive file exists unless `drive_search_files` or `drive_get_file` confirms it.
@@ -27,10 +29,9 @@ Do not ask for Google passwords, OAuth client secrets, access tokens, or refresh
 1. Build a small search plan from available identifiers:
    - numeric order number, e.g. `44542`;
    - Shopify order name, e.g. `#44542`;
-   - customer email or name;
-   - supplier name;
    - PO number or subject;
    - confirmation/tracking number.
+   Add customer email/name or supplier name only if the exact identifiers return no useful matches or the user specifically asks for a wider search.
 2. Search one identifier at a time with `drive_search_files`.
 3. If the MCP supports `name_contains`, prefer it for exact order numbers and PO numbers.
 4. If a query string is needed, keep it simple and literal:
@@ -39,7 +40,7 @@ Do not ask for Google passwords, OAuth client secrets, access tokens, or refresh
    - `{supplier} 44542`;
    - `{customer_email}`;
    - `{tracking_number}`.
-5. Summarize candidate files by name, type, modified date, owner when available, and confidence.
+5. Summarize candidate files by name, type, modified date, owner when available, and confidence. Separate direct matches from broad fallback/noisy matches.
 6. Read a file with `drive_get_file` only when one candidate is clearly relevant or the user chooses it.
 7. Route extracted content to the downstream skill, such as supplier PO, Sales Confirmation, tracking, or order-note recording.
 

@@ -12,6 +12,7 @@
 - "create Gmail draft", "draft email", "send supplier email" -> Gmail draft flow, with send confirmation before sending.
 - "Drive", "Google Drive", "find PO file", "order document", "attachment", "shared file" -> Drive file finder flow, with separate narrow Drive searches.
 - "notify customer", "email client", "send order update", "note-change notification" -> Shopify native order email flow, with Daniel approval before sending.
+- "Shopify Inbox", "Inbox conversation", "reply in Inbox" -> unsupported Inbox/manual-checklist flow unless a future supported API-backed MCP tool exists.
 - "add note", "write inside order", "remark" -> order note flow, using `shopify_add_order_note` from the PaintAccess Operations MCP.
 - "PO sent", "already emailed", "copy of email", "record this in Shopify" -> order note/status recorder.
 - "reply to customer", "write email" -> customer email draft flow.
@@ -64,6 +65,15 @@ Use the workspace app `PaintAccess Operations` for Shopify, Gmail, and Drive wor
 - Drive lookup: `drive_search_files` with separate exact/narrow searches, then `drive_get_file` only for a selected or high-confidence candidate.
 
 Use `shopify-graphql-safe-mutation` only as an escalation path when the MCP does not expose a safe narrow tool for the action.
+
+## Unsupported Inbox flow
+
+The current PaintAccess Operations MCP does not expose Shopify Inbox tools. For Inbox requests:
+
+- do not claim conversations were searched or replies were sent;
+- do not use browser automation unless explicitly requested by the user for a manual admin operation;
+- offer Gmail/order/Drive lookups as available evidence sources;
+- propose a backend/MCP extension only after confirming a supported public API or moving chat capture into PaintAccess-owned infrastructure.
 
 ## Human approval gates
 

@@ -17,6 +17,8 @@ Use the workspace app `PaintAccess Operations` as the default operations surface
 
 Do not rely on the generic Shopify ChatGPT app for these pipelines; it is too limited for PaintAccess operational writes. Gmail and Google Drive should also use the PaintAccess Operations MCP backend, not personal ChatGPT Apps, unless the user explicitly chooses a temporary fallback.
 
+When a user asks for a read-only or prepare-only MCP check and names the relevant tool or operation, attempt the narrow MCP tool once before saying access is unavailable. If the tool is not available, authorization fails, or the call times out, report the exact tool name and visible error/blocker. Do not infer that the MCP is unavailable only because the current message is a new test or because earlier tool results are not in context.
+
 Use these MCP tools by intent:
 
 - `shopify_search_orders` for recent/partial order discovery.
@@ -50,6 +52,7 @@ Use this sequence:
    - payment approval/process recording;
    - supplier tracking and fulfilment preparation;
    - Shopify order note/status recording;
+   - Shopify Inbox or Admin panel request;
    - Operations Desk notification;
    - Shopify MCP tool call;
    - GraphQL mutation only if the MCP does not expose the needed safe action;
@@ -114,6 +117,15 @@ Use this when the user asks to find PO files, supplier attachments, Drive record
 3. `drive_get_file` only when one candidate is clearly relevant or the user selects it.
 4. Route extracted content to the matching downstream skill.
 
+### Shopify Inbox request
+
+Use this when the user asks to read, search, summarize, or reply in Shopify Inbox.
+
+1. State that the current PaintAccess Operations MCP has no Shopify Inbox conversation tool.
+2. Do not invent Inbox access, use generic Shopify app capabilities, or use browser automation unless the user explicitly asks for browser-based manual operation.
+3. Offer safe alternatives: Gmail search, Shopify order lookup, Shopify-native customer email preparation, or a manual Inbox checklist.
+4. For implementation work, propose a dedicated backend/MCP extension only if Shopify exposes a supported public API or if PaintAccess migrates chat into its own widget/backend. Do not depend on private Shopify Inbox/Ping callbacks.
+
 ### Order stock delay customer email
 
 1. `shopify-order-lookup-safe`
@@ -153,8 +165,10 @@ Use this when the user asks to add an order note and notify/email the customer/c
 
 - Never cancel, refund, delete, fulfill, or financially modify an order unless the user explicitly asks and the available tool allows it.
 - Never send supplier/customer emails, approve/process supplier payments, or complete final fulfilment without Daniel's approval unless the rule is explicitly changed.
+- For prepare-only tools such as `shopify_prepare_fulfillment`, `shopify_prepare_cancellation`, and `shopify_prepare_customer_email`, report if a tool call stalls or asks for unexpected permission instead of waiting indefinitely or escalating to a final action.
 - If only a screenshot is provided and the order number is not visible, ask for the order number or another reliable identifier.
 - For refunds/cancellations, prefer adding an internal reminder and giving manual Admin steps unless an approved tool safely supports the action.
+- For Shopify Inbox, report it as unsupported by the current MCP. The current safe response is a manual checklist or a proposal for a supported integration path, not a claimed Inbox read/reply.
 - Do not invent supplier mappings. Use existing mappings or ask for confirmation.
 - Do not claim a Gmail draft, Drive file, Shopify email, or Shopify note was created unless the relevant MCP tool confirms it.
 - Do not claim the generic Shopify app can complete admin-panel tasks. If a needed Shopify Admin action is not represented by the MCP, prepare a manual admin checklist or propose a backend/MCP extension.
