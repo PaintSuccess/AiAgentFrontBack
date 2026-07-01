@@ -36,13 +36,13 @@ Extract and verify:
 4. Use `shopify_get_fulfillment_readiness` to check whether the order can be prepared for fulfilment.
 5. Use `shopify_prepare_fulfillment` only to prepare the Shopify fulfilment payload/status; do not complete final fulfilment.
 6. Prepare customer update email only when required.
-7. Use `shopify-order-note-recorder` to record tracking received and fulfilment status.
+7. Use `shopify-order-timeline-recorder` to record tracking received and fulfilment status.
 8. Notify Daniel that fulfilment is ready for approval.
 
-## Standard note
+## Standard timeline entry
 
 ```text
-Tracking received from supplier. Carrier: {carrier}. Tracking number: {tracking_number}. Order ready for fulfilment / fulfilment prepared.
+PaintAccess Ops: Tracking received from supplier. Carrier: {carrier}. Tracking: {tracking_number}. Next action: prepare fulfilment.
 ```
 
 See `references/tracking-checklist.md`.

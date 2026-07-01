@@ -18,12 +18,12 @@ Payment approval required for order #{order_number}. Supplier: {supplier}. Total
 Payment/order processed for order #{order_number}. Supplier: {supplier}. Payment status: {status}. Waiting for tracking.
 ```
 
-## Shopify note templates
+## Shopify timeline entry templates
 
 ```text
-{date} - Payment approval required for supplier order with {supplier}. Sales Confirmation checked. Total confirmed amount: {amount}. Shipping: {shipping}. Waiting for Daniel approval.
+PaintAccess Ops: Payment approval required for {supplier}. Sales Confirmation checked. Total: {amount}. Shipping: {shipping}. Next action: Daniel approval.
 ```
 
 ```text
-{date} - Order processed with supplier {supplier}. Payment approved/processed via {payment_method}. Waiting for tracking.
+PaintAccess Ops: Supplier order processed with {supplier}. Payment approved/processed via {payment_method}. Next action: await tracking.
 ```

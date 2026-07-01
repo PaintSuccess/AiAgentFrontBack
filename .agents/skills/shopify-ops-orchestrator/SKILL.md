@@ -1,6 +1,6 @@
 ---
 name: shopify-ops-orchestrator
-description: coordinate repeatable paintaccess shopify operations by selecting and sequencing other shopify skills. use when a user asks for an end-to-end Operations Desk workflow involving new Shopify orders, order lookup, cancellation/refund reminders, stock-delay customer emails, gmail drafts, google drive file lookup, supplier purchase orders, supplier routing, sales confirmation checks, payment approval, tracking, fulfilment preparation, shopify notes/tags/metafields, notifications, or post-operation skill improvement.
+description: coordinate repeatable paintaccess shopify operations by selecting and sequencing other shopify skills. use when a user asks for an end-to-end Operations Desk workflow involving new Shopify orders, order lookup, cancellation/refund reminders, stock-delay customer emails, gmail drafts, google drive file lookup, supplier purchase orders, supplier routing, sales confirmation checks, payment approval, tracking, fulfilment preparation, shopify timeline entries/tags/metafields, notifications, or post-operation skill improvement.
 ---
 
 # Shopify Ops Orchestrator
@@ -13,7 +13,7 @@ Do not perform risky Shopify changes until the target resource is identified wit
 
 ## Shopify MCP rule
 
-Use the workspace app `PaintAccess Operations` as the default operations surface. It is backed by the repo endpoint `api/mcp/shopify.js` and exposes narrow tools for Shopify order lookup, readiness checks, notes, tags, ops metafields, fulfilment preparation, cancellation preparation, email templates, Gmail, and Google Drive.
+Use the workspace app `PaintAccess Operations` as the default operations surface. It is backed by the repo endpoint `api/mcp/shopify.js` and exposes narrow tools for Shopify order lookup, readiness checks, timeline entries, tags, ops metafields, fulfilment preparation, cancellation preparation, email templates, Gmail, and Google Drive.
 
 Do not rely on the generic Shopify ChatGPT app for these pipelines; it is too limited for PaintAccess operational writes. Gmail and Google Drive should also use the PaintAccess Operations MCP backend, not personal ChatGPT Apps, unless the user explicitly chooses a temporary fallback.
 
@@ -26,8 +26,8 @@ Use these MCP tools by intent:
 - `shopify_search_orders` for recent/partial order discovery.
 - `shopify_get_order` for exact order inspection by order number, name, or GID.
 - `shopify_get_fulfillment_readiness` before tracking or fulfilment preparation.
-- `shopify_add_order_note` for operational notes and audit trail entries.
-- `shopify_remove_order_note_entry` only to correct or revert a matching PaintAccess Operations note entry.
+- `shopify_record_order_timeline_entry` for operational order timeline entries and audit trail entries.
+- `shopify_remove_order_note_entry` only to correct or revert older PaintAccess Operations entries left in the persistent Shopify Notes field.
 - `shopify_add_order_tag` / `shopify_remove_order_tag` for controlled workflow markers.
 - `shopify_set_ops_metafield` for controlled `paintaccess_ops` state.
 - `shopify_prepare_fulfillment` to prepare fulfilment data only; Daniel must approve final fulfilment.
@@ -53,7 +53,7 @@ Use this sequence:
    - supplier Sales Confirmation check;
    - payment approval/process recording;
    - supplier tracking and fulfilment preparation;
-   - Shopify order note/status recording;
+   - Shopify order timeline/status recording;
    - Shopify Inbox or Admin panel request;
    - Operations Desk notification;
    - Shopify MCP tool call;
@@ -80,7 +80,7 @@ Use this sequence:
 3. `shopify_prepare_customer_email` to create the supplier/customer email template when needed
 4. `gmail-draft-safe` if a supplier email draft or send step is requested
 5. `operations-stage-notifier` to report order reviewed and PO readiness
-6. `shopify-order-note-recorder` to record PO sent/drafted status when applicable
+6. `shopify-order-timeline-recorder` to record PO sent/drafted status when applicable
 7. `shopify-flow-skill-evolver`
 
 ### Supplier Sales Confirmation received
@@ -89,7 +89,7 @@ Use this sequence:
 2. `drive-file-finder-safe` if the confirmation or PO is expected in Google Drive instead of Gmail
 3. `supplier-sales-confirmation-checker`
 4. `operations-stage-notifier` to report match/mismatch, shipping, total, and issues
-5. `shopify-order-note-recorder` to record confirmation details and payment status
+5. `shopify-order-timeline-recorder` to record confirmation details and payment status
 6. `supplier-payment-approval-recorder` when Daniel approval or payment processing is needed
 7. `shopify-flow-skill-evolver`
 
@@ -97,7 +97,7 @@ Use this sequence:
 
 1. `supplier-payment-approval-recorder`
 2. `operations-stage-notifier` to request or confirm payment approval
-3. `shopify-order-note-recorder` to record payment approved/processed and waiting for tracking
+3. `shopify-order-timeline-recorder` to record payment approved/processed and waiting for tracking
 4. `shopify-flow-skill-evolver`
 
 ### Supplier tracking received
@@ -106,7 +106,7 @@ Use this sequence:
 2. `drive-file-finder-safe` if tracking, packing slip, or shipment attachment is expected in Google Drive
 3. `supplier-tracking-fulfillment-prep`
 4. `operations-stage-notifier` to report tracking received and fulfilment readiness
-5. `shopify-order-note-recorder` to record carrier/tracking/fulfilment status
+5. `shopify-order-timeline-recorder` to record carrier/tracking/fulfilment status
 6. Use `shopify_complete_fulfillment` only when final fulfilment is explicitly approved. For test orders, use fake tracking only when the user asked for a fulfilment-status test and keep `notify_customer` false unless specifically testing customer notification.
 7. `shopify-flow-skill-evolver`
 
@@ -134,26 +134,26 @@ Use this when the user asks to read, search, summarize, or reply in Shopify Inbo
 2. `shopify-stock-delay-customer-workflow`
 3. `shopify_prepare_customer_email` for the customer-facing template
 4. `shopify_send_customer_email` with `delivery_method: "order_invoice"` if Daniel approved Shopify-native sending, or `gmail-draft-safe` only when Gmail is requested as the channel
-5. `shopify-order-note-recorder` to store the action and email copy
+5. `shopify-order-timeline-recorder` to store the action and email copy
 6. `shopify-flow-skill-evolver`
 
-### Customer/supplier email copied into Shopify note
+### Customer/supplier email copied into Shopify timeline
 
 1. `shopify-order-lookup-safe`
-2. `shopify-order-note-recorder`
-3. `shopify-graphql-safe-mutation` only if `shopify_add_order_note` is unavailable or insufficient
+2. `shopify-order-timeline-recorder`
+3. `shopify-graphql-safe-mutation` only if `shopify_record_order_timeline_entry` is unavailable or insufficient
 4. `shopify-flow-skill-evolver`
 
-### Shopify note change with customer notification
+### Shopify timeline change with customer notification
 
-Use this when the user asks to add an order note and notify/email the customer/client, or when testing the note-notification pipeline.
+Use this when the user asks to record an order timeline update and notify/email the customer/client, or when testing the timeline-notification pipeline.
 
 1. `shopify-order-lookup-safe` to confirm the exact order, customer email, and any test-order markers.
-2. `shopify-order-note-recorder` to write the internal note using `shopify_add_order_note`.
+2. `shopify-order-timeline-recorder` to record the internal timeline entry using `shopify_record_order_timeline_entry`.
 3. `shopify_prepare_customer_email` to prepare the customer-safe message if the copy is not already prepared.
 4. `shopify_send_customer_email` with `delivery_method: "order_invoice"` only after explicit approval. For test orders addressed to `gluked@gmail.com`, a user request to send the test notification is enough approval if the agent reports the recipient, subject, body/custom message, and Shopify provider before/while sending.
 5. Use Gmail only as a fallback or if the user explicitly asks for Gmail.
-6. Report the Shopify note result, Shopify email provider/result, and any skipped approval-gated steps.
+6. Report the Shopify timeline result, Shopify email provider/result, and any skipped approval-gated steps.
 7. `shopify-flow-skill-evolver`
 
 ### Any Shopify write without a dedicated tool
@@ -169,10 +169,10 @@ Use this when the user asks to add an order note and notify/email the customer/c
 - Never send supplier/customer emails, approve/process supplier payments, or complete final fulfilment without Daniel's approval unless the rule is explicitly changed.
 - For prepare-only tools such as `shopify_prepare_fulfillment`, `shopify_prepare_cancellation`, and `shopify_prepare_customer_email`, report if a tool call stalls or asks for unexpected permission instead of waiting indefinitely or escalating to a final action.
 - If only a screenshot is provided and the order number is not visible, ask for the order number or another reliable identifier.
-- For refunds/cancellations, prefer adding an internal reminder and giving manual Admin steps unless an approved tool safely supports the action.
+- For refunds/cancellations, prefer recording an internal timeline reminder and giving manual Admin steps unless an approved tool safely supports the action.
 - For Shopify Inbox, report it as unsupported by the current MCP. The current safe response is a manual checklist or a proposal for a supported integration path, not a claimed Inbox read/reply.
 - Do not invent supplier mappings. Use existing mappings or ask for confirmation.
-- Do not claim a Gmail draft, Drive file, Shopify email, or Shopify note was created unless the relevant MCP tool confirms it.
+- Do not claim a Gmail draft, Drive file, Shopify email, or Shopify timeline entry was created unless the relevant MCP tool confirms it.
 - Do not claim the generic Shopify app can complete admin-panel tasks. If a needed Shopify Admin action is not represented by the MCP, prepare a manual admin checklist or propose a backend/MCP extension.
 
 See `references/flow-routing.md`.

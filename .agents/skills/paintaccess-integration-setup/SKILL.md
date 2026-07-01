@@ -9,7 +9,7 @@ Use this skill when preparing accounts and connectors for Operations Desk automa
 
 ## Required connectors
 
-- Workspace app `PaintAccess Operations`, backed by the repo MCP endpoint, for Shopify orders, products, notes/tags/metafields, fulfilment preparation, cancellation preparation, email templates, Gmail, and Google Drive.
+- Workspace app `PaintAccess Operations`, backed by the repo MCP endpoint, for Shopify orders, products, timeline entries/tags/metafields, fulfilment preparation, cancellation preparation, email templates, Gmail, and Google Drive.
 - Backend Gmail access through Google OAuth env secrets for supplier/customer drafts, sends after approval, and reading supplier confirmations/tracking emails.
 - Backend Google Drive access through Google OAuth env secrets if PO files, attachments, or shared documents are stored there.
 - GitHub access for maintaining and deploying `PaintSuccess/AiAgentFrontBack`.
@@ -36,7 +36,7 @@ Runtime secrets:
 ## Shopify MCP setup
 
 1. Deploy the repo endpoint `api/mcp/shopify.js`.
-2. Confirm the Shopify app active version includes required Admin API scopes for MCP operations: `read_orders`, `write_orders` for order notes and `orderInvoiceSend`, `read_customers`, `write_customers`, `read_draft_orders`, `write_draft_orders` for the draft-order invoice fallback, `read_fulfillments`, `write_fulfillments`, `read_merchant_managed_fulfillment_orders`, `write_merchant_managed_fulfillment_orders`, `read_products`, and `read_inventory`.
+2. Confirm the Shopify app active version includes required Admin API scopes for MCP operations: `read_orders`, `write_orders` for order timeline-entry recording compatibility and `orderInvoiceSend`, `read_customers`, `write_customers`, `read_draft_orders`, `write_draft_orders` for the draft-order invoice fallback, `read_fulfillments`, `write_fulfillments`, `read_merchant_managed_fulfillment_orders`, `write_merchant_managed_fulfillment_orders`, `read_products`, and `read_inventory`.
 3. Open `https://ai-agent-front-back.vercel.app/api/shopify/oauth-start` and approve app reauthorization in Shopify Admin.
 4. On callback, confirm whether Vercel auto-store completed. If not, copy the displayed token into Vercel as `SHOPIFY_ACCESS_TOKEN`.
 5. Redeploy production if no deploy hook was triggered.

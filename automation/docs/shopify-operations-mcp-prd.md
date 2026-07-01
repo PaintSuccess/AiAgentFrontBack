@@ -877,7 +877,7 @@ PO draft prepared for IQuip:
 - 38EHB60 x1
 
 Gmail draft prepared via PaintAccess Operations MCP.
-Shopify note added: PO draft prepared, waiting for Daniel approval to send.
+Shopify timeline entry recorded: PO draft prepared, waiting for Daniel approval to send.
 
 Approval needed: send supplier email.
 ```

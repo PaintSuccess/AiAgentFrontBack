@@ -28,12 +28,12 @@ You do not need to do anything at this stage. Please let us know if this is okay
 Thank you for your patience and understanding.
 ```
 
-## Shopify note template
+## Shopify timeline entry template
 
 ```text
-{date} - Customer emailed regarding stock delay for order #{order_number}. Advised that {product_or_brand} products are currently out of stock and distributor expects stock in approximately {restock_timing}. Customer informed that order will be dispatched immediately upon stock arrival and no action is required from their side. Awaiting customer confirmation.
+PaintAccess Ops: Customer update drafted/sent regarding stock delay. Affected item: {product_or_brand}. Expected restock: {restock_timing}. Customer told order will dispatch when stock arrives and no action is required unless confirmation is requested.
 
-Copy of email:
+Details:
 
-{email_body}
+{short_email_summary_or_copy_if_requested}
 ```

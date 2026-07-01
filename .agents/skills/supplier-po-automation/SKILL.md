@@ -11,7 +11,7 @@ Use this skill to turn Shopify orders into supplier purchase order workflows.
 
 Create a reliable chain:
 
-Shopify order -> supplier mapping -> PO draft -> supplier email -> Shopify note/status update.
+Shopify order -> supplier mapping -> PO draft -> supplier email -> Shopify timeline/status update.
 
 ## Preconditions
 
@@ -30,7 +30,7 @@ Shopify order -> supplier mapping -> PO draft -> supplier email -> Shopify note/
 6. Prepare a PO summary for each supplier.
 7. Draft supplier email.
 8. If Gmail draft or sending is requested, use `gmail-draft-safe`; send only after user confirmation unless the user has pre-approved automation.
-9. Use `shopify-order-note-recorder`, backed by `shopify_add_order_note`, to document PO/email action and prevent duplicate PO sends.
+9. Use `shopify-order-timeline-recorder`, backed by `shopify_record_order_timeline_entry`, to document PO/email action and prevent duplicate PO sends.
 
 ## Output
 

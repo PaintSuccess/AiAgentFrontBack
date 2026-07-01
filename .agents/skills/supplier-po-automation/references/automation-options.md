@@ -14,7 +14,7 @@ User asks to check an order
 -> supplier mapping
 -> PO draft
 -> Gmail draft if requested
--> Shopify note/tag update if requested
+-> Shopify timeline/tag update if requested
 ```
 
 Limits:
@@ -34,7 +34,7 @@ New paid order in Shopify
 -> supplier mapping
 -> PO generation
 -> Gmail/SMTP email
--> Shopify tag or note update
+-> Shopify tag or timeline update
 ```
 
 Use this when the user wants a fast no-code/low-code setup.
@@ -50,7 +50,7 @@ Shopify webhook orders/paid
 -> backend rules engine
 -> supplier-specific PO generator
 -> Gmail API or SMTP
--> Shopify Admin API note/tag/metafield update
+-> Shopify Admin API timeline/tag/metafield update
 -> logging and duplicate prevention
 ```
 

@@ -7,7 +7,7 @@
 - carrier;
 - tracking number;
 - shipped products;
-- partial shipment/backorder notes;
+- partial shipment/backorder details;
 - dispatch date if provided.
 
 ## Shopify update preparation
@@ -17,7 +17,7 @@ Prepare:
 - tracking carrier;
 - tracking number;
 - fulfilled line items if partial shipment details are available;
-- note text;
+- timeline entry text;
 - notification summary.
 
 ## Stop conditions

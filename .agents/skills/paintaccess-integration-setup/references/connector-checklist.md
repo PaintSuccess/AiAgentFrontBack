@@ -6,7 +6,7 @@ Use the workspace app `PaintAccess Operations`, backed by the repo MCP endpoint.
 
 Authorization setup:
 
-- Active Shopify app version must include `write_orders` for order notes and existing-order invoice email, customer, draft order fallback, and fulfillment scopes needed by the MCP.
+- Active Shopify app version must include `write_orders` for order timeline-entry recording compatibility and existing-order invoice email, customer, draft order fallback, and fulfillment scopes needed by the MCP.
 - Reauthorize through `https://ai-agent-front-back.vercel.app/api/shopify/oauth-start` after changing scopes.
 - The callback should store `SHOPIFY_ACCESS_TOKEN` in Vercel automatically when Vercel auto-store env vars are configured; otherwise copy the shown token into Vercel manually.
 
@@ -15,7 +15,7 @@ Expected tools:
 - `shopify_search_orders`;
 - `shopify_get_order`;
 - `shopify_get_fulfillment_readiness`;
-- `shopify_add_order_note`;
+- `shopify_record_order_timeline_entry`;
 - `shopify_remove_order_note_entry`;
 - `shopify_add_order_tag`;
 - `shopify_remove_order_tag`;

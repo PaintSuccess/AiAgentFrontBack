@@ -1,0 +1,6 @@
+interface:
+  display_name: "Shopify Order Timeline Recorder"
+  short_description: "Records operational order timeline entries in Shopify."
+  icon: "🛒"
+  brand_color: "#95BF47"
+  default_prompt: "Use $shopify-order-timeline-recorder to record this operational update in the Shopify order timeline."

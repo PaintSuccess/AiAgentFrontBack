@@ -14,7 +14,7 @@ Create a compact table with:
 - line total;
 - status.
 
-## Summary fields for Shopify note
+## Summary fields for Shopify timeline entry
 
 Include:
 

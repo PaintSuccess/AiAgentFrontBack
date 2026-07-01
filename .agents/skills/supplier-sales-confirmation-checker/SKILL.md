@@ -1,6 +1,6 @@
 ---
 name: supplier-sales-confirmation-checker
-description: compare supplier Sales Confirmations against PaintAccess Shopify orders and Purchase Orders. use when a supplier confirmation email, order confirmation, invoice-like confirmation, pricing confirmation, shipping charge, backorder, unavailable item, substitution, or supplier change must be checked before payment approval and Shopify notes are updated.
+description: compare supplier Sales Confirmations against PaintAccess Shopify orders and Purchase Orders. use when a supplier confirmation email, order confirmation, invoice-like confirmation, pricing confirmation, shipping charge, backorder, unavailable item, substitution, or supplier change must be checked before payment approval and Shopify timeline/status markers are updated.
 ---
 
 # Supplier Sales Confirmation Checker
@@ -40,7 +40,7 @@ Compare the Sales Confirmation against the PO and Shopify order:
    - mismatch;
    - needs Daniel review.
 5. Produce a notification-ready summary.
-6. Send details to `shopify-order-note-recorder`, backed by `shopify_add_order_note`.
+6. Send details to `shopify-order-timeline-recorder`, backed by `shopify_record_order_timeline_entry`.
 7. Route to `supplier-payment-approval-recorder` only after Daniel can review the result.
 
 ## Output format

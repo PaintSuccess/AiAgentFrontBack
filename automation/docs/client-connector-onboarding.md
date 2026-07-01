@@ -17,7 +17,7 @@ When Daniel or the client pulls this repository, the skills and documentation co
 - Required app/MCP checklist.
 - Setup instructions.
 - Environment variable names without real values.
-- Templates for notes, emails, notifications, and workflows.
+- Templates for timeline entries, emails, notifications, and workflows.
 
 ## What Git must not store
 
@@ -54,7 +54,7 @@ Minimum production connector set:
    - read a Drive file if Drive is used.
 7. Test safe write operations:
    - create Gmail draft;
-   - add Shopify note;
+   - record Shopify timeline entry;
    - prepare fulfilment without completing it.
 
 ## Google backend flow

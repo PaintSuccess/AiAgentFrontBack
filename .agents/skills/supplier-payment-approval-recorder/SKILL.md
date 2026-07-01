@@ -1,6 +1,6 @@
 ---
 name: supplier-payment-approval-recorder
-description: coordinate and record Daniel's supplier payment approval for PaintAccess orders after Sales Confirmation review. use when payment approval is required, card-on-file processing is allowed, bank transfer is needed, payment is approved, payment is processed, or Shopify notes must show payment status and waiting-for-tracking state.
+description: coordinate and record Daniel's supplier payment approval for PaintAccess orders after Sales Confirmation review. use when payment approval is required, card-on-file processing is allowed, bank transfer is needed, payment is approved, payment is processed, or Shopify timeline/status markers must show payment status and waiting-for-tracking state.
 ---
 
 # Supplier Payment Approval Recorder
@@ -10,7 +10,7 @@ Use this skill after Sales Confirmation has been checked.
 ## Approval rule
 
 Do not approve or process supplier payment without Daniel's explicit approval.
-Record decisions in Shopify only through the PaintAccess Operations MCP, normally via `shopify-order-note-recorder` and `shopify_add_order_note`.
+Record decisions in Shopify only through the PaintAccess Operations MCP, normally via `shopify-order-timeline-recorder` and `shopify_record_order_timeline_entry`.
 
 ## Payment paths
 
@@ -31,15 +31,15 @@ Record decisions in Shopify only through the PaintAccess Operations MCP, normall
    - card on file;
    - bank transfer;
    - other.
-6. Use `shopify-order-note-recorder` to add:
+6. Use `shopify-order-timeline-recorder` to record:
    - payment approved/processed;
    - supplier can process payment or bank transfer required;
    - waiting for tracking.
 
-## Standard note
+## Standard timeline entry
 
 ```text
-Order processed with supplier. Payment approved/processed. Waiting for tracking.
+PaintAccess Ops: Supplier order processed. Payment approved/processed. Next action: await tracking.
 ```
 
 See `references/payment-statuses.md`.

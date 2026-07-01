@@ -38,9 +38,9 @@ Required fields:
 - order number;
 - future-tense wording unless refund/cancellation is already complete.
 
-## Shopify note handoff
+## Shopify timeline handoff
 
-After a confirmed draft, provide the email subject and body to `shopify-order-note-recorder` if the user wants the action stored in Shopify.
+After a confirmed draft, provide the email subject and body to `shopify-order-timeline-recorder` if the user wants the action stored in Shopify.
 
 ## Customer tracking update draft
 

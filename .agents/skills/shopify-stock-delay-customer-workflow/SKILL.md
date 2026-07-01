@@ -1,6 +1,6 @@
 ---
 name: shopify-stock-delay-customer-workflow
-description: handle PaintAccess Shopify customer stock-delay workflows. use when an order item is out of stock, backordered, delayed by a distributor, expected back in stock later, or the user asks to email the customer through Shopify native email or Gmail, and record a Shopify note about the delay.
+description: handle PaintAccess Shopify customer stock-delay workflows. use when an order item is out of stock, backordered, delayed by a distributor, expected back in stock later, or the user asks to email the customer through Shopify native email or Gmail, and record a Shopify order timeline entry about the delay.
 ---
 
 # Shopify Stock Delay Customer Workflow
@@ -29,8 +29,8 @@ Use this skill when a PaintAccess customer needs an order update because product
    - ask the customer to confirm the wait is acceptable.
 3. If the user approved sending a customer update, prefer `shopify_send_customer_email` with `delivery_method: "order_invoice"` so Shopify applies the branded store email template, logo, contact details, and footer.
 4. Use `gmail-draft-safe` only when the user wants Gmail specifically or Shopify native sending is unavailable.
-5. Prepare a Shopify note with date, action taken, reason, expected timing, current status, and copy of the email.
-6. Use `shopify-order-note-recorder` to write the note with `shopify_add_order_note` when requested and tools are available.
+5. Prepare a concise Shopify order timeline entry with action taken, reason, expected timing, current status, and short email summary/copy when requested.
+6. Use `shopify-order-timeline-recorder` to record the entry with `shopify_record_order_timeline_entry` when requested and tools are available.
 
 ## Reporting
 
@@ -38,9 +38,9 @@ Say separately whether each step was completed:
 
 - email drafted;
 - Shopify native email sent, Gmail draft created, or send skipped pending approval;
-- Shopify note text prepared;
-- Shopify note actually written.
+- Shopify timeline entry text prepared;
+- Shopify timeline entry actually recorded.
 
-Do not say the note was added unless the write succeeds.
+Do not say the timeline entry was recorded unless the write succeeds.
 
 See `references/stock-delay-template.md`.

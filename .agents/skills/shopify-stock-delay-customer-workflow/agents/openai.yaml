@@ -3,4 +3,4 @@ interface:
   short_description: "Emails customers about stock delays."
   icon: "🛒"
   brand_color: "#95BF47"
-  default_prompt: "Use $shopify-stock-delay-customer-workflow to draft the customer delay email and Shopify note."
+  default_prompt: "Use $shopify-stock-delay-customer-workflow to draft the customer delay email and Shopify timeline entry."

@@ -62,9 +62,9 @@ Daniel
 PaintAccess
 ```
 
-## Stock delay note summary
+## Stock delay timeline summary
 
-Use this summary inside a Shopify note when the email is also recorded:
+Use this summary inside a Shopify order timeline entry when the email/action is also recorded:
 
 ```text
 Customer emailed regarding stock delay for order {order_number}. Advised that {product_or_brand} products are currently out of stock and distributor expects stock in approximately {restock_timing}. Customer informed that order will be dispatched immediately upon stock arrival and no action is required from their side. Awaiting customer confirmation.

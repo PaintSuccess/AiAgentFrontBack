@@ -56,7 +56,7 @@ Actions:
    - If the confirmation or PO is stored in Drive, use `drive-file-finder-safe` with separate narrow searches.
 2. Compare supplier-confirmed products, quantities, prices, shipping charge, total, backorders, unavailable items, substitutions, and changes against PO and Shopify order.
 3. Notify Daniel with a clear match/mismatch summary.
-4. Add confirmation details to Shopify notes with `shopify_add_order_note`.
+4. Record confirmation details in the Shopify order timeline with `shopify_record_order_timeline_entry`.
 
 Skills:
 
@@ -64,7 +64,7 @@ Skills:
 - `drive-file-finder-safe`
 - `supplier-sales-confirmation-checker`
 - `operations-stage-notifier`
-- `shopify-order-note-recorder`
+- `shopify-order-timeline-recorder`
 
 ## Stage 4: Payment approval
 
@@ -72,7 +72,7 @@ Actions:
 
 1. Request Daniel approval for supplier payment.
 2. Record payment method: card on file or bank transfer.
-3. After approval/process, add Shopify note with `shopify_add_order_note`: payment approved/processed, waiting for tracking.
+3. After approval/process, record Shopify timeline entry with `shopify_record_order_timeline_entry`: payment approved/processed, waiting for tracking.
 
 Approval gate:
 
@@ -82,7 +82,7 @@ Skills:
 
 - `supplier-payment-approval-recorder`
 - `operations-stage-notifier`
-- `shopify-order-note-recorder`
+- `shopify-order-timeline-recorder`
 
 ## Stage 5: Tracking and fulfilment preparation
 
@@ -92,7 +92,7 @@ Actions:
    - If tracking, packing slips, or attachments are stored in Drive, use `drive-file-finder-safe` with separate narrow searches.
 2. Identify Shopify order, supplier, carrier, tracking number, and shipped products when provided.
 3. Prepare customer update/draft if required.
-4. Record tracking with `shopify_add_order_note` and use `shopify_prepare_fulfillment` to prepare fulfilment when tools allow.
+4. Record tracking with `shopify_record_order_timeline_entry` and use `shopify_prepare_fulfillment` to prepare fulfilment when tools allow.
 5. Notify Daniel that fulfilment is prepared.
 
 Approval gate:
@@ -105,5 +105,5 @@ Skills:
 - `drive-file-finder-safe`
 - `supplier-tracking-fulfillment-prep`
 - `customer-email-reply-drafter`
-- `shopify-order-note-recorder`
+- `shopify-order-timeline-recorder`
 - `operations-stage-notifier`

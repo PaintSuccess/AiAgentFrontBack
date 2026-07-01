@@ -1,11 +1,11 @@
 ---
 name: shopify-graphql-safe-mutation
-description: perform safe shopify admin graphql write operations when no dedicated shopify tool exists. use for updating order notes, metafields, tags, custom attributes, resources, or other shopify admin changes that require graphql. trigger whenever a shopify mutation is needed and the exact mutation/input fields must be discovered, validated, and executed safely before reporting results.
+description: perform safe shopify admin graphql write operations when no dedicated shopify tool exists. use for updating metafields, tags, custom attributes, resources, or other shopify admin changes that require graphql. trigger whenever a shopify mutation is needed and the exact mutation/input fields must be discovered, validated, and executed safely before reporting results. do not use GraphQL to write operational order logs into the persistent Shopify Notes field; prefer shopify_record_order_timeline_entry through the PaintAccess Operations MCP.
 ---
 
 # Shopify GraphQL Safe Mutation
 
-Use this skill only for Shopify writes that are not covered by the `PaintAccess Operations` MCP. Prefer MCP tools first: `shopify_add_order_note`, `shopify_add_order_tag`, `shopify_remove_order_tag`, `shopify_set_ops_metafield`, `shopify_prepare_fulfillment`, `shopify_prepare_cancellation`, `shopify_prepare_customer_email`, and `shopify_send_customer_email`.
+Use this skill only for Shopify writes that are not covered by the `PaintAccess Operations` MCP. Prefer MCP tools first: `shopify_record_order_timeline_entry`, `shopify_add_order_tag`, `shopify_remove_order_tag`, `shopify_set_ops_metafield`, `shopify_prepare_fulfillment`, `shopify_prepare_cancellation`, `shopify_prepare_customer_email`, and `shopify_send_customer_email`.
 
 ## Mandatory workflow
 
@@ -31,7 +31,7 @@ Before step 1, state why the existing MCP tool set is insufficient. If the reque
 After execution, say:
 
 - what resource changed;
-- what field/note/tag was updated;
+- what field/timeline entry/tag was updated;
 - whether `userErrors` were returned;
 - what manual action remains.
 
