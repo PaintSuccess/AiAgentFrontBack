@@ -1,6 +1,6 @@
 const {
-  TOKEN_TTL_SECONDS,
   createAccessToken,
+  getTokenTtlSeconds,
   parseBody,
   verifyPkce,
   verifySignedPayload,
@@ -39,7 +39,7 @@ module.exports = async function handler(req, res) {
   return res.status(200).json({
     access_token: accessToken,
     token_type: "Bearer",
-    expires_in: TOKEN_TTL_SECONDS,
+    expires_in: getTokenTtlSeconds(),
     scope: code.scope,
   });
 };

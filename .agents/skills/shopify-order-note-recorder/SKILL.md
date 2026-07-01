@@ -17,6 +17,7 @@ Use this skill to record operational actions back into a Shopify order.
   - `shopify_add_order_tag` / `shopify_remove_order_tag` for tags;
   - `shopify_set_ops_metafield` for controlled `paintaccess_ops` state.
 - Use `shopify-graphql-safe-mutation` only if no MCP tool covers the requested safe action.
+- For `shopify_add_order_note`, include a stable `request_id` when the note is part of a workflow. Reuse the same `request_id` if the ChatGPT approval/authorization prompt expires or the tool result is unclear, so the backend can avoid duplicate notes.
 
 ## Note types
 
@@ -60,6 +61,9 @@ Use this skill to record operational actions back into a Shopify order.
    - `Tracking received`;
    - `Fulfilment prepared`.
 5. Write the note/tag/metafield with the matching PaintAccess Operations MCP tool.
+   - If ChatGPT says the note tool approval/authorization expired, immediately retry the same `shopify_add_order_note` call once with the same `request_id`.
+   - If retry still fails, report the exact blocker and show the prepared note text so the user can decide whether to authorize again or add it manually.
+   - Do not claim the note was recorded unless the tool confirms `note_added` or says the matching note already exists.
 6. When a customer notification was requested, report all three states separately:
    - Shopify note/tag/metafield write result;
    - Shopify native email provider/result, or Gmail draft/send fallback result;

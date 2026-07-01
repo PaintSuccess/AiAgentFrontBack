@@ -19,6 +19,8 @@ Do not rely on the generic Shopify ChatGPT app for these pipelines; it is too li
 
 When a user asks for a read-only or prepare-only MCP check and names the relevant tool or operation, attempt the narrow MCP tool once before saying access is unavailable. If the tool is not available, authorization fails, or the call times out, report the exact tool name and visible error/blocker. Do not infer that the MCP is unavailable only because the current message is a new test or because earlier tool results are not in context.
 
+When a write tool triggers a ChatGPT permission prompt, keep the next message short and focused on that pending tool call. Do not continue a long workflow while waiting for approval. If the prompt expires, retry the exact same write once with the same idempotency/request id when the tool supports it, then report a clean blocker if the retry also fails.
+
 Use these MCP tools by intent:
 
 - `shopify_search_orders` for recent/partial order discovery.

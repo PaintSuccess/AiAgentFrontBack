@@ -113,6 +113,7 @@ const tools = withSecurity([
         next_action: stringProp("Next operational action."),
         copy_text: stringProp("Optional short copy of email/PO/details."),
         approval_reference: stringProp("Approval reference if the note records an approved action."),
+        request_id: stringProp("Optional stable idempotency key. Reuse the same value when retrying after an approval/auth timeout."),
       },
       ["summary"]
     ),
@@ -291,7 +292,7 @@ const tools = withSecurity([
       },
       ["template_type", "approval_reference"]
     ),
-    annotations: { readOnlyHint: false, destructiveHint: true },
+    annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: true },
   },
   {
     name: "gmail_search_messages",
@@ -337,7 +338,7 @@ const tools = withSecurity([
       },
       ["to", "subject", "body_text"]
     ),
-    annotations: { readOnlyHint: false, destructiveHint: false },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
   },
   {
     name: "gmail_send_email",
@@ -355,7 +356,7 @@ const tools = withSecurity([
       },
       ["to", "subject", "body_text", "approval_reference"]
     ),
-    annotations: { readOnlyHint: false, destructiveHint: true },
+    annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: true },
   },
   {
     name: "drive_search_files",
@@ -521,6 +522,9 @@ function summarizeResult(result) {
   if (result?.order_number && result?.ok === false) {
     return result.message || `Action not completed for ${result.order_number}.`;
   }
+  if (result?.order_number && result?.duplicate) {
+    return result.message || `Matching action already exists for ${result.order_number}.`;
+  }
   if (result?.order_number && result?.tag) {
     return `${result.ok ? "Updated" : "Checked"} ${result.order_number}: ${result.tag}.`;
   }
@@ -590,10 +594,20 @@ function objectSchema(properties, required = []) {
 function withSecurity(toolList) {
   return toolList.map((tool) => ({
     ...tool,
+    annotations: normalizeAnnotations(tool.annotations),
     securitySchemes: SECURITY_SCHEMES,
     _meta: {
       ...(tool._meta || {}),
       securitySchemes: SECURITY_SCHEMES,
     },
   }));
+}
+
+function normalizeAnnotations(annotations = {}) {
+  const readOnlyHint = annotations.readOnlyHint === true;
+  return {
+    readOnlyHint,
+    destructiveHint: annotations.destructiveHint === true,
+    openWorldHint: annotations.openWorldHint === true,
+  };
 }
