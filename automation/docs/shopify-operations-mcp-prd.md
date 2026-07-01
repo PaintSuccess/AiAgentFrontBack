@@ -11,7 +11,7 @@
 
 ## Summary
 
-PaintAccess needs a ChatGPT-based Operations Desk that can coordinate Shopify order operations, supplier purchase orders, Gmail drafts/sends, Google Drive files, customer communication, internal notes, payment approvals, supplier tracking, and fulfilment preparation.
+PaintAccess needs a ChatGPT-based Operations Desk that can coordinate Shopify order operations, supplier purchase orders, Gmail drafts/sends, Google Drive files, customer communication, internal timeline entries, payment approvals, supplier tracking, and fulfilment preparation.
 
 User testing showed that ChatGPT's built-in Gmail and Google Drive app authorizations were unreliable for this agent workflow. Gmail and Google Drive should now be handled by the PaintAccess backend and exposed through the same custom MCP as Shopify.
 
@@ -33,7 +33,7 @@ The Operations Desk requires staff-grade Shopify actions:
 - identify supplier routing;
 - prepare supplier purchase orders;
 - record process status on Shopify orders;
-- add internal notes and tags;
+- record internal Shopify order timeline entries and tags;
 - avoid duplicate supplier PO sends;
 - prepare fulfilment details;
 - support approval-gated cancellation/refund/payment workflows;
@@ -139,7 +139,7 @@ Important skills:
 - `gmail-message-finder-safe`
 - `gmail-draft-safe`
 - `supplier-sales-confirmation-checker`
-- `shopify-order-note-recorder`
+- `shopify-order-timeline-recorder`
 - `supplier-payment-approval-recorder`
 - `supplier-tracking-fulfillment-prep`
 - `operations-stage-notifier`
@@ -175,7 +175,7 @@ Allowed:
 - use backend Gmail tools to search/read emails;
 - use backend Gmail tools to draft/send emails after approval;
 - use backend Google Drive tools to read/write PO files if authorized;
-- add safe Shopify internal notes and tags through MCP;
+- add safe Shopify order timeline entries and tags through MCP;
 - prepare fulfilment details without final completion;
 - produce approval requests for Daniel.
 
@@ -256,7 +256,7 @@ Minimum response:
 - financial status;
 - fulfilment status;
 - tags;
-- note summary/process state;
+- timeline summary/process state;
 - existing fulfilments/tracking.
 
 ### FR2: Safe order identity
@@ -268,9 +268,9 @@ Before any write, the MCP caller must provide a high-confidence order identifier
 
 The MCP must reject writes when the order is ambiguous.
 
-### FR3: Internal order notes
+### FR3: Shopify order timeline entries
 
-The MCP must support adding or updating internal order notes for operational events:
+The MCP must support recording internal operational events to the Shopify order timeline without leaving those events in the persistent order Notes field:
 
 - PO drafted;
 - PO sent;
@@ -284,13 +284,9 @@ The MCP must support adding or updating internal order notes for operational eve
 - customer stock delay communication;
 - manual action required.
 
-The note must include:
+The timeline entry should be concise and Shopify-native in style. It should include only useful operational details:
 
-- timestamp;
 - action;
-- actor/tool;
-- source;
-- order number;
 - supplier if applicable;
 - next action;
 - approval state where applicable.
@@ -319,7 +315,7 @@ The MCP must not allow arbitrary tags in phase 1 unless admin-enabled.
 
 ### FR5: Supplier workflow state
 
-The MCP should support reading and writing supplier process state through tags, notes, or metafields.
+The MCP should support reading and writing supplier process state through tags, timeline entries, or metafields.
 
 Preferred long-term state storage:
 
@@ -335,11 +331,11 @@ keys:
   last_agent_action
 ```
 
-Phase 1 may use notes and tags only if metafield implementation is deferred.
+Phase 1 may use timeline entries and tags only if metafield implementation is deferred.
 
 ### FR6: Duplicate prevention
 
-Before recording `PO sent` or preparing a duplicate supplier email, the MCP must check existing tags/metafields/notes for matching supplier state.
+Before recording `PO sent` or preparing a duplicate supplier email, the MCP must check existing tags/metafields/timeline events for matching supplier state.
 
 If duplicate risk is detected, the tool must return:
 
@@ -358,7 +354,7 @@ Allowed phase 1 behavior:
 - inspect fulfilment readiness;
 - prepare carrier/tracking data payload;
 - produce a human-readable fulfilment preview;
-- add `Fulfilment prepared` note/tag after approval or clear instruction.
+- add `Fulfilment prepared` timeline entry/tag after approval or clear instruction.
 
 Forbidden phase 1 behavior:
 
@@ -373,7 +369,7 @@ Allowed:
 
 - check order status;
 - verify paid/unfulfilled state;
-- prepare internal note;
+- prepare internal timeline entry;
 - prepare customer reply;
 - mark `Manual action required`;
 - report manual Shopify Admin steps.
@@ -485,7 +481,7 @@ Output:
 - line items;
 - shipping details;
 - tags;
-- notes/process state;
+- timeline/process state;
 - fulfilment state;
 - existing tracking.
 
@@ -508,9 +504,9 @@ Output:
 
 ### Tool group 2: Safe write tools
 
-#### `shopify_add_order_note`
+#### `shopify_record_order_timeline_entry`
 
-Purpose: Add a controlled internal order note.
+Purpose: Record a controlled internal Operations Desk entry in the Shopify order timeline without leaving the text in the persistent order Notes field.
 
 Inputs:
 
@@ -526,7 +522,8 @@ Inputs:
 Output:
 
 - success/failure;
-- updated note preview;
+- timeline entry preview;
+- persistent Notes field restoration status;
 - user errors.
 
 #### `shopify_remove_order_note_entry`
@@ -631,7 +628,7 @@ Output:
 - current status;
 - eligibility hints;
 - manual action steps;
-- suggested note;
+- suggested timeline entry;
 - approval required flag.
 
 ### Tool group 4: Admin-only diagnostic tools
@@ -721,7 +718,8 @@ readonly:
   - shopify_get_fulfillment_readiness
 
 safe_write:
-  - shopify_add_order_note
+  - shopify_record_order_timeline_entry
+  - shopify_remove_order_note_entry
   - shopify_add_order_tag
   - shopify_remove_order_tag
   - shopify_set_ops_metafield
@@ -745,7 +743,7 @@ admin_only:
 - prepare PO text;
 - prepare customer/supplier email text;
 - create Gmail draft if client policy allows drafts;
-- add non-financial internal note after explicit user instruction;
+- record non-financial internal timeline entry after explicit user instruction;
 - add controlled process tag after explicit user instruction.
 
 ### Daniel approval required
@@ -788,7 +786,7 @@ Minimum audit fields:
 Phase 1 audit targets:
 
 - application logs;
-- Shopify order note for business-relevant state.
+- Shopify order timeline entry for business-relevant state.
 
 Phase 2 audit targets:
 
@@ -942,7 +940,7 @@ Acceptance:
 
 Deliverables:
 
-- `shopify_add_order_note`;
+- `shopify_record_order_timeline_entry`;
 - `shopify_add_order_tag`;
 - controlled tag validation;
 - audit logging;
@@ -950,7 +948,7 @@ Deliverables:
 
 Acceptance:
 
-- note can be added to a test order;
+- timeline entry can be recorded for a test order;
 - controlled tag can be added to a test order;
 - duplicate PO marker blocks repeat processing;
 - all writes show an audit record.
@@ -961,7 +959,7 @@ Deliverables:
 
 - agent skill updates if needed;
 - end-to-end order to PO draft workflow;
-- Gmail MCP draft plus Shopify note/tag coordination;
+- Gmail MCP draft plus Shopify timeline/tag coordination;
 - supplier confirmation check workflow;
 - tracking received workflow.
 
@@ -977,7 +975,7 @@ Deliverables:
 
 - fulfilment readiness;
 - prepare fulfilment payload;
-- Shopify note/tag for fulfilment prepared;
+- Shopify timeline/tag for fulfilment prepared;
 - Daniel approval gate.
 
 Acceptance:
@@ -1067,8 +1065,8 @@ Mitigation:
 
 ## Open questions
 
-1. Which Shopify writes are allowed without Daniel approval: notes only, tags only, metafields, or all three?
-2. Should operation state use only notes/tags in phase 1, or should metafields be implemented immediately?
+1. Which Shopify writes are allowed without Daniel approval: timeline entries only, tags only, metafields, or all three?
+2. Should operation state use only timeline entries/tags in phase 1, or should metafields be implemented immediately?
 3. Which supplier mappings are authoritative today?
 4. Should Gmail draft creation require approval, or only Gmail send?
 5. Should final fulfilment ever be agent-executable after approval, or always manual?
@@ -1088,6 +1086,6 @@ Mitigation:
 - Add Workspace Agent tool descriptions.
 - Test with known historical orders.
 - Test Read-only Monitor cannot write.
-- Test Operations Desk note/tag write on a safe order.
-- Test Gmail MCP draft plus Shopify note workflow.
+- Test Operations Desk timeline/tag write on a safe order.
+- Test Gmail MCP draft plus Shopify timeline workflow.
 - Document production runbook.

@@ -13,7 +13,7 @@ tools:
   custom_mcps:
     - name: "PaintAccess Operations MCP"
       required: true
-      action_constraints: "Use only shopify_search_orders, shopify_get_order, shopify_get_fulfillment_readiness, gmail_search_messages, gmail_get_message, drive_search_files, and drive_get_file. Do not call note/tag/metafield/draft/send/prepare-write tools."
+      action_constraints: "Use only shopify_search_orders, shopify_get_order, shopify_get_fulfillment_readiness, gmail_search_messages, gmail_get_message, drive_search_files, and drive_get_file. Do not call timeline/tag/metafield/draft/send/prepare-write tools."
 skills:
   core:
     - "shopify-ops-orchestrator"

@@ -16,7 +16,7 @@ The agent should help the team run:
 - supplier split and PO preparation;
 - supplier Gmail draft preparation;
 - supplier Sales Confirmation checks;
-- Shopify order note updates;
+- Shopify order timeline updates;
 - payment approval coordination;
 - supplier tracking checks;
 - fulfilment preparation;
@@ -102,7 +102,7 @@ Recommended constraints:
 
 - Ask before sending emails.
 - Ask before Shopify writes that affect customers, payment, cancellation, refund, or fulfilment.
-- Allow low-risk draft/note preparation where appropriate.
+- Allow low-risk draft/timeline-entry preparation where appropriate.
 
 ### 3. Create the agent
 
@@ -119,7 +119,7 @@ PaintAccess Operations Desk
 4. Give it this purpose:
 
 ```text
-Coordinate PaintAccess Shopify order operations: review new orders, prepare supplier POs, draft supplier/customer emails, check supplier confirmations, record Shopify notes, coordinate payment approval, process tracking details, and prepare fulfilment. Require Daniel approval for sending emails, payment approval/processing, cancellations/refunds, and final fulfilment.
+Coordinate PaintAccess Shopify order operations: review new orders, prepare supplier POs, draft supplier/customer emails, check supplier confirmations, record Shopify order timeline entries, coordinate payment approval, process tracking details, and prepare fulfilment. Require Daniel approval for sending emails, payment approval/processing, cancellations/refunds, and final fulfilment.
 ```
 
 ### 4. Add skills
@@ -138,7 +138,7 @@ Core skills to add first:
 - `gmail-message-finder-safe`
 - `gmail-draft-safe`
 - `supplier-sales-confirmation-checker`
-- `shopify-order-note-recorder`
+- `shopify-order-timeline-recorder`
 - `supplier-payment-approval-recorder`
 - `supplier-tracking-fulfillment-prep`
 - `operations-stage-notifier`
@@ -214,12 +214,12 @@ Start with read-only tests:
 1. Find a known Shopify order.
 2. Find a known supplier email.
 3. Draft a supplier PO email without sending.
-4. Prepare a Shopify note without writing it.
+4. Prepare a Shopify order timeline entry without writing it.
 
 Then test low-risk writes:
 
 1. Create a Gmail draft.
-2. Add a non-financial Shopify internal note.
+2. Record a non-financial Shopify order timeline entry.
 
 Do not test live sending, refund, cancellation, payment, or final fulfilment until Daniel approves the exact behavior.
 
@@ -232,7 +232,7 @@ The Shopify MCP exposes narrow tools:
 - `shopify_get_order`
 - `shopify_search_orders`
 - `shopify_get_fulfillment_readiness`
-- `shopify_add_order_note`
+- `shopify_record_order_timeline_entry`
 - `shopify_remove_order_note_entry`
 - `shopify_add_order_tag`
 - `shopify_remove_order_tag`

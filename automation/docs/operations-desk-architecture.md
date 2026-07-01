@@ -12,7 +12,7 @@ Shopify order
 -> Gmail supplier draft
 -> supplier Sales Confirmation
 -> price, quantity, shipping check
--> Shopify notes
+-> Shopify order timeline entry
 -> Daniel payment approval
 -> supplier processing
 -> supplier tracking
@@ -36,7 +36,7 @@ Allowed before approval:
 - reading orders and emails;
 - preparing drafts;
 - comparing data;
-- preparing notes;
+- preparing timeline entries;
 - preparing fulfilment details;
 - sending notifications that review/approval is needed.
 
@@ -45,16 +45,16 @@ Allowed before approval:
 | Product stage | Skills |
 |---|---|
 | New Shopify order review | `shopify-order-lookup-safe`, `supplier-po-automation`, `operations-stage-notifier` |
-| Supplier split and PO preparation | `supplier-po-automation`, `shopify-order-note-recorder` |
+| Supplier split and PO preparation | `supplier-po-automation`, `shopify-order-timeline-recorder` |
 | Supplier email draft | `gmail-draft-safe`, `operations-stage-notifier` |
 | Supplier Sales Confirmation search | `gmail-message-finder-safe` |
 | Sales Confirmation comparison | `supplier-sales-confirmation-checker`, `operations-stage-notifier` |
-| Shopify order notes | `shopify-order-note-recorder`, `shopify-graphql-safe-mutation` |
+| Shopify order timeline entries | `shopify-order-timeline-recorder`, `shopify-graphql-safe-mutation` |
 | Payment approval | `supplier-payment-approval-recorder`, `operations-stage-notifier` |
 | Tracking email search | `gmail-message-finder-safe` |
-| Tracking and fulfilment preparation | `supplier-tracking-fulfillment-prep`, `shopify-order-note-recorder` |
+| Tracking and fulfilment preparation | `supplier-tracking-fulfillment-prep`, `shopify-order-timeline-recorder` |
 | Customer messages | `customer-email-reply-drafter`, `shopify-stock-delay-customer-workflow`, `gmail-draft-safe` |
-| Cancellation/refund reminder | `shopify-order-cancellation-reminder`, `shopify-order-note-recorder` |
+| Cancellation/refund reminder | `shopify-order-cancellation-reminder`, `shopify-order-timeline-recorder` |
 | Product-level orchestration | `shopify-ops-orchestrator` |
 | Skill improvement | `shopify-flow-skill-evolver` |
 | Account/plugin setup | `paintaccess-integration-setup` |
@@ -75,7 +75,7 @@ Operations Desk must notify at these key stages:
 
 ## Required integrations
 
-- Shopify Admin: order read, product/variant read, order notes/tags/metafields, tracking/fulfilment preparation, GraphQL fallback.
+- Shopify Admin: order read, product/variant read, order timeline entries/tags/metafields, tracking/fulfilment preparation, GraphQL fallback.
 - Gmail: drafts, search/read supplier Sales Confirmation emails, search/read tracking emails, optional send after Daniel approval.
 - Google Drive: optional PO files, templates, or attachments.
 - GitHub: maintain and deploy the existing backend repository `PaintSuccess/AiAgentFrontBack`.
@@ -107,4 +107,4 @@ Codex remains the development and maintenance surface for this repository. The W
 1. Shopify Admin API credentials stay in Vercel/runtime secrets.
 2. The custom MCP endpoint is `api/mcp/shopify.js`.
 3. The ChatGPT workspace app is `PaintAccess Operations`.
-4. The Operations Desk agent should use this app for Shopify lookups, order notes, tags, ops metafields, fulfilment preparation, and cancellation preparation.
+4. The Operations Desk agent should use this app for Shopify lookups, order timeline entries, tags, ops metafields, fulfilment preparation, and cancellation preparation.

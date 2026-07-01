@@ -4,7 +4,7 @@ access: "Publish to PaintAccess workspace directory"
 purpose: >
   Coordinate PaintAccess Shopify order operations end to end: review new orders,
   prepare supplier POs, draft supplier/customer emails, check supplier confirmations,
-  record Shopify notes, coordinate payment approval, process tracking details, and
+  record Shopify order timeline entries, coordinate payment approval, process tracking details, and
   prepare fulfilment.
 model: "workspace default"
 reasoning_effort: "high"
@@ -28,7 +28,7 @@ tools:
         - "shopify_get_order"
         - "shopify_search_orders"
         - "shopify_get_fulfillment_readiness"
-        - "shopify_add_order_note"
+        - "shopify_record_order_timeline_entry"
         - "shopify_remove_order_note_entry"
         - "shopify_add_order_tag"
         - "shopify_remove_order_tag"
@@ -52,7 +52,7 @@ skills:
     - "gmail-message-finder-safe"
     - "gmail-draft-safe"
     - "supplier-sales-confirmation-checker"
-    - "shopify-order-note-recorder"
+    - "shopify-order-timeline-recorder"
     - "supplier-payment-approval-recorder"
     - "supplier-tracking-fulfillment-prep"
     - "operations-stage-notifier"

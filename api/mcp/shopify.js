@@ -18,6 +18,7 @@ const {
   CONTROLLED_TAGS,
   OPS_METAFIELD_KEYS,
   addOrderNote,
+  addOrderTimelineEntry,
   addOrderTag,
   completeFulfillment,
   getFulfillmentReadiness,
@@ -35,7 +36,7 @@ const {
 const MCP_PROTOCOL_VERSION = "2025-03-26";
 
 const SERVER_INSTRUCTIONS =
-  "PaintAccess Operations MCP exposes narrow Shopify, Gmail, and Google Drive operations for ChatGPT Workspace Agents. Use read tools first, write only to known orders/resources, and treat cancellation, refund, payment, email send, and final fulfilment as approval-required.";
+  "PaintAccess Operations MCP exposes narrow Shopify, Gmail, and Google Drive operations for ChatGPT Workspace Agents. Use read tools first, write only to known orders/resources, and treat cancellation, refund, payment, email send, and final fulfilment as approval-required. For operational order logging, use Shopify order timeline entries; do not leave operations logs in the persistent Shopify Notes field.";
 
 const SECURITY_SCHEMES = [{ type: "oauth2", scopes: DEFAULT_SCOPES }];
 
@@ -43,6 +44,7 @@ const TOOL_HANDLERS = {
   shopify_search_orders: searchOrders,
   shopify_get_order: getOrder,
   shopify_get_fulfillment_readiness: getFulfillmentReadiness,
+  shopify_record_order_timeline_entry: addOrderTimelineEntry,
   shopify_add_order_note: addOrderNote,
   shopify_remove_order_note_entry: removeOrderNoteEntry,
   shopify_add_order_tag: addOrderTag,
@@ -99,20 +101,41 @@ const tools = withSecurity([
     annotations: { readOnlyHint: true, destructiveHint: false },
   },
   {
-    name: "shopify_add_order_note",
-    title: "Add Shopify order note",
+    name: "shopify_record_order_timeline_entry",
+    title: "Record Shopify order timeline entry",
     description:
-      "Append a controlled PaintAccess Operations Desk note to a known Shopify order. Does not cancel, refund, send email, or complete fulfilment.",
+      "Record a concise PaintAccess Operations Desk entry in the Shopify order timeline without leaving the text in the persistent order Notes field. Does not cancel, refund, send email, edit line items, or complete fulfilment.",
     inputSchema: objectSchema(
       {
         ...orderIdentifierProps(),
-        note_type: stringProp("Controlled note type, e.g. po_drafted, tracking_received, manual_action_required."),
-        summary: stringProp("Concise operational summary to record."),
+        note_type: stringProp("Controlled timeline entry type, e.g. po_drafted, tracking_received, manual_action_required."),
+        summary: stringProp("Concise Shopify-timeline-style operational summary to record."),
         source: stringProp("Source of action, e.g. ChatGPT Operations Desk, Gmail app, Daniel approval."),
         supplier: stringProp("Supplier name when relevant."),
         next_action: stringProp("Next operational action."),
-        copy_text: stringProp("Optional short copy of email/PO/details."),
-        approval_reference: stringProp("Approval reference if the note records an approved action."),
+        copy_text: stringProp("Optional concise supporting detail. Do not paste full email bodies unless explicitly required."),
+        approval_reference: stringProp("Approval reference if the timeline entry records an approved action."),
+        request_id: stringProp("Optional stable idempotency key. Reuse the same value when retrying after an approval/auth timeout."),
+      },
+      ["summary"]
+    ),
+    annotations: { readOnlyHint: false, destructiveHint: false },
+  },
+  {
+    name: "shopify_add_order_note",
+    title: "Deprecated alias: record Shopify order timeline entry",
+    description:
+      "Compatibility alias for shopify_record_order_timeline_entry. Use the timeline tool name in new workflows. This does not leave operations text in the persistent Shopify Notes field.",
+    inputSchema: objectSchema(
+      {
+        ...orderIdentifierProps(),
+        note_type: stringProp("Controlled timeline entry type, e.g. po_drafted, tracking_received, manual_action_required."),
+        summary: stringProp("Concise Shopify-timeline-style operational summary to record."),
+        source: stringProp("Source of action, e.g. ChatGPT Operations Desk, Gmail app, Daniel approval."),
+        supplier: stringProp("Supplier name when relevant."),
+        next_action: stringProp("Next operational action."),
+        copy_text: stringProp("Optional concise supporting detail. Do not paste full email bodies unless explicitly required."),
+        approval_reference: stringProp("Approval reference if the timeline entry records an approved action."),
         request_id: stringProp("Optional stable idempotency key. Reuse the same value when retrying after an approval/auth timeout."),
       },
       ["summary"]
@@ -225,7 +248,7 @@ const tools = withSecurity([
     name: "shopify_prepare_cancellation",
     title: "Prepare cancellation/refund",
     description:
-      "Prepare a cancellation/refund readiness report and suggested note. Does not cancel, refund, or delete the order.",
+      "Prepare a cancellation/refund readiness report and suggested Shopify order timeline entry. Does not cancel, refund, or delete the order.",
     inputSchema: objectSchema(
       {
         ...orderIdentifierProps(),
@@ -528,8 +551,8 @@ function summarizeResult(result) {
   if (result?.order_number && result?.tag) {
     return `${result.ok ? "Updated" : "Checked"} ${result.order_number}: ${result.tag}.`;
   }
-  if (result?.order_number && result?.note_added) {
-    return `Added Operations Desk note to ${result.order_number}.`;
+  if (result?.order_number && result?.timeline_entry_added) {
+    return `Recorded Operations Desk timeline activity for ${result.order_number}.`;
   }
   if (result?.order_number && result?.removed) {
     return `Removed matching Operations Desk note entry from ${result.order_number}.`;

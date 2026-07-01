@@ -9,7 +9,7 @@ The project collects repeatable Shopify operations into Skills so similar tasks 
 Current focus:
 
 - safe Shopify order lookup;
-- cancellation/refund reminder notes;
+- cancellation/refund reminder timeline entries;
 - safe Shopify GraphQL mutations;
 - supplier purchase order automation;
 - supplier Sales Confirmation checking;
@@ -74,7 +74,7 @@ Shopify order
 -> Purchase Order preparation
 -> Gmail supplier draft
 -> supplier Sales Confirmation check
--> Shopify notes
+-> Shopify order timeline entry
 -> Daniel payment approval
 -> supplier processing
 -> tracking email
