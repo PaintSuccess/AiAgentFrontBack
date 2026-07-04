@@ -610,3 +610,4 @@ Then say:
 
 I’ve found a recommended painter in your area. I can send you their details or a direct link. Would you like me to do that?
 
+

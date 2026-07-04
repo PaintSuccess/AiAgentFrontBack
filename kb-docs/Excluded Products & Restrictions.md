@@ -64,3 +64,4 @@ If a business asks about developing its own brand of brushes, rollers, or access
 ## Price-Sensitive Or Escalation Cases
 
 For pricing negotiation, bulk/trade pricing, unusual freight questions, restricted products, or uncertain availability, ask for the customer's details and escalate to trade@PaintAccess.com.au.
+

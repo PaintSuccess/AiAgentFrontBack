@@ -626,6 +626,10 @@
       elevenEl = document.createElement('elevenlabs-convai');
       elevenEl.setAttribute('agent-id', CFG.elevenAgentId);
       elevenEl.setAttribute('dynamic-variables', JSON.stringify({
+        channel: 'website_widget',
+        conversation_mode: mode || 'chat',
+        ui_surface: 'website_widget',
+        display_products_available: 'true',
         customer_name:  CFG.customerName || '',
         customer_greeting: CFG.customerFirstName ? ' ' + CFG.customerFirstName : '',
         customer_email: CFG.customerEmail || '',

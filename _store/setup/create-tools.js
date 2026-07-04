@@ -70,7 +70,7 @@ const toolDefs = [
       type: "webhook",
       name: "search_products",
       description:
-        "Search for products on the Paint Access website by name, brand, type, or category. Use when a customer asks about a specific product, wants recommendations, asks about prices, or wants to find a product. Returns product details including prices, availability, and direct links.",
+        "Search for products on the Paint Access website by name, brand, type, or category. Use when a customer asks about a specific product, wants recommendations, asks about prices, or wants to find a product. Returns product details including prices, availability, and direct links. Website widget / browser voice contract: after this tool returns products, the next action must be display_products_in_chat before speaking product details or saying anything is on the customer's screen.",
       // See lookup_order — same rationale.  search_products is the worst
       // offender for perceived latency because the LLM also has to ingest
       // the JSON and craft a spoken response.
@@ -226,7 +226,7 @@ const toolDefs = [
       type: "client",
       name: "display_products_in_chat",
       description:
-        "Use this in the website widget to send a list of products to the on-screen product cards. Call immediately after every successful search_products result whenever this client tool is available. Never read URLs, SKUs or long product names aloud. After calling, briefly say 'I've put the details on your screen' and continue. Do not call in SMS or WhatsApp.",
+        "Mandatory website widget / browser voice display tool. Use this to send search_products results to the on-screen product cards. Call immediately after every successful search_products result whenever this client tool is available, before speaking product details or claiming anything is on the customer's screen. Never read URLs, SKUs or long product names aloud. After this tool succeeds, briefly say 'I've put the details on your screen' and continue. Do not call in SMS or WhatsApp.",
       expects_response: false,
       parameters: {
         type: "object",

@@ -1,15 +1,15 @@
 # KB Docs — ElevenLabs Knowledge Base Local Mirror
 Agent ID: agent_1001kn99pk1xefprh4gb665f6j3p
-Last synced: 2026-06-30 20:12
+Last synced: 2026-07-04 12:07
 
 Variant 3 refactor published to ElevenLabs: 2026-06-30 20:12
 
 | File | ElevenLabs Doc ID | usage_mode |
 |------|------------------|------------|
-| Bot Behavior Rules.md | 554lZXFr3AS3RYT7VBWD | prompt |
+| Bot Behavior Rules.md | 7pHevm8qBA3TCyMkSt2P | prompt |
 | Product Knowledge & Painting Guides.md | jzhZn0lbuIURjxAeVIDf | auto |
 | Paint Sprayers Trouble-Shoot.md | kpbiVeRo1xUDHcx0WLNN | auto |
-| Product Recommendation Rules.md | KmkN4LtOYl2c1fqyHLaw | prompt |
+| Product Recommendation Rules.md | EQutE4iYTvz4lZPcYa9i | prompt |
 | Product Recommendation Details.md | 8k7aHXxI2TAzsoLdui4x | auto |
 | Excluded Products & Restrictions.md | YyJzX0Gm875wmW7KIv14 | prompt |
 | Company Information.md | rVqMNfjLnuc0Q5qMydnB | prompt |

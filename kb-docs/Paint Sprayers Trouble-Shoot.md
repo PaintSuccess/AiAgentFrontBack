@@ -869,3 +869,4 @@ Do not mention or promise a specific video link unless a real PaintAccess-approv
 If the customer asks for a video and no approved link is available, say:
 
 “I can ask the team to send the right guide for your exact model. What model sprayer do you have?”
+

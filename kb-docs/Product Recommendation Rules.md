@@ -1,4 +1,4 @@
-<!-- ElevenLabs KB Doc | id: KmkN4LtOYl2c1fqyHLaw | usage_mode: prompt -->
+<!-- ElevenLabs KB Doc | id: EQutE4iYTvz4lZPcYa9i | usage_mode: prompt -->
 # Product Recommendation Rules for PaintAccess AI Agent
 
 ## Purpose
@@ -17,6 +17,9 @@ This is the always-loaded product recommendation routing document. Keep it short
 
 - Never invent product names, prices, stock, availability, colours, or product links.
 - Use `search_products` or the available Shopify product tools before giving final product names, availability, prices, or product links.
+- In the website widget or browser voice mode, every successful `search_products` result must be followed immediately by `display_products_in_chat` before speaking product details or saying anything is on the customer's screen.
+- Do not say "I've put the details on your screen", "you can see them", "shown", or similar until `display_products_in_chat` has succeeded in that same turn.
+- For requests that combine screen display and SMS/email follow-up, show the product cards first, then handle the SMS/email step.
 - If product search has not been run yet, recommend the category first and say you will check the best available option.
 - Follow the Excluded Products & Restrictions document for stock and unavailable-brand rules.
 - If Shopify says a product can be purchased, do not call it unavailable just because inventory quantity is zero or negative.
@@ -68,3 +71,5 @@ Examples:
 - Kitchen cabinets -> fine-finish sprayer, suitable coating, sanding/prep, masking, primer, strainers, PPE.
 - Interior repaint -> wall paint, ceiling paint if needed, primer if needed, rollers/back-rolling tools, masking, tape, cleaning products.
 - Sprayer setup -> machine, correct tips, filters, hose/extension if needed, cleaning/pump protection, masking and PPE.
+
+

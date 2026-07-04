@@ -33,6 +33,10 @@ const STOP_WORDS = new Set([
 
 // Detect Shopify SKU/style codes like "16W120", "17M362", "ZSP4"
 const SKU_PATTERN = /^[A-Z0-9][A-Z0-9-]{2,}$/i;
+const COMMON_QUERY_VARIANTS = {
+  refining: ["refinishing", "refinish"],
+  tube: ["tub"],
+};
 
 // ── GraphQL queries ──────────────────────────────────────────────────────────
 const PRODUCT_SEARCH_QUERY = `
@@ -144,6 +148,9 @@ function expandTokens(tokens) {
 
 function tokenVariants(token) {
   const variants = new Set(expandUnitToken(token));
+  for (const variant of COMMON_QUERY_VARIANTS[String(token || "").toLowerCase()] || []) {
+    variants.add(variant);
+  }
   const spaced = String(token || "").match(/^(\d+(?:\.\d+)?)([a-z]+)$/i);
   if (spaced) variants.add(`${spaced[1]} ${spaced[2].toLowerCase()}`);
   return [...variants];
@@ -374,6 +381,25 @@ function shapeProduct(p) {
   };
 }
 
+function displayPayload(products, queryOrCollection) {
+  const productCards = products.map((product) => ({
+    name: product.name,
+    url: product.url,
+    price: product.price,
+    note:
+      product.available === true
+        ? "In stock"
+        : product.available === false
+          ? "Currently unavailable"
+          : undefined,
+  }));
+
+  return {
+    intro: `Found ${productCards.length} product${productCards.length === 1 ? "" : "s"} for ${queryOrCollection}:`,
+    products: productCards,
+  };
+}
+
 // ── Search strategies ────────────────────────────────────────────────────────
 async function fetchPool(shopifyQuery) {
   const data = await shopifyGraphQL(PRODUCT_SEARCH_QUERY, {
@@ -599,6 +625,9 @@ async function handler(req, res) {
       found: true,
       query: query || null,
       collection: collection || null,
+      next_action_required:
+        "If this conversation is in the website widget or browser voice mode, your immediate next tool call must be display_products_in_chat using display_products_in_chat_payload. Do this before speaking product details or saying anything is on the customer's screen. If the channel is SMS or WhatsApp, do not call display_products_in_chat; include concise product links in the text reply instead.",
+      display_products_in_chat_payload: displayPayload(shaped, query || collection),
       summary: {
         total: shaped.length,
         in_stock: shaped.filter((p) => p.available).length,
