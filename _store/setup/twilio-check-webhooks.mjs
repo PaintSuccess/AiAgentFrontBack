@@ -9,7 +9,7 @@ await page.bringToFront();
 fs.mkdirSync("test-output", { recursive: true });
 
 const numbers = [
-  { label: "mobile",  num: "61480846611" },
+  { label: "mobile",  num: "61485077888" },
   { label: "sydney",  num: "61258385959" },
   { label: "old",     num: "61488826453" },
 ];

@@ -1,6 +1,6 @@
 // Import BOTH new numbers into ElevenLabs and assign agent.
 //   - Sydney landline (+61 2 5838 5959) → voice agent
-//   - Mobile (+61 480 846 611) → SMS/outbound (still useful for ElevenLabs voice too)
+//   - Mobile (+61 485 077 888) → SMS/outbound (still useful for ElevenLabs voice too)
 // Writes IDs back to app/.env and setup/.env
 
 import 'dotenv/config';
@@ -20,7 +20,7 @@ const NUMBERS = [
   },
   {
     key: 'TWILIO_MOBILE_NUMBER',
-    phone: '+61480846611',
+    phone: '+61485077888',
     label: 'Paint Access Mobile',
     envKey: 'ELEVENLABS_PHONE_NUMBER_ID_MOBILE',
   },
