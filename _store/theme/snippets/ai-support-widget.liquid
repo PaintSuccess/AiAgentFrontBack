@@ -625,6 +625,12 @@
       callEverStarted = false;
       elevenEl = document.createElement('elevenlabs-convai');
       elevenEl.setAttribute('agent-id', CFG.elevenAgentId);
+      if (mode === 'chat') {
+        elevenEl.setAttribute('override-text-only', 'true');
+        elevenEl.setAttribute('text-input', 'true');
+        elevenEl.setAttribute('transcript', 'true');
+        elevenEl.setAttribute('use-rtc', 'false');
+      }
       elevenEl.setAttribute('dynamic-variables', JSON.stringify({
         channel: 'website_widget',
         conversation_mode: mode || 'chat',

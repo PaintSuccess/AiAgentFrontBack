@@ -23,12 +23,13 @@ const STOP_WORDS = new Set([
   "i", "im", "am", "me", "my", "we", "you", "your", "a", "an", "the", "of", "for",
   "and", "or", "to", "in", "on", "at", "is", "it", "are", "be", "do", "does", "did",
   "have", "has", "want", "need", "looking", "look", "show", "give", "tell",
-  "please", "thanks", "hello", "hi", "hey", "some", "any", "this", "that",
+  "please", "thanks", "hello", "hi", "hey", "help", "some", "any", "this", "that",
   "these", "those", "what", "which", "where", "best", "good", "buy", "get",
   "find", "search", "with", "without", "about", "product", "products", "link",
   "links", "url", "urls", "can", "could", "would", "should", "send", "grab",
   "also", "same", "other", "only", "not", "just", "codex", "live", "test",
-  "interest", "interested", "share",
+  "interest", "interested", "share", "from", "paint", "access", "paintaccess",
+  "whatsapp", "support", "chat", "business",
 ]);
 
 // Detect Shopify SKU/style codes like "16W120", "17M362", "ZSP4"
@@ -37,6 +38,13 @@ const COMMON_QUERY_VARIANTS = {
   refining: ["refinishing", "refinish"],
   tube: ["tub"],
 };
+
+const NON_MERCHANDISE_PATTERNS = [
+  /\bpaintaccess[-\s]+vip[-\s]+painters[-\s]+club\b/i,
+  /\bvip[-\s]+painters[-\s]+club[-\s]+membership\b/i,
+  /\bdaniel[-\s]+dorofeev\b/i,
+  /\bjoin[-\s]+vip[-\s]+painters[-\s]+community\b/i,
+];
 
 // ── GraphQL queries ──────────────────────────────────────────────────────────
 const PRODUCT_SEARCH_QUERY = `
@@ -187,6 +195,20 @@ function searchableFields(product) {
   ]
     .map((v) => String(v || "").toLowerCase())
     .filter(Boolean);
+}
+
+function isMerchandiseProduct(product) {
+  const haystack = [
+    product.handle,
+    product.title,
+    product.productType,
+    product.vendor,
+    ...(product.tags || []),
+  ]
+    .map((value) => String(value || ""))
+    .join(" ");
+
+  return !NON_MERCHANDISE_PATTERNS.some((pattern) => pattern.test(haystack));
 }
 
 function compactField(field) {
@@ -455,11 +477,16 @@ async function searchProducts(rawQuery) {
   const expandedTokens = expandTokens(tokens);
   const strategies = [];
 
+  if (!tokens.length && !looksLikeSku(rawQuery)) {
+    return { products: [], tokens, expandedTokens, strategies };
+  }
+
   const seen = new Map(); // handle → node
   const add = (nodes) => {
     for (const n of nodes) {
       if (n.status && n.status !== "ACTIVE") continue;
       if (!n.onlineStoreUrl) continue;
+      if (!isMerchandiseProduct(n)) continue;
       if (!seen.has(n.handle)) seen.set(n.handle, n);
     }
   };
@@ -564,7 +591,7 @@ async function searchByCollection(handle) {
   const data = await shopifyGraphQL(COLLECTION_SEARCH_QUERY, { handle });
   return (data.collectionByHandle?.products?.edges || [])
     .map((e) => e.node)
-    .filter((p) => p.onlineStoreUrl);
+    .filter((p) => p.onlineStoreUrl && isMerchandiseProduct(p));
 }
 
 // ── Handler ──────────────────────────────────────────────────────────────────
