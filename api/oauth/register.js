@@ -12,7 +12,7 @@ module.exports = async function handler(req, res) {
       : "paintaccess-chatgpt",
     client_id_issued_at: Math.floor(Date.now() / 1000),
     redirect_uris: body.redirect_uris || [],
-    grant_types: ["authorization_code"],
+    grant_types: ["authorization_code", "refresh_token"],
     response_types: ["code"],
     token_endpoint_auth_method: "none",
   });
