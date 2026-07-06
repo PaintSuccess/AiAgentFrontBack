@@ -90,6 +90,7 @@ module.exports = async function handler(req, res) {
         customerId: customerContext?.customer_id || "",
         customerTags: customerContext?.customer_tags || "",
         customerRecentOrders: customerContext?.customer_recent_orders || "",
+        customerOrders: customerContext?.recentOrders || [],
         conversationHistory,
       });
       if (agentReply) replyText = agentReply;

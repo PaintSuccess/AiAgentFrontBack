@@ -8,6 +8,7 @@
     "preview": "vite preview",
     "test:search": "node scripts/test-product-search.js",
     "test:search:local": "node scripts/test-product-search.js local",
+    "test:text-orders": "node scripts/test-text-channel-orders.js",
     "test:display-sequence": "node scripts/test-elevenlabs-product-display-sequence.js",
     "deploy": "vercel --prod"
   },

@@ -32,7 +32,7 @@ const toolDefs = [
       type: "webhook",
       name: "lookup_order",
       description:
-        "Look up a customer's order status, tracking information, and fulfillment details. Use when a customer asks about their order, tracking, delivery status, or where their order is. For privacy, always collect BOTH the order number and the email used for that order before calling this tool.",
+        "Look up a customer's safe order status, tracking information, and fulfillment details. Use when a customer asks about their order, tracking, delivery status, or where their order is. If customer_id or customer_phone is available from dynamic variables, use it to verify that customer's own orders. Guests with no trusted customer context need both order number and order email.",
       // Speak a filler ("Let me check that for you…") + play typing sound
       // while the webhook runs. Without this the user hears ~5–10s of dead air
       // because the LLM blocks until the tool returns.
@@ -48,17 +48,32 @@ const toolDefs = [
         },
         request_body_schema: {
           type: "object",
-          required: ["order_number", "email"],
+          required: [],
           properties: {
             order_number: {
               type: "string",
               description:
-                "The order number (e.g., 1001 or #1001). Required.",
+                "The order number (e.g., 1001 or #1001). Optional when listing recent orders for a verified/logged-in customer.",
             },
             email: {
               type: "string",
               description:
-                "The email address used when placing that order. Required.",
+                "The email address used when placing that order. Required only for guests with no customer_id or customer_phone context.",
+            },
+            customer_id: {
+              type: "string",
+              description:
+                "Known Shopify customer ID from the customer_id dynamic variable when available.",
+            },
+            customer_email: {
+              type: "string",
+              description:
+                "Known customer email from the customer_email dynamic variable when available.",
+            },
+            customer_phone: {
+              type: "string",
+              description:
+                "Known phone number from the customer_phone dynamic variable or inbound SMS/WhatsApp caller ID when available.",
             },
           },
         },
