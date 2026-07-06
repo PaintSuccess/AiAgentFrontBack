@@ -428,12 +428,34 @@
         elevenResults.style.left = '';
       }
     }
+    var currentResultProducts = [];
+    var lastResultsAt = 0;
+    function resultProductKey(product) {
+      return String((product && (product.url || product.name || product.title)) || '').toLowerCase();
+    }
+    function mergeResultProducts(previous, incoming) {
+      var seen = {};
+      return previous.concat(incoming).filter(function (product) {
+        var key = resultProductKey(product);
+        if (!key || seen[key]) return false;
+        seen[key] = true;
+        return true;
+      });
+    }
     function showResults(payload) {
       if (!elevenResults) { console.error('showResults: elevenResults not ready'); return; }
       var intro = (payload && payload.intro) || '';
-      var products = (payload && Array.isArray(payload.products)) ? payload.products : [];
+      var incomingProducts = (payload && Array.isArray(payload.products)) ? payload.products : [];
+      var now = Date.now();
+      var shouldMerge = currentResultProducts.length > 0 && (now - lastResultsAt) < 12000;
+      var products = shouldMerge ? mergeResultProducts(currentResultProducts, incomingProducts) : incomingProducts;
+      currentResultProducts = products.slice(0, 6);
+      lastResultsAt = now;
+      if (shouldMerge && products.length > incomingProducts.length) {
+        intro = 'Recommended options from your request:';
+      }
       elevenResults.querySelector('[data-pa-intro]').textContent = intro;
-      var cards = products.slice(0, 6).map(function (p) {
+      var cards = currentResultProducts.map(function (p) {
         var name  = escapeHTML(p && p.name);
         var url   = safeUrl(p && p.url);
         var price = p && p.price ? escapeHTML(p.price) : '';
@@ -623,6 +645,8 @@
 
     function mountEleven(mode) {
       callEverStarted = false;
+      currentResultProducts = [];
+      lastResultsAt = 0;
       elevenEl = document.createElement('elevenlabs-convai');
       elevenEl.setAttribute('agent-id', CFG.elevenAgentId);
       if (mode === 'chat') {
