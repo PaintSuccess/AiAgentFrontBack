@@ -3,7 +3,7 @@ const { shopifyFetch, verifyAuth, corsHeaders, rateLimit, sanitizeInput } = requ
 module.exports = async function handler(req, res) {
   corsHeaders(res, req);
   if (req.method === "OPTIONS") return res.status(200).end();
-  if (rateLimit(req, res)) return;
+  if (await rateLimit(req, res)) return;
 
   if (!verifyAuth(req)) {
     return res.status(401).json({ error: "Unauthorized" });

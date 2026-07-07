@@ -7,6 +7,7 @@ const {
   verifyRefreshToken,
   verifySignedPayload,
 } = require("../../lib/mcp-auth");
+const { rateLimit } = require("../../lib/shopify");
 
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -14,6 +15,7 @@ module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (await rateLimit(req, res)) return;
 
   const body = parseBody(req);
   if (!["authorization_code", "refresh_token"].includes(body.grant_type)) {

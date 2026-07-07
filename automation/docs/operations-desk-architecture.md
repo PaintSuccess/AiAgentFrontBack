@@ -40,6 +40,21 @@ Allowed before approval:
 - preparing fulfilment details;
 - sending notifications that review/approval is needed.
 
+**Enforcement note:** as of this writing, `shopify_complete_fulfillment`, `shopify_send_customer_email`,
+and `gmail_send_email` are the only actions gated server-side (via a Shopify order tag a human must
+apply directly in Shopify Admin — see `app/lib/shopify-ops.js`). Everything else in the "require
+Daniel approval before" list above is enforced by this document and each agent's prompt only, not by
+the MCP server. Cancellation and refunds have no backing mutation at all, so those two are
+structurally impossible regardless of what an agent claims.
+
+**Per-agent scoping note:** all three workspace agents (Operations Desk, Read-only Monitor, Admin
+Setup) authenticate to the same MCP with the same token and the same scope. The Read-only Monitor's
+"no writes" restriction (see `workspace-agents/paintaccess-readonly-monitor.yaml`) is prompt-level
+only — the server does not currently distinguish which agent is calling it, so it cannot reject a
+write from an agent that is only supposed to read. Do not treat any agent's tool restriction as a
+security boundary until per-agent MCP scoping (separate tokens/scopes per agent) is implemented
+server-side.
+
 ## Skills map
 
 | Product stage | Skills |

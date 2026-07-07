@@ -4,7 +4,7 @@ const { lookupCustomerOrder } = require("../../lib/customer-order-lookup");
 module.exports = async function handler(req, res) {
   corsHeaders(res, req);
   if (req.method === "OPTIONS") return res.status(200).end();
-  if (rateLimit(req, res)) return;
+  if (await rateLimit(req, res)) return;
 
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });

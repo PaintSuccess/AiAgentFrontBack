@@ -1,5 +1,5 @@
 const crypto = require("crypto");
-const { corsHeaders, cleanEnv } = require("../../lib/shopify");
+const { corsHeaders, cleanEnv, rateLimit } = require("../../lib/shopify");
 const {
   formatFields,
   formatTranscript,
@@ -91,6 +91,8 @@ module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
+
+  if (await rateLimit(req, res)) return;
 
   if (!verifyWebhookAuth(req)) {
     return res.status(401).json({ error: "Invalid webhook signature" });

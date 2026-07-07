@@ -1,13 +1,17 @@
 ---
 name: shopify-graphql-safe-mutation
-description: perform safe shopify admin graphql write operations when no dedicated shopify tool exists. use for updating metafields, tags, custom attributes, resources, or other shopify admin changes that require graphql. trigger whenever a shopify mutation is needed and the exact mutation/input fields must be discovered, validated, and executed safely before reporting results. do not use GraphQL to write operational order logs into the persistent Shopify Notes field; prefer shopify_record_order_timeline_entry through the PaintAccess Operations MCP.
+description: use when a shopify admin write is needed that has no dedicated MCP tool (metafields, tags, custom attributes, or other shopify admin changes requiring graphql). this MCP has no generic execute-graphql tool, so the correct action is to stop and ask a developer to add a narrow tool, not to attempt raw GraphQL execution. do not use GraphQL to write operational order logs into the persistent Shopify Notes field; prefer shopify_record_order_timeline_entry through the PaintAccess Operations MCP.
 ---
 
 # Shopify GraphQL Safe Mutation
 
 Use this skill only for Shopify writes that are not covered by the `PaintAccess Operations` MCP. Prefer MCP tools first: `shopify_record_order_timeline_entry`, `shopify_add_order_tag`, `shopify_remove_order_tag`, `shopify_set_ops_metafield`, `shopify_prepare_fulfillment`, `shopify_prepare_cancellation`, `shopify_prepare_customer_email`, and `shopify_send_customer_email`.
 
-## Mandatory workflow
+**This MCP does not support arbitrary GraphQL execution.** There is no `shopify_execute_approved_graphql_operation` or `shopify_validate_graphql_operation` tool, and none is planned — arbitrary mutation execution is explicitly out of scope per the PRD's approval model (it requires Admin approval, not agent-level access). If the request cannot be done through one of the named MCP tools above, **stop and ask a developer to add a dedicated, narrow MCP tool for it.** Do not attempt to discover, validate, or execute a raw GraphQL mutation yourself through any other means.
+
+## If a developer is adding a new tool
+
+The workflow below is guidance for the *developer* implementing a new narrow MCP tool, not something the agent performs at runtime:
 
 1. Inspect the GraphQL schema before constructing the mutation.
 2. Inspect the relevant input type.
@@ -16,19 +20,17 @@ Use this skill only for Shopify writes that are not covered by the `PaintAccess 
 5. Execute only after validation passes.
 6. Read `userErrors` and report the practical result, not raw JSON.
 
-Before step 1, state why the existing MCP tool set is insufficient. If the request can be done through the MCP, stop and route to the MCP instead.
+## Rules for the developer-facing tool request
 
-## Rules
-
-- Do not guess mutation names or input fields.
-- Do not skip validation.
-- Do not execute dangerous financial, staff, theme-live, gift card, or blocked mutations.
+- Never guess mutation names or input fields when specifying the new tool.
+- The new tool must validate before executing.
+- Never build a tool that permits dangerous financial, staff, theme-live, gift card, or blocked mutations.
 - Prefer narrow mutations that update only the requested fields.
 - Include resource IDs only after safe lookup.
 
-## Reporting
+## Reporting (once a developer has added and shipped the tool)
 
-After execution, say:
+After the new tool executes, say:
 
 - what resource changed;
 - what field/timeline entry/tag was updated;

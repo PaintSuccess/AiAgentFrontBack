@@ -1,4 +1,4 @@
-const { cleanEnv } = require("../../lib/shopify");
+const { cleanEnv, rateLimit } = require("../../lib/shopify");
 const {
   DEFAULT_SCOPES,
   protectedResourceMetadata,
@@ -446,6 +446,8 @@ module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
+
+  if (await rateLimit(req, res)) return;
 
   const auth = verifyMcpRequest(req);
   if (!auth.ok) {

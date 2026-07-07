@@ -43,7 +43,7 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  if (rateLimit(req, res)) return;
+  if (await rateLimit(req, res)) return;
 
   const { name, email, phone, tags, note } = req.body || {};
 

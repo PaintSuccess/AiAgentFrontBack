@@ -1,6 +1,7 @@
 const {
   corsHeaders,
   rateLimit,
+  checkRateLimit,
   sanitizeInput,
   cleanEnv,
   shopifyFetch,
@@ -14,10 +15,9 @@ const TWILIO_SMS_FROM = normalizePhoneEnv(
     cleanEnv("TWILIO_PHONE_NUMBER") ||
     cleanEnv("TWILIO_SYDNEY_NUMBER")
 );
-const SMS_WINDOW_MS = 60 * 60 * 1000;
+const SMS_WINDOW_SECONDS = 60 * 60;
 const SMS_IP_MAX = 10;
 const SMS_PHONE_MAX = 3;
-const smsLimiter = new Map();
 const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{1,63}$/;
 
 function normalizePhoneEnv(value) {
@@ -122,27 +122,17 @@ function limitKey(kind, value) {
   return `${kind}:${value || "unknown"}`;
 }
 
-function isLimited(key, max) {
-  const now = Date.now();
-  const entry = smsLimiter.get(key);
-  if (!entry || now - entry.t > SMS_WINDOW_MS) {
-    smsLimiter.set(key, { t: now, n: 1 });
-    return false;
-  }
-  entry.n += 1;
-  return entry.n > max;
-}
-
-function smsRateLimit(req, phone) {
+async function smsRateLimit(req, phone) {
   const ip =
     (req.headers["x-forwarded-for"] || "").split(",")[0].trim() ||
     req.socket?.remoteAddress ||
     "unknown";
 
-  return (
-    isLimited(limitKey("ip", ip), SMS_IP_MAX) ||
-    isLimited(limitKey("phone", phone), SMS_PHONE_MAX)
-  );
+  const [ipLimited, phoneLimited] = await Promise.all([
+    checkRateLimit(limitKey("ip", ip), SMS_IP_MAX, SMS_WINDOW_SECONDS),
+    checkRateLimit(limitKey("phone", phone), SMS_PHONE_MAX, SMS_WINDOW_SECONDS),
+  ]);
+  return ipLimited || phoneLimited;
 }
 
 async function sendTwilioSms({ to, body }) {
@@ -192,7 +182,7 @@ async function sendTwilioSms({ to, body }) {
 module.exports = async function handler(req, res) {
   corsHeaders(res, req);
   if (req.method === "OPTIONS") return res.status(200).end();
-  if (rateLimit(req, res)) return;
+  if (await rateLimit(req, res)) return;
 
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -216,7 +206,7 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: "Please enter a valid email address." });
     }
 
-    if (smsRateLimit(req, to)) {
+    if (await smsRateLimit(req, to)) {
       return res.status(429).json({
         error: "Too many SMS requests. Please wait before trying again.",
       });

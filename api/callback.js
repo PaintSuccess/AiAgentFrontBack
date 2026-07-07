@@ -21,14 +21,24 @@ function isEmailTakenError(err) {
 // Public-facing endpoint — no Bearer auth required (called by storefront widget).
 // Accepts callback request form data, logs it as a Shopify draft order, then
 // triggers an ElevenLabs outbound AI call to the customer's number via Twilio.
+//
+// DISABLED BY DEFAULT (ENABLE_AI_CALLBACK unset/not "true"): this endpoint is not
+// currently wired to any widget/dashboard UI, and outbound AI phone calls to a
+// customer-submitted number raise open consent/compliance questions (Australian
+// Spam Act / Do Not Call Register) that haven't been resolved yet. The rest of
+// this handler is left intact -- flip ENABLE_AI_CALLBACK=true to restore it once
+// that's settled; no other code change needed.
 module.exports = async function handler(req, res) {
   corsHeaders(res);
+  if (cleanEnv("ENABLE_AI_CALLBACK") !== "true") {
+    return res.status(404).json({ error: "Not found" });
+  }
   if (req.method === "OPTIONS") return res.status(200).end();
 
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
-  if (rateLimit(req, res)) return;
+  if (await rateLimit(req, res)) return;
 
   const { name, phone, email, best_time, message } = req.body || {};
 

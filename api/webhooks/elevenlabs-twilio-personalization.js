@@ -56,7 +56,7 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  if (rateLimit(req, res)) return;
+  if (await rateLimit(req, res)) return;
 
   if (!isAuthorized(req)) {
     return res.status(401).json({ error: "Unauthorized" });

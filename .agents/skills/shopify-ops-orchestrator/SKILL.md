@@ -31,11 +31,11 @@ Use these MCP tools by intent:
 - `shopify_add_order_tag` / `shopify_remove_order_tag` for controlled workflow markers.
 - `shopify_set_ops_metafield` for controlled `paintaccess_ops` state.
 - `shopify_prepare_fulfillment` to prepare fulfilment data only; Daniel must approve final fulfilment.
-- `shopify_complete_fulfillment` to complete final fulfilment with tracking only after explicit approval. Prefer this for marked test orders; for live orders require a clear Daniel approval reference and `allow_live_order`.
-- `shopify_prepare_cancellation` to prepare cancellation/refund review only; Daniel must approve final cancellation/refund.
+- `shopify_complete_fulfillment` to complete final fulfilment with tracking only after explicit approval. Prefer this for marked test orders; for live orders `allow_live_order` is also required. **The order must carry the `ops-approved` tag before calling this** — Daniel applies it directly in Shopify Admin (no MCP tool can add it). Calling this tool without the tag present fails with `approval_required` regardless of what `approval_reference` text is passed; `approval_reference` is logged for the audit trail only, it is not itself the approval.
+- `shopify_prepare_cancellation` to prepare cancellation/refund review only; Daniel must approve final cancellation/refund. (There is no tool that can execute a cancellation or refund — this is enforced structurally, not just by policy.)
 - `shopify_prepare_customer_email` to compose customer/supplier email copy from Shopify order details.
-- `shopify_send_customer_email` to send approved customer emails through Shopify's branded native templates. Use `delivery_method: "order_invoice"` for existing-order customer updates, and `delivery_method: "draft_order_invoice"` only for supplier/fallback cases.
-- `gmail_search_messages`, `gmail_get_message`, `gmail_create_draft`, and `gmail_send_email` for backend-authorized Gmail work.
+- `shopify_send_customer_email` to send approved customer emails through Shopify's branded native templates. Use `delivery_method: "order_invoice"` for existing-order customer updates, and `delivery_method: "draft_order_invoice"` only for supplier/fallback cases. **Same `ops-approved` tag requirement as `shopify_complete_fulfillment` above** — the order must carry it before this call will succeed.
+- `gmail_search_messages`, `gmail_get_message`, `gmail_create_draft`, and `gmail_send_email` for backend-authorized Gmail work. **`gmail_send_email` is not tied to a Shopify order, so it cannot use the tag mechanism above** — it still only checks that `approval_reference` is a non-empty string. Treat that as a weaker guarantee: only call it after you have unambiguous, explicit approval in the current conversation, and say plainly in your response that you're relying on that, not on a system-enforced gate.
 - `drive_search_files`, `drive_get_file`, and `drive_create_text_file` for backend-authorized Google Drive work.
 
 ## Routing

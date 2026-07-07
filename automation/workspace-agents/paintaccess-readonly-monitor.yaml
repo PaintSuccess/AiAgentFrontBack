@@ -14,6 +14,12 @@ tools:
     - name: "PaintAccess Operations MCP"
       required: true
       action_constraints: "Use only shopify_search_orders, shopify_get_order, shopify_get_fulfillment_readiness, gmail_search_messages, gmail_get_message, drive_search_files, and drive_get_file. Do not call timeline/tag/metafield/draft/send/prepare-write tools."
+      # SECURITY NOTE: this restriction is enforced only by this prompt text. The MCP
+      # server does not currently distinguish between agents -- this agent shares the
+      # same token and scope as "PaintAccess Operations Desk" and "PaintAccess Admin
+      # Setup", and the server would accept a write call from this agent if one were
+      # made. Do not treat "read-only" as a security boundary until per-agent MCP
+      # scoping is implemented server-side.
 skills:
   core:
     - "shopify-ops-orchestrator"

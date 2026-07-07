@@ -48,7 +48,7 @@ Use this skill to record operational actions back into a Shopify order.
    - body should briefly say the order has an operations update, include the customer-safe summary, and avoid internal-only details such as supplier costs, payment approval notes, or manager instructions;
    - use `shopify_send_customer_email` with `delivery_method: "order_invoice"` when the user approved sending. This sends through Shopify's existing order invoice notification template, so Shopify applies the store's branded logo/contact/footer;
    - use Gmail only as a fallback when the user specifically asks for Gmail or Shopify native sending is unavailable;
-   - send only when the user explicitly asked to send and supplied or confirmed an approval reference. For test-order pipeline tests, a user request such as "send this test notification" counts as approval when the recipient is `gluked@gmail.com`.
+   - `shopify_send_customer_email` will reject the call with `approval_required` unless the order carries the `ops-approved` tag in Shopify — that tag must already be present (Daniel applies it directly in Shopify Admin, no MCP tool can add it), not just a confirmation phrase in the chat. If the tag isn't there, tell the user the email is ready but needs Daniel to tag the order `ops-approved` before it can send, and do not claim it was sent.
 4. If marking a process, choose a tag/status phrase such as:
    - `PO sent`;
    - `PO sent - {Supplier}`;
@@ -85,7 +85,7 @@ Use this subflow when the user asks to "notify the customer", "email the client"
    - no internal manager instructions;
    - no supplier private details unless the user explicitly approved sharing them;
    - for test orders, mention it is a PaintAccess AI operations test if appropriate.
-4. Send with `shopify_send_customer_email` only after explicit approval. Use `delivery_method: "order_invoice"` and include `approval_reference`.
+4. Send with `shopify_send_customer_email` (requires the order to already carry the `ops-approved` tag in Shopify, applied by Daniel directly — see note above). Use `delivery_method: "order_invoice"` and include `approval_reference` for the audit log.
 5. Use Gmail draft/send only if Shopify native sending is blocked or the user explicitly wants Gmail.
 6. If the email was sent, optionally record a second internal timeline entry confirming the notification was sent, but only if the user asked for a full audit trail.
 

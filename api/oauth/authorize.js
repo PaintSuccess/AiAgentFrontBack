@@ -7,12 +7,16 @@ const {
   parseBody,
   safeEqual,
 } = require("../../lib/mcp-auth");
-const { cleanEnv } = require("../../lib/shopify");
+const { cleanEnv, rateLimit } = require("../../lib/shopify");
 
 module.exports = async function handler(req, res) {
   if (!["GET", "POST"].includes(req.method)) {
     return res.status(405).send("Method not allowed");
   }
+  // Rate-limited especially because POST here is where the MCP_OAUTH_PIN is
+  // guessed against -- without this, safeEqual's timing-safety doesn't stop
+  // an attacker from just trying many PINs quickly.
+  if (await rateLimit(req, res)) return;
 
   const input = req.method === "GET" ? req.query || {} : parseBody(req);
   const params = normalizeAuthorizeParams(input, req);

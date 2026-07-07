@@ -15,6 +15,39 @@ function fallbackReply() {
   return "Thanks for contacting Paint Access. I can help with products, stock, orders, or painting advice. For urgent help, call 02 5838 5959.";
 }
 
+// bodyParser is disabled for this route (see module.exports.config below) so Meta's
+// HMAC signature can be verified against the exact raw bytes it was computed over --
+// Vercel's automatic JSON parsing discards those before user code ever sees the
+// request, which is what let verifyMetaSignature's rawBody fallback fail open.
+function readRawBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on("data", (chunk) => chunks.push(chunk));
+    req.on("end", () => resolve(Buffer.concat(chunks)));
+    req.on("error", reject);
+  });
+}
+
+// Populates req.rawBody / req.body ourselves, matching the shape Vercel's built-in
+// parser used to provide, so verifyTwilioSignature/verifyMetaSignature/parseWhatsAppInbound
+// (all in lib/whatsapp.js) need no changes: Twilio sends form-urlencoded (parsed to a
+// plain object, same as before), Meta sends JSON (parsed to an object for downstream
+// use, with the exact raw string kept on req.rawBody for signature verification).
+async function populateRequestBody(req) {
+  const rawBodyBuffer = await readRawBody(req);
+  const rawBodyText = rawBodyBuffer.toString("utf8");
+  const contentType = String(req.headers["content-type"] || "");
+  req.rawBody = rawBodyText;
+
+  if (contentType.includes("application/json")) {
+    req.body = rawBodyText ? JSON.parse(rawBodyText) : {};
+  } else if (contentType.includes("application/x-www-form-urlencoded")) {
+    req.body = Object.fromEntries(new URLSearchParams(rawBodyText));
+  } else {
+    req.body = {};
+  }
+}
+
 async function buildAgentReply(inbound, conversationHistory = [], customerContext = null) {
   const text =
     inbound.text ||
@@ -64,7 +97,14 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  if (rateLimit(req, res)) return;
+  if (await rateLimit(req, res)) return;
+
+  try {
+    await populateRequestBody(req);
+  } catch (err) {
+    console.error("[WhatsApp] Failed to read/parse request body:", err.message);
+    return res.status(400).json({ error: "Invalid request body" });
+  }
 
   const inbound = parseWhatsAppInbound(req);
   if (!inbound) return res.status(400).json({ error: "Unsupported WhatsApp webhook payload" });
@@ -149,4 +189,13 @@ module.exports = async function handler(req, res) {
 
     return res.status(200).json({ ok: false, error: "Processing failed" });
   }
+};
+
+// Disable Vercel's automatic body parsing for this route -- see populateRequestBody
+// above. api/twilio/whatsapp-inbound.js re-exports this same module, so this config
+// applies to that route too.
+module.exports.config = {
+  api: {
+    bodyParser: false,
+  },
 };

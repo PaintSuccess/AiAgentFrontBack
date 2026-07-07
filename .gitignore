@@ -17,3 +17,4 @@ _store/setup/find-pretty.log
 _store/setup/find-pretty.out
 _store/setup/*.err
 _store/setup/*.log
+.env*.local
