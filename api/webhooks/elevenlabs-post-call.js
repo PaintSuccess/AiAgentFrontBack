@@ -5,6 +5,7 @@ const {
   formatTranscript,
 } = require("../../lib/trade-email");
 const { createAiCallNotification } = require("../../lib/shopify-call-notification");
+const commsStore = require("../../lib/comms/store");
 
 const WEBHOOK_SECRET = cleanEnv("ELEVENLABS_WEBHOOK_SECRET");
 const AGENT_ID = cleanEnv("ELEVENLABS_AGENT_ID");
@@ -196,6 +197,35 @@ module.exports = async function handler(req, res) {
     ].join("\n"),
     raw_payload: event,
   });
+
+  // Persist voice calls and widget chats to the comms spine (fail-safe). SMS/WhatsApp
+  // are already captured per-message by their own webhooks, so skip them here to
+  // avoid double-recording.
+  const channelLower = channel.toLowerCase();
+  if (channelLower === "call" || channelLower === "chat") {
+    await commsStore.recordConversation({
+      channel: channelLower,
+      conversationId: data.conversation_id,
+      phone: dynVars.customer_phone || phoneData.caller_id || phoneData.from_number,
+      email: dynVars.customer_email,
+      name: (dynVars.customer_name || "").replace(/^,\s*/, "").trim(),
+      shopifyCustomerId: dynVars.customer_id,
+      direction: "inbound",
+      transcript: (data.transcript || []).map((t) => ({
+        role: t.role,
+        message: t.message,
+        ts: t.time_in_call_secs,
+      })),
+      summary: analysis.transcript_summary,
+      title,
+      status: data.status,
+      durationSeconds: metadata.call_duration_secs,
+      result: analysis.call_successful,
+      twilioCallSid: phoneData.call_sid || phoneData.callSid || null,
+      startedAt: metadata.start_time_unix_secs,
+      cost: metadata.cost,
+    });
+  }
 
   return res.status(200).json({ ok: true, notification });
 };

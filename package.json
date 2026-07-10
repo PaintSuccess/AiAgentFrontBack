@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@shopify/polaris": "^13.9.0",
+    "@supabase/supabase-js": "^2.110.2",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.0",
     "react": "^18.3.1",

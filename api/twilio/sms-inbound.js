@@ -3,6 +3,7 @@ const { corsHeaders, rateLimit, cleanEnv } = require("../../lib/shopify");
 const { askElevenLabsTextAgent } = require("../../lib/elevenlabs-text");
 const { getCustomerContextByPhone } = require("../../lib/shopify-customer-context");
 const { loadTwilioTextHistory } = require("../../lib/twilio-text-history");
+const commsStore = require("../../lib/comms/store");
 
 // Validate Twilio webhook signature to prevent spoofed requests
 function verifyTwilioSignature(req) {
@@ -79,6 +80,19 @@ module.exports = async function handler(req, res) {
       console.error("[SMS] Customer context lookup failed:", err.message);
     }
 
+    // Persist the inbound customer message to the comms spine (fail-safe).
+    await commsStore.recordInbound({
+      channel: "sms",
+      fromPhone: from,
+      toPhone: to,
+      body,
+      externalProvider: "twilio",
+      externalId: messageSid,
+      name: customerContext?.customer_name || "",
+      email: customerContext?.customer_email || "",
+      shopifyCustomerId: customerContext?.customer_id || "",
+    });
+
     try {
       const agentReply = await askElevenLabsTextAgent({
         text: body,
@@ -97,6 +111,17 @@ module.exports = async function handler(req, res) {
     } catch (err) {
       console.error("ElevenLabs SMS text agent error:", err.message);
     }
+
+    // Persist the outbound AI reply. Sent via TwiML, so there is no Twilio SID here
+    // (Phase 2's async REST send will supply one for delivery tracking).
+    await commsStore.recordOutbound({
+      channel: "sms",
+      toPhone: from,
+      author: "ai",
+      body: replyText,
+      externalProvider: "twilio",
+      status: "sent",
+    });
 
     // Respond with TwiML
     res.setHeader("Content-Type", "text/xml");

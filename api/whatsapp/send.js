@@ -1,5 +1,6 @@
 const { cleanEnv, corsHeaders, rateLimit, verifyAuth } = require("../../lib/shopify");
 const { sendWhatsAppMessage, normalizeE164, getProvider } = require("../../lib/whatsapp");
+const commsStore = require("../../lib/comms/store");
 
 function cleanMessage(value) {
   return String(value || "")
@@ -78,6 +79,18 @@ module.exports = async function handler(req, res) {
       template,
       media,
       provider,
+    });
+
+    // Persist the outbound WhatsApp message to the comms spine (fail-safe).
+    await commsStore.recordOutbound({
+      channel: "whatsapp",
+      toPhone: to,
+      author: String(payload.author || "human"),
+      body: body || (type === "template" ? `[template: ${template?.key || template?.name || template?.contentSid || "?"}]` : ""),
+      media: media || null,
+      externalProvider: sent?.provider === "meta" ? "meta" : "twilio",
+      externalId: sent?.id || "",
+      status: sent?.status || "sent",
     });
 
     return res.status(200).json({ ok: true, sent });

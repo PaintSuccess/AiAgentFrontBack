@@ -3,6 +3,7 @@ const { askElevenLabsTextAgent } = require("../../lib/elevenlabs-text");
 const { upsertWhatsAppLead } = require("../../lib/shopify-whatsapp-leads");
 const { getCustomerContextByPhone } = require("../../lib/shopify-customer-context");
 const { loadTwilioTextHistory } = require("../../lib/twilio-text-history");
+const commsStore = require("../../lib/comms/store");
 const {
   parseWhatsAppInbound,
   sendWhatsAppMessage,
@@ -161,6 +162,21 @@ module.exports = async function handler(req, res) {
       console.error("[WhatsApp] Customer context lookup failed:", err.message);
     }
 
+    // Persist the inbound WhatsApp message to the comms spine (fail-safe).
+    await commsStore.recordInbound({
+      channel: "whatsapp",
+      fromPhone: inbound.from,
+      body: inbound.text,
+      externalProvider: inbound.provider === "meta" ? "meta" : "twilio",
+      externalId:
+        inbound.provider === "meta"
+          ? inbound.messageId
+          : inbound.raw?.MessageSid || inbound.raw?.SmsMessageSid || "",
+      name: customerContext?.customer_name || inbound.profileName || "",
+      email: customerContext?.customer_email || "",
+      shopifyCustomerId: customerContext?.customer_id || "",
+    });
+
     try {
       replyText = await buildAgentReply(inbound, conversationHistory, customerContext);
     } catch (err) {
@@ -168,6 +184,15 @@ module.exports = async function handler(req, res) {
     }
 
     if (inbound.provider === "twilio") {
+      // TwiML reply — no Twilio SID available here.
+      await commsStore.recordOutbound({
+        channel: "whatsapp",
+        toPhone: inbound.from,
+        author: "ai",
+        body: replyText,
+        externalProvider: "twilio",
+        status: "sent",
+      });
       res.setHeader("Content-Type", "text/xml");
       return res.status(200).send(twimlMessage(replyText));
     }
@@ -176,6 +201,16 @@ module.exports = async function handler(req, res) {
       to: inbound.from,
       body: replyText,
       provider: "meta",
+    });
+
+    await commsStore.recordOutbound({
+      channel: "whatsapp",
+      toPhone: inbound.from,
+      author: "ai",
+      body: replyText,
+      externalProvider: "meta",
+      externalId: sent?.id || "",
+      status: sent?.status || "sent",
     });
 
     return res.status(200).json({ ok: true, sent });

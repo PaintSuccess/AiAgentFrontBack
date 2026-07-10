@@ -7,9 +7,12 @@ const {
   shopifyFetch,
 } = require("../../lib/shopify");
 const { askElevenLabsTextAgent } = require("../../lib/elevenlabs-text");
+const commsStore = require("../../lib/comms/store");
 
 const TWILIO_ACCOUNT_SID = cleanEnv("TWILIO_ACCOUNT_SID");
 const TWILIO_AUTH_TOKEN = cleanEnv("TWILIO_AUTH_TOKEN");
+const PUBLIC_BASE_URL = (cleanEnv("PUBLIC_BASE_URL") || cleanEnv("BACKEND_URL") || "").replace(/\/$/, "");
+const STATUS_CALLBACK_URL = PUBLIC_BASE_URL ? `${PUBLIC_BASE_URL}/api/twilio/status-callback` : "";
 const TWILIO_SMS_FROM = normalizePhoneEnv(
   cleanEnv("TWILIO_MOBILE_NUMBER") ||
     cleanEnv("TWILIO_PHONE_NUMBER") ||
@@ -148,6 +151,7 @@ async function sendTwilioSms({ to, body }) {
   params.set("To", to);
   params.set("From", TWILIO_SMS_FROM);
   params.set("Body", body);
+  if (STATUS_CALLBACK_URL) params.set("StatusCallback", STATUS_CALLBACK_URL);
 
   const auth = Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString("base64");
   const response = await fetch(
@@ -249,6 +253,19 @@ module.exports = async function handler(req, res) {
 
     const twilioMessage = await sendTwilioSms({ to, body: smsBody });
     console.log("[SMS Send] Sent:", twilioMessage.sid, "to", to);
+
+    // Persist the outbound message to the comms spine (fail-safe).
+    await commsStore.recordOutbound({
+      channel: "sms",
+      toPhone: to,
+      author: "ai",
+      body: smsBody,
+      externalProvider: "twilio",
+      externalId: twilioMessage.sid,
+      status: twilioMessage.status || "queued",
+      name: customerName,
+      email,
+    });
 
     return res.status(200).json({
       ok: true,
