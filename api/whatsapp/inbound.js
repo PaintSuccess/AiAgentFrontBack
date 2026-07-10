@@ -4,6 +4,7 @@ const { upsertWhatsAppLead } = require("../../lib/shopify-whatsapp-leads");
 const { getCustomerContextByPhone } = require("../../lib/shopify-customer-context");
 const { loadTwilioTextHistory } = require("../../lib/twilio-text-history");
 const commsStore = require("../../lib/comms/store");
+const commsQueries = require("../../lib/comms/queries");
 const {
   parseWhatsAppInbound,
   sendWhatsAppMessage,
@@ -176,6 +177,17 @@ module.exports = async function handler(req, res) {
       email: customerContext?.customer_email || "",
       shopifyCustomerId: customerContext?.customer_id || "",
     });
+
+    // AI-control gate: if a human has taken over this thread, do not auto-reply.
+    const control = await commsQueries.getControlByPhone(inbound.from);
+    if (control && control.control_mode !== "ai") {
+      console.log(`[WhatsApp] Thread in '${control.control_mode}' mode — AI staying silent.`);
+      if (inbound.provider === "twilio") {
+        res.setHeader("Content-Type", "text/xml");
+        return res.status(200).send(`<?xml version="1.0" encoding="UTF-8"?>\n<Response></Response>`);
+      }
+      return res.status(200).json({ ok: true, paused: true });
+    }
 
     try {
       replyText = await buildAgentReply(inbound, conversationHistory, customerContext);

@@ -4,6 +4,7 @@ const { askElevenLabsTextAgent } = require("../../lib/elevenlabs-text");
 const { getCustomerContextByPhone } = require("../../lib/shopify-customer-context");
 const { loadTwilioTextHistory } = require("../../lib/twilio-text-history");
 const commsStore = require("../../lib/comms/store");
+const commsQueries = require("../../lib/comms/queries");
 
 // Validate Twilio webhook signature to prevent spoofed requests
 function verifyTwilioSignature(req) {
@@ -92,6 +93,14 @@ module.exports = async function handler(req, res) {
       email: customerContext?.customer_email || "",
       shopifyCustomerId: customerContext?.customer_id || "",
     });
+
+    // AI-control gate: if a human has taken over this thread, do not auto-reply.
+    const control = await commsQueries.getControlByPhone(from);
+    if (control && control.control_mode !== "ai") {
+      console.log(`[SMS] Thread in '${control.control_mode}' mode — AI staying silent.`);
+      res.setHeader("Content-Type", "text/xml");
+      return res.status(200).send(`<?xml version="1.0" encoding="UTF-8"?>\n<Response></Response>`);
+    }
 
     try {
       const agentReply = await askElevenLabsTextAgent({

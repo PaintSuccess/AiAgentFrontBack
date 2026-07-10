@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Page, Layout, Frame, Navigation } from "@shopify/polaris";
+import InboxPage from "./pages/InboxPage";
 import DashboardPage from "./pages/DashboardPage";
 import ConversationPage from "./pages/ConversationPage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
@@ -11,6 +12,11 @@ export default function App() {
     <Navigation location={view.page}>
       <Navigation.Section
         items={[
+          {
+            label: "Inbox",
+            onClick: () => setView({ page: "inbox", id: null }),
+            selected: view.page === "inbox",
+          },
           {
             label: "Communications",
             onClick: () => setView({ page: "dashboard", id: null }),
@@ -28,6 +34,7 @@ export default function App() {
 
   return (
     <Frame navigation={navigation}>
+      {view.page === "inbox" && <InboxPage />}
       {view.page === "dashboard" && (
         <DashboardPage
           onViewConversation={(id) => setView({ page: "conversation", id })}
