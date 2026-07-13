@@ -21,7 +21,7 @@ const KbIcon = (
 );
 
 const NAV = [
-  { key: "inbox", label: "Inbox", icon: InboxIcon },
+  { key: "inbox", label: "Comms Hub", title: "Communication Hub", icon: InboxIcon },
   { key: "contacts", label: "Contacts", icon: ContactsIcon },
   { key: "knowledge-base", label: "Knowledge", icon: KbIcon },
 ];
