@@ -72,7 +72,9 @@ async function buildAgentReply(inbound, conversationHistory = [], customerContex
     customerRecentOrders: customerContext?.customer_recent_orders || "",
     customerOrders: customerContext?.recentOrders || [],
     conversationHistory,
-    timeoutMs: 20000,
+    // Meta's Cloud API webhook also expects an ack within a short window before it
+    // retries delivery; same reasoning as the SMS default in elevenlabs-text.js.
+    timeoutMs: 14000,
   });
 
   return reply || fallbackReply();
@@ -164,7 +166,7 @@ module.exports = async function handler(req, res) {
     }
 
     // Persist the inbound WhatsApp message to the comms spine (fail-safe).
-    await commsStore.recordInbound({
+    const inboundRecord = await commsStore.recordInbound({
       channel: "whatsapp",
       fromPhone: inbound.from,
       body: inbound.text,
@@ -177,6 +179,18 @@ module.exports = async function handler(req, res) {
       email: customerContext?.customer_email || "",
       shopifyCustomerId: customerContext?.customer_id || "",
     });
+
+    // Both Twilio and Meta retry a webhook that doesn't ack fast enough, re-delivering
+    // the same message id. recordInbound already dedupes on (provider, externalId) — if
+    // this exact message was already processed, don't call the LLM or send a second reply.
+    if (inboundRecord && inboundRecord.isNew === false) {
+      console.log(`[WhatsApp] Duplicate delivery — already answered, staying silent.`);
+      if (inbound.provider === "twilio") {
+        res.setHeader("Content-Type", "text/xml");
+        return res.status(200).send(`<?xml version="1.0" encoding="UTF-8"?>\n<Response></Response>`);
+      }
+      return res.status(200).json({ ok: true, duplicate: true });
+    }
 
     // AI-control gate: if a human has taken over this thread, do not auto-reply.
     const control = await commsQueries.getControlByPhone(inbound.from);

@@ -82,7 +82,7 @@ module.exports = async function handler(req, res) {
     }
 
     // Persist the inbound customer message to the comms spine (fail-safe).
-    await commsStore.recordInbound({
+    const inboundRecord = await commsStore.recordInbound({
       channel: "sms",
       fromPhone: from,
       toPhone: to,
@@ -93,6 +93,15 @@ module.exports = async function handler(req, res) {
       email: customerContext?.customer_email || "",
       shopifyCustomerId: customerContext?.customer_id || "",
     });
+
+    // Twilio retries a webhook that doesn't ack fast enough, re-delivering the same
+    // MessageSid. recordInbound already dedupes on (provider, externalId) — if this
+    // exact message was already processed, don't call the LLM or send a second reply.
+    if (inboundRecord && inboundRecord.isNew === false) {
+      console.log(`[SMS] Duplicate delivery of ${messageSid} — already answered, staying silent.`);
+      res.setHeader("Content-Type", "text/xml");
+      return res.status(200).send(`<?xml version="1.0" encoding="UTF-8"?>\n<Response></Response>`);
+    }
 
     // AI-control gate: if a human has taken over this thread, do not auto-reply.
     const control = await commsQueries.getControlByPhone(from);
