@@ -194,11 +194,14 @@ now being re-selected among Listmonk+SES vs Brevo (Mailchimp ruled out).
   Phase-5 spike to confirm Omnisend ad-audience sync depth.
 - **Phase 1 — Persistence spine + ingestion + backfill.** Schema; webhooks write to DB; Twilio status
   callbacks; ElevenLabs post-call storage; backfill. Hub now reads threaded data from DB (faster, unified).
-- **Phase 2 — Two-way inbox + human takeover.** Control gate, shared send service, `POST /api/comms/*`,
-  `InboxPage.jsx` with realtime. (Biggest piece; delivers requirement 1's core.)
-- **Phase 3 — Outbound recorded voice.** Generalize `callback.js` → `/api/comms/call` with recording +
-  transcription stored in `voice_calls`; keep consent/DNC gate.
-- **Phase 4 — Admin ChatGPT comms tools.** MCP `comms_*` tools reusing send service + approval gate.
+- **Phase 2 — Two-way inbox + human takeover. ✅ DONE + deployed.** Control gate, shared send service,
+  `POST /api/comms/*`, `InboxPage.jsx` (polling). Delivers requirement 1's core.
+- **Phase 3 — Outbound recorded voice. ⏸ DEFERRED (possible later, not needed now).** Generalize
+  `callback.js` → `/api/comms/call` with recording + transcription stored in `voice_calls`; keep
+  consent/DNC gate.
+- **Phase 4 — Admin ChatGPT comms tools. ✅ DONE + deployed.** MCP `comms_search_threads`,
+  `comms_get_thread`, `comms_send_message` (approval_reference required), `comms_take_over`,
+  `comms_hand_back` — reuse the send service + control layer.
 - **Phase 5 — Marketing.** Omnisend integration (email/SMS campaigns + analytics) + Twilio WhatsApp
   broadcast + MCP `marketing_*` tools + analytics dashboard tab + auto-retargeting audiences.
 - **Phase 6 — Unify & polish.** Full attribution loop, auto next-action, failed-message alerts, exports.
