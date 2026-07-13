@@ -206,11 +206,15 @@ module.exports = async function handler(req, res) {
     await commsStore.recordConversation({
       channel: channelLower,
       conversationId: data.conversation_id,
-      phone: dynVars.customer_phone || phoneData.caller_id || phoneData.from_number,
+      phone:
+        dynVars.customer_phone ||
+        phoneData.external_number ||
+        phoneData.caller_id ||
+        phoneData.called_number,
       email: dynVars.customer_email,
       name: (dynVars.customer_name || "").replace(/^,\s*/, "").trim(),
       shopifyCustomerId: dynVars.customer_id,
-      direction: "inbound",
+      direction: phoneData.direction || "inbound",
       transcript: (data.transcript || []).map((t) => ({
         role: t.role,
         message: t.message,

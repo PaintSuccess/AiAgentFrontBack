@@ -67,20 +67,26 @@ async function backfillElevenLabs() {
       processed++;
       const detail = await elDetail(c.conversation_id);
       if (!detail) { skipped++; continue; }
-      const channel = mapChannel(detail.conversation_initiation_source);
-      if (!channel) { skipped++; continue; }
       const dyn = detail.conversation_initiation_client_data?.dynamic_variables || {};
       const md = detail.metadata || {};
       const an = detail.analysis || {};
       const phoneData = md.phone_call || md.twilio || md.call || {};
+      // Detect voice calls by phone_call metadata (source lives in metadata, not
+      // top level). SMS/WhatsApp are captured per-message from Twilio → skip here.
+      const src = String(md.conversation_initiation_source || detail.conversation_initiation_source || "").toLowerCase();
+      let channel;
+      if (phoneData.external_number || phoneData.call_sid || phoneData.caller_id) channel = "call";
+      else if (src.includes("whatsapp") || src.includes("sms")) channel = null;
+      else channel = "chat";
+      if (!channel) { skipped++; continue; }
       const r = await store.recordConversation({
         channel,
         conversationId: detail.conversation_id,
-        phone: dyn.customer_phone || phoneData.caller_id || phoneData.from_number,
+        phone: dyn.customer_phone || phoneData.external_number || phoneData.caller_id || phoneData.called_number,
         email: dyn.customer_email,
         name: (dyn.customer_name || "").replace(/^,\s*/, "").trim(),
         shopifyCustomerId: dyn.customer_id,
-        direction: "inbound",
+        direction: phoneData.direction || "inbound",
         transcript: (detail.transcript || []).map((t) => ({
           role: t.role, message: t.message, ts: t.time_in_call_secs,
         })),

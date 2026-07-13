@@ -38,6 +38,7 @@ function initials(name, phone) {
 const contactName = (c) => (!c ? "Unknown" : c.name || c.email || c.phone || "Unknown");
 function timeAgo(iso) { if (!iso) return ""; const d = (Date.now() - new Date(iso).getTime()) / 1000; if (d < 60) return "now"; if (d < 3600) return `${Math.floor(d / 60)}m`; if (d < 86400) return `${Math.floor(d / 3600)}h`; return new Date(iso).toLocaleDateString("en-AU", { day: "numeric", month: "short" }); }
 const clockTime = (iso) => (iso ? new Date(iso).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" }) : "");
+const formatDur = (s) => { s = Number(s) || 0; const m = Math.floor(s / 60); const r = s % 60; return m ? `${m}m ${r}s` : `${r}s`; };
 function dayLabel(iso) { const d = new Date(iso), t = new Date(), y = new Date(); y.setDate(t.getDate() - 1); if (d.toDateString() === t.toDateString()) return "Today"; if (d.toDateString() === y.toDateString()) return "Yesterday"; return d.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short", year: "numeric" }); }
 const money = (v, cur) => (v == null ? "" : `${cur || "AUD"} ${Number(v).toLocaleString("en-AU", { minimumFractionDigits: 2 })}`);
 const dateShort = (iso) => (iso ? new Date(iso).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }) : "");
@@ -75,7 +76,9 @@ export default function InboxPage({ initialThreadId } = {}) {
   const [channel, setChannel] = useState("sms");
   const [sending, setSending] = useState(false);
   const [calling, setCalling] = useState(false);
+  const [openTx, setOpenTx] = useState(() => new Set());
   const [error, setError] = useState(null);
+  const toggleTx = (id) => setOpenTx((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const [banner, setBanner] = useState(null);
   const [canned, setCanned] = useState([]);
   const [cannedOpen, setCannedOpen] = useState(false);
@@ -336,6 +339,39 @@ export default function InboxPage({ initialThreadId } = {}) {
                   const showDay = !prev || new Date(prev.sent_at).toDateString() !== new Date(m.sent_at).toDateString();
                   const author = m.author === "ai" ? "AI" : m.author === "human" ? "You" : m.author === "system" ? "System" : "Customer";
                   const read = m.status === "read";
+                  if (m.channel === "voice") {
+                    const meta = m.metadata || {};
+                    const turns = meta.transcript || [];
+                    const open = openTx.has(m.id);
+                    return (
+                      <React.Fragment key={m.id || i}>
+                        {showDay && <div className="pa-day">{dayLabel(m.sent_at)}</div>}
+                        <div className="pa-call-card">
+                          <div className="pa-call-head">
+                            <span className="pa-call-ic">📞</span>
+                            <span className="pa-call-title">{m.direction === "outbound" ? "Outbound" : "Inbound"} voice call{meta.duration_seconds ? ` · ${formatDur(meta.duration_seconds)}` : ""}</span>
+                            <span className="pa-call-time">{clockTime(m.sent_at)}</span>
+                          </div>
+                          {m.body && <div className="pa-call-summary">{m.body}</div>}
+                          {turns.length > 0 && (
+                            <>
+                              <button className="pa-call-toggle" onClick={() => toggleTx(m.id)}>{open ? "Hide" : "Show"} transcript ({turns.length})</button>
+                              {open && (
+                                <div className="pa-transcript">
+                                  {turns.map((t, ti) => (
+                                    <div key={ti} className={`pa-turn ${t.role === "agent" ? "is-agent" : "is-user"}`}>
+                                      <span className="pa-turn-role">{t.role === "agent" ? "AI" : "Customer"}</span>
+                                      <span className="pa-turn-text">{t.message}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </React.Fragment>
+                    );
+                  }
                   return (
                     <React.Fragment key={m.id || i}>
                       {showDay && <div className="pa-day">{dayLabel(m.sent_at)}</div>}
