@@ -52,28 +52,42 @@ client: monetization (usage meters / upgrade), notifications._
 
 ## 3. Prioritized build order
 
-### P0 — Layout & space (doing now)
-- [ ] Replace the wide Polaris text nav with a **compact icon rail** (logo + Inbox/KB, room for future sections).
-- [ ] Make the inbox **fill the full width and height** (remove wasted empty space); polished empty state.
+### P0 — Layout & space ✅ DONE
+- [x] Compact icon rail (App.jsx + app-shell.css)
+- [x] Full-bleed inbox filling width/height
 
-### P1 — Quick wins (fit our current data + schema)
-- [ ] **Status filter tabs**: All · Open · Closed (thread.status already exists; add Pending). Wire the list filter + a status control in the thread header.
-- [ ] **Star / Pin** a conversation (add `starred`, `pinned` bool columns to `threads`; folders + toggle).
-- [ ] **Per-channel unread counts** on the channel tabs.
-- [ ] **Internal notes** on a contact (add `contacts.notes` text or a `notes` table; show/edit in panel).
-- [ ] **Contact "Edit"** (name/email) + **tag add/remove** (write to `contacts`).
-- [ ] **"View all orders"** deep-link to the Shopify customer admin page.
-- [ ] **Quick replies / canned responses** (a small `canned_responses` table; insert into composer). Includes approved **WhatsApp templates** for outside the 24h window.
-- [ ] **New message** composer (start a conversation to a new number/customer).
-- [ ] Attachment/media send + inbound media rendering (Twilio MediaUrl; store in `messages.media`).
+### P1 — Quick wins ✅ DONE (except media — see open question)
+- [x] **Status** control (Open/Pending/Closed) + folder filters
+- [x] **Star / Pin** (threads.starred/pinned; folders + toggles; pinned sort first)
+- [x] **Per-channel unread counts** on channel tabs (/api/comms/stats)
+- [x] **Internal notes** on a contact (contacts.notes, synced to Shopify customer note)
+- [x] **Edit contact** (name/email) + **tags** add/remove — all written back to the Shopify customer
+- [x] **"View all orders"** + per-order deep-links to Shopify admin
+- [x] **Quick replies / canned responses** (canned_responses table + composer popover + create)
+- [x] **New message** composer (modal → send to a new number → opens the thread)
+- [ ] **Attachments / media** — OPEN QUESTION (needs a storage/proxy approach decision, see §5)
 
-### P2 — Medium
-- [ ] **Assignment**: assign a thread to a staff member; Unassigned / My Chats / Team folders (needs a `staff`/`assigned_to` concept + who "me" is via the Shopify session).
-- [ ] **Labels** (many-to-many thread labels beyond tags).
-- [ ] **Contacts directory** tab (searchable list of all contacts + profiles).
-- [ ] **Snooze / Pending** state + reopen.
-- [ ] **Rich CTA cards** in messages (product/catalogue cards rendered from links).
-- [ ] Server-side search across all history (not just the loaded page).
+### P2 — Medium ✅ DONE
+- [x] **Assignment**: assign-to-me / unassign + Mine / Unassigned folders (uses the Shopify
+      session user id). _Limitation: a full staff-member dropdown needs a staff directory —
+      Shopify's staff API is Plus-only, so multi-staff assignment is deferred._
+- [x] **Labels** (threads.labels[]; add/remove per thread)
+- [x] **Contacts directory** tab (ContactsPage + /api/comms/contacts; click → opens thread)
+- [x] **Pending** status (covers snooze's middle state; snoozed_until column exists for a
+      timed-snooze UI later)
+- [x] **Rich CTA cards** — product links render as "View product" buttons
+- [x] **Server-side search** across contacts + message bodies (all history)
+
+## 5. Open question — attachments / media
+Both directions need an infra decision:
+- **Inbound** (customer sends a photo): Twilio media URLs require Basic-auth to fetch, so the
+  browser can't load them directly. Options: (a) an auth'd proxy endpoint the frontend blob-fetches,
+  (b) copy media into a public store on receipt.
+- **Outbound** (agent attaches a file): Twilio needs a publicly reachable MediaUrl, which means
+  hosting the file (e.g. a **Supabase Storage** public bucket) — a privacy/retention/cost decision.
+
+Proposed default: a Supabase Storage bucket for both (copy inbound on receipt, upload outbound),
+with signed URLs. Pending the user's OK on hosting customer media there.
 
 ### P3 — Larger modules (own tabs; align with later phases)
 - [ ] **Analytics** tab: volumes by channel, response times, AI-vs-human, delivery rates (reads `events`).
