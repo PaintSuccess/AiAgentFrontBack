@@ -65,7 +65,8 @@ client: monetization (usage meters / upgrade), notifications._
 - [x] **"View all orders"** + per-order deep-links to Shopify admin
 - [x] **Quick replies / canned responses** (canned_responses table + composer popover + create)
 - [x] **New message** composer (modal → send to a new number → opens the thread)
-- [ ] **Attachments / media** — OPEN QUESTION (needs a storage/proxy approach decision, see §5)
+- [~] **Attachments / media** — SKIPPED by user decision (2026-07-13). Inbox stays text + links
+      for now; revisit with a storage approach later (see §5).
 
 ### P2 — Medium ✅ DONE
 - [x] **Assignment**: assign-to-me / unassign + Mine / Unassigned folders (uses the Shopify
