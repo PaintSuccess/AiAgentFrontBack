@@ -43,6 +43,7 @@ export default function InboxPage() {
   const [composer, setComposer] = useState("");
   const [channel, setChannel] = useState("sms");
   const [sending, setSending] = useState(false);
+  const [calling, setCalling] = useState(false);
   const [error, setError] = useState(null);
   const scrollRef = useRef(null);
   const channelInitFor = useRef(null); // thread id we've defaulted the channel for
@@ -118,6 +119,24 @@ export default function InboxPage() {
       setError(err.message);
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleCall = async () => {
+    if (!detail?.thread?.id) return;
+    if (!window.confirm("Place an outbound recorded AI call to this customer now?")) return;
+    setCalling(true);
+    setError(null);
+    try {
+      await dashboardFetch("/api/comms/call", {
+        method: "POST",
+        body: JSON.stringify({ threadId: detail.thread.id }),
+      });
+      await loadThread(detail.thread.id);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setCalling(false);
     }
   };
 
@@ -211,6 +230,9 @@ export default function InboxPage() {
                     </BlockStack>
                     <InlineStack gap="200" blockAlign="center">
                       <Badge tone={isHuman ? "attention" : "info"}>{isHuman ? "Human control" : "AI active"}</Badge>
+                      {thread.contact?.phone && (
+                        <Button loading={calling} onClick={handleCall}>Call</Button>
+                      )}
                       {isHuman ? (
                         <Button onClick={() => handleControl("ai")}>Hand back to AI</Button>
                       ) : (

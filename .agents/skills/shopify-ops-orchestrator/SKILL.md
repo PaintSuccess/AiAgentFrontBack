@@ -37,6 +37,12 @@ Use these MCP tools by intent:
 - `shopify_send_customer_email` to send approved customer emails through Shopify's branded native templates. Use `delivery_method: "order_invoice"` for existing-order customer updates, and `delivery_method: "draft_order_invoice"` only for supplier/fallback cases. **Same `ops-approved` tag requirement as `shopify_complete_fulfillment` above** — the order must carry it before this call will succeed.
 - `gmail_search_messages`, `gmail_get_message`, `gmail_create_draft`, and `gmail_send_email` for backend-authorized Gmail work. **`gmail_send_email` is not tied to a Shopify order, so it cannot use the tag mechanism above** — it still only checks that `approval_reference` is a non-empty string. Treat that as a weaker guarantee: only call it after you have unambiguous, explicit approval in the current conversation, and say plainly in your response that you're relying on that, not on a system-enforced gate.
 - `drive_search_files`, `drive_get_file`, and `drive_create_text_file` for backend-authorized Google Drive work.
+- **Communications control center** (PaintAccess unified customer inbox across SMS, WhatsApp, website chat, and voice — backed by the app's own database, not Shopify Inbox):
+  - `comms_search_threads` to find a customer's conversation thread by name, phone, email, or message text.
+  - `comms_get_thread` to read one customer's full cross-channel history (by `thread_id`, `phone`, or `email`).
+  - `comms_send_message` to send an SMS or WhatsApp reply as a human agent. **Requires `approval_reference`** (non-empty string — a weaker, non-order-tag gate, same as `gmail_send_email`): only send after unambiguous explicit approval in the current conversation, and say plainly you are relying on that, not a system-enforced gate. WhatsApp free text only works inside the customer's 24h service window.
+  - `comms_take_over` to pause the AI on a thread so a human owns it (the AI stops auto-replying to inbound messages); `comms_hand_back` to return the thread to AI auto-reply.
+  - `comms_start_call` to place an outbound recorded AI voice call to a customer. **Requires `approval_reference`** and carries consent / Do Not Call obligations — treat as customer-facing and approval-gated.
 
 ## Routing
 
@@ -54,6 +60,7 @@ Use this sequence:
    - payment approval/process recording;
    - supplier tracking and fulfilment preparation;
    - Shopify order timeline/status recording;
+   - customer conversation via the communications control center (read/reply/take over/call on SMS, WhatsApp, chat, voice);
    - Shopify Inbox or Admin panel request;
    - Operations Desk notification;
    - Shopify MCP tool call;
@@ -119,14 +126,20 @@ Use this when the user asks to find PO files, supplier attachments, Drive record
 3. `drive_get_file` only when one candidate is clearly relevant or the user selects it.
 4. Route extracted content to the matching downstream skill.
 
-### Shopify Inbox request
+### Customer conversation / unified inbox request
 
-Use this when the user asks to read, search, summarize, or reply in Shopify Inbox.
+Use this when the user asks to read, search, summarize, reply to, take over, or call in a customer conversation (SMS, WhatsApp, website chat, or voice).
 
-1. State that the current PaintAccess Operations MCP has no Shopify Inbox conversation tool.
-2. Do not invent Inbox access, use generic Shopify app capabilities, or use browser automation unless the user explicitly asks for browser-based manual operation.
-3. Offer safe alternatives: Gmail search, Shopify order lookup, Shopify-native customer email preparation, or a manual Inbox checklist.
-4. For implementation work, propose a dedicated backend/MCP extension only if Shopify exposes a supported public API or if PaintAccess migrates chat into its own widget/backend. Do not depend on private Shopify Inbox/Ping callbacks.
+1. For SMS / WhatsApp / website-chat / voice, use the **communications control center** tools: `comms_search_threads` → `comms_get_thread` to read history, `comms_send_message` to reply (approval required), `comms_take_over` / `comms_hand_back` to control AI auto-reply, `comms_start_call` for an outbound recorded call (approval required). These are backed by the app's own database and unify all channels per customer.
+2. **Shopify's native Inbox chat product itself is still not exposed** by the MCP — do not claim to read/reply inside Shopify Inbox specifically, invent Inbox access, or use browser automation unless the user explicitly asks for browser-based manual operation. If the conversation lives only in Shopify Inbox (not SMS/WhatsApp/chat/voice), offer Gmail search, Shopify order lookup, Shopify-native customer email, or a manual checklist.
+3. Before sending or calling, confirm the exact contact via `comms_get_thread` and report the recipient, channel, and message/intent. Never send or call without explicit approval in the current conversation.
+
+### Common chain — take over a live customer conversation
+
+1. `comms_search_threads` (or `comms_get_thread` by phone/email) to locate the thread and read recent messages.
+2. `comms_take_over` to pause the AI when a human needs to handle it.
+3. `comms_send_message` to reply (after approval), or `comms_start_call` to call (after approval).
+4. `comms_hand_back` to return the thread to the AI when done.
 
 ### Order stock delay customer email
 
@@ -167,6 +180,7 @@ Use this when the user asks to record an order timeline update and notify/email 
 
 - Never cancel, refund, delete, fulfill, or financially modify an order unless the user explicitly asks and the available tool allows it.
 - Never send supplier/customer emails, approve/process supplier payments, or complete final fulfilment without Daniel's approval unless the rule is explicitly changed.
+- Never send a customer SMS/WhatsApp (`comms_send_message`) or place an outbound call (`comms_start_call`) without explicit approval in the current conversation — both are customer-facing and only gated by a non-empty `approval_reference`, not a system-enforced order tag. Report the recipient, channel, and message/intent before or while sending.
 - For prepare-only tools such as `shopify_prepare_fulfillment`, `shopify_prepare_cancellation`, and `shopify_prepare_customer_email`, report if a tool call stalls or asks for unexpected permission instead of waiting indefinitely or escalating to a final action.
 - If only a screenshot is provided and the order number is not visible, ask for the order number or another reliable identifier.
 - For refunds/cancellations, prefer recording an internal timeline reminder and giving manual Admin steps unless an approved tool safely supports the action.

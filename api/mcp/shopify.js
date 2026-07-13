@@ -38,6 +38,7 @@ const {
   commsSendMessage,
   commsTakeOver,
   commsHandBack,
+  commsStartCall,
 } = require("../../lib/comms/mcp-tools");
 
 const MCP_PROTOCOL_VERSION = "2025-03-26";
@@ -74,6 +75,7 @@ const TOOL_HANDLERS = {
   comms_send_message: commsSendMessage,
   comms_take_over: commsTakeOver,
   comms_hand_back: commsHandBack,
+  comms_start_call: commsStartCall,
 };
 
 const tools = withSecurity([
@@ -505,6 +507,22 @@ const tools = withSecurity([
     }),
     annotations: { readOnlyHint: false, destructiveHint: false },
   },
+  {
+    name: "comms_start_call",
+    title: "Start outbound AI call",
+    description:
+      "Place an outbound recorded AI voice call to a customer (via ElevenLabs + Twilio). The recording and transcript are stored back on the conversation thread. Identify by thread_id, phone, or email. Requires approval_reference. Outbound calls carry consent / Do Not Call obligations.",
+    inputSchema: objectSchema(
+      {
+        thread_id: stringProp("Thread id to call the contact of."),
+        phone: stringProp("Recipient phone in E.164 (overrides thread lookup)."),
+        email: stringProp("Recipient email to resolve the thread."),
+        approval_reference: stringProp("Required approval reference before calling a customer."),
+      },
+      ["approval_reference"]
+    ),
+    annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: true },
+  },
 ]);
 
 module.exports = async function handler(req, res) {
@@ -626,6 +644,7 @@ function summarizeResult(result) {
   if (result?.control_mode && result?.thread_id) {
     return `Thread ${result.thread_id} set to ${result.control_mode} control.`;
   }
+  if (result?.call_started) return `Outbound AI call started to ${result.to}.`;
   if (result?.orders) return `Found ${result.orders.length} Shopify order(s).`;
   if (result?.messages) return `Found ${result.messages.length} Gmail message(s).`;
   if (result?.files) return `Found ${result.files.length} Google Drive file(s).`;
