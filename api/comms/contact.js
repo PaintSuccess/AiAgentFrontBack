@@ -50,6 +50,7 @@ module.exports = async function handler(req, res) {
               .map((s) => s.trim())
               .filter(Boolean),
             orders: (ctx.recentOrders || []).map((o) => ({
+              id: o.id,
               name: o.name,
               created_at: o.created_at,
               total_price: o.total_price,

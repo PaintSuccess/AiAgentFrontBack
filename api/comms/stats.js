@@ -1,6 +1,5 @@
 /**
- * GET /api/comms/threads — list inbox threads (most-recent first) from the
- * comms spine. Query: limit, status, channel, q (search).
+ * GET /api/comms/stats — folder + channel counts for the inbox badges.
  */
 const { requireDashboardAuth } = require("../../lib/dashboard-auth");
 const queries = require("../../lib/comms/queries");
@@ -16,16 +15,10 @@ module.exports = async function handler(req, res) {
   if (!session) return;
 
   try {
-    const { items } = await queries.listThreads({
-      limit: req.query.limit,
-      folder: req.query.folder,
-      channel: req.query.channel,
-      q: req.query.q,
-      currentUser: session.sub,
-    });
-    return res.status(200).json({ items });
+    const counts = await queries.getInboxCounts(session.sub);
+    return res.status(200).json(counts);
   } catch (err) {
-    console.error("[comms/threads]", err.message);
-    return res.status(500).json({ error: "Failed to list threads" });
+    console.error("[comms/stats]", err.message);
+    return res.status(500).json({ error: "Failed to load stats" });
   }
 };

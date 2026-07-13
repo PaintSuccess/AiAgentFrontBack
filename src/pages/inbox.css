@@ -227,6 +227,78 @@
 .pa-empty .pa-empty-title { font-weight: 600; color: var(--pa-ink-2); }
 .pa-muted { color: var(--pa-ink-3); font-size: 13px; }
 
+/* ── List header: folder + new message ────────────────────────────── */
+.pa-list-head { display: flex; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--pa-border-soft); align-items: center; }
+.pa-folder-select { flex: 1; padding: 7px 9px; border: 1px solid var(--pa-border); border-radius: 9px; background: #fff; font-size: 13px; color: var(--pa-ink); }
+.pa-newmsg { flex: none; width: 36px; height: 36px; border-radius: 9px; border: 1px solid var(--pa-accent); background: var(--pa-accent); color: #fff; font-size: 20px; line-height: 1; cursor: pointer; }
+.pa-newmsg:hover { background: #4338ca; }
+
+/* channel tab badge */
+.pa-tab-count { min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--pa-accent); color: #fff; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.pa-chan-tab.is-active .pa-tab-count { background: rgba(255,255,255,0.25); }
+
+/* Conversation row extras */
+.pa-conv-flags { display: inline-flex; gap: 3px; align-items: center; }
+.pa-star { background: none; border: none; cursor: pointer; color: var(--pa-ink-3); font-size: 15px; line-height: 1; padding: 0; }
+.pa-star.is-on { color: #f5b301; }
+.pa-pin-ic { color: var(--pa-ink-3); font-size: 12px; }
+
+/* Thread header actions */
+.pa-th-actions .pa-icon-btn { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--pa-border); background: #fff; border-radius: 9px; cursor: pointer; font-size: 15px; color: var(--pa-ink-2); }
+.pa-th-actions .pa-icon-btn:hover { background: var(--pa-bg); }
+.pa-th-actions .pa-icon-btn.is-on { color: #f5b301; border-color: #f5b301; }
+.pa-select { padding: 7px 9px; border: 1px solid var(--pa-border); border-radius: 9px; background: #fff; font-size: 13px; color: var(--pa-ink); }
+
+/* Labels row under header */
+.pa-labels { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px 16px; background: var(--pa-card); border-bottom: 1px solid var(--pa-border-soft); }
+.pa-label-chip { display: inline-flex; align-items: center; gap: 5px; padding: 2px 8px; border-radius: 6px; background: #eef2ff; color: var(--pa-accent); font-size: 12px; font-weight: 600; }
+.pa-label-chip button { border: none; background: none; color: inherit; cursor: pointer; font-size: 13px; line-height: 1; }
+.pa-label-add { border: 1px dashed var(--pa-border); background: #fff; border-radius: 6px; padding: 2px 8px; font-size: 12px; color: var(--pa-ink-2); cursor: pointer; }
+
+/* Message links / CTA */
+.pa-bubble a { color: inherit; text-decoration: underline; }
+.pa-cta { display: inline-block; margin-top: 6px; padding: 5px 11px; border-radius: 8px; background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.35); color: #fff; font-size: 12.5px; font-weight: 600; text-decoration: none; }
+.pa-msg-row:not(.is-out) .pa-cta { background: var(--pa-accent-soft); border-color: transparent; color: var(--pa-accent); }
+
+/* Composer extras */
+.pa-composer-tools { display: flex; gap: 6px; margin-bottom: 8px; }
+.pa-tool-btn { border: 1px solid var(--pa-border); background: #fff; border-radius: 8px; padding: 5px 10px; font-size: 12.5px; font-weight: 600; color: var(--pa-ink-2); cursor: pointer; }
+.pa-tool-btn:hover { background: var(--pa-bg); }
+.pa-popover { position: absolute; bottom: 100%; left: 0; margin-bottom: 6px; width: 320px; max-height: 300px; overflow-y: auto; background: #fff; border: 1px solid var(--pa-border); border-radius: 12px; box-shadow: 0 8px 24px rgba(16,24,40,0.12); z-index: 30; padding: 6px; }
+.pa-canned-item { display: block; width: 100%; text-align: left; border: none; background: none; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+.pa-canned-item:hover { background: var(--pa-bg); }
+.pa-canned-title { font-weight: 600; font-size: 13px; }
+.pa-canned-body { font-size: 12px; color: var(--pa-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pa-composer { position: relative; }
+
+/* Contact panel edit bits */
+.pa-c-input { width: 100%; padding: 7px 9px; border: 1px solid var(--pa-border); border-radius: 8px; font-size: 13px; margin-bottom: 6px; font-family: inherit; }
+.pa-c-notes { width: 100%; min-height: 70px; padding: 8px 9px; border: 1px solid var(--pa-border); border-radius: 8px; font-size: 13px; font-family: inherit; resize: vertical; }
+.pa-link-btn { border: none; background: none; color: var(--pa-accent); font-weight: 600; font-size: 12.5px; cursor: pointer; padding: 0; }
+.pa-section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 9px; }
+.pa-tag-x { border: none; background: none; cursor: pointer; color: var(--pa-ink-3); margin-left: 4px; font-size: 12px; }
+.pa-tag-input { flex: 1; min-width: 90px; border: 1px dashed var(--pa-border); border-radius: 6px; padding: 2px 8px; font-size: 12px; }
+.pa-order-link { color: var(--pa-accent); text-decoration: none; }
+
+/* Modal */
+.pa-modal-overlay { position: fixed; inset: 0; background: rgba(16,24,40,0.4); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.pa-modal { width: 420px; max-width: 92vw; background: #fff; border-radius: 14px; padding: 20px; }
+.pa-modal h3 { margin: 0 0 14px; font-size: 16px; font-weight: 650; }
+.pa-modal label { display: block; font-size: 12px; font-weight: 600; color: var(--pa-ink-2); margin: 10px 0 4px; }
+.pa-modal input, .pa-modal textarea, .pa-modal select { width: 100%; padding: 9px 10px; border: 1px solid var(--pa-border); border-radius: 9px; font-size: 14px; font-family: inherit; }
+.pa-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+/* Contacts directory page */
+.pa-contacts { height: 100%; display: flex; flex-direction: column; background: var(--pa-bg); }
+.pa-contacts-head { padding: 16px 20px; background: var(--pa-card); border-bottom: 1px solid var(--pa-border); display: flex; align-items: center; gap: 12px; }
+.pa-contacts-head h1 { font-size: 18px; font-weight: 650; margin: 0; flex: none; }
+.pa-contacts-list { flex: 1; overflow-y: auto; padding: 12px 20px; }
+.pa-contact-row { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--pa-card); border: 1px solid var(--pa-border); border-radius: 12px; margin-bottom: 8px; cursor: pointer; }
+.pa-contact-row:hover { border-color: var(--pa-accent); }
+.pa-contact-meta { flex: 1; min-width: 0; }
+.pa-contact-meta .nm { font-weight: 600; }
+.pa-contact-meta .sub { font-size: 12.5px; color: var(--pa-ink-2); }
+
 /* Responsive: drop the contact panel first, then narrow the list */
 @media (max-width: 1120px) { .pa-col-contact { display: none; } }
 @media (max-width: 880px) { .pa-col-list { width: 240px; } }

@@ -1,9 +1,8 @@
 /**
- * GET /api/comms/threads — list inbox threads (most-recent first) from the
- * comms spine. Query: limit, status, channel, q (search).
+ * GET /api/comms/contacts — contact directory. Query: q, limit.
  */
 const { requireDashboardAuth } = require("../../lib/dashboard-auth");
-const queries = require("../../lib/comms/queries");
+const { listContacts } = require("../../lib/comms/contacts");
 
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -16,16 +15,10 @@ module.exports = async function handler(req, res) {
   if (!session) return;
 
   try {
-    const { items } = await queries.listThreads({
-      limit: req.query.limit,
-      folder: req.query.folder,
-      channel: req.query.channel,
-      q: req.query.q,
-      currentUser: session.sub,
-    });
+    const { items } = await listContacts({ q: req.query.q, limit: req.query.limit });
     return res.status(200).json({ items });
   } catch (err) {
-    console.error("[comms/threads]", err.message);
-    return res.status(500).json({ error: "Failed to list threads" });
+    console.error("[comms/contacts]", err.message);
+    return res.status(500).json({ error: "Failed to list contacts" });
   }
 };

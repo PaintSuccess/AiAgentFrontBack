@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { dashboardFetch } from "../utils/fetch";
 import "./inbox.css";
 
+const ADMIN_BASE = "https://admin.shopify.com/store/zgmzge-0d";
 const CHANNELS = {
   sms: { label: "SMS", color: "#2f7ed8" },
   whatsapp: { label: "WhatsApp", color: "#25b366" },
@@ -9,93 +10,98 @@ const CHANNELS = {
   voice: { label: "Voice", color: "#f59e0b" },
   email: { label: "Email", color: "#ec4899" },
 };
-const SENDABLE = [
-  { value: "sms", label: "SMS" },
-  { value: "whatsapp", label: "WhatsApp" },
+const SENDABLE = [{ value: "sms", label: "SMS" }, { value: "whatsapp", label: "WhatsApp" }];
+const FOLDERS = [
+  { value: "all", label: "All conversations" },
+  { value: "unread", label: "Unread" },
+  { value: "open", label: "Open" },
+  { value: "pending", label: "Pending" },
+  { value: "closed", label: "Closed" },
+  { value: "starred", label: "Starred" },
+  { value: "pinned", label: "Pinned" },
+  { value: "mine", label: "Assigned to me" },
+  { value: "unassigned", label: "Unassigned" },
 ];
+const STATUSES = [{ value: "open", label: "Open" }, { value: "pending", label: "Pending" }, { value: "closed", label: "Closed" }];
 const AVATAR_COLORS = ["#4f46e5", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#6366f1", "#f97316"];
 const THREADS_POLL_MS = 6000;
 const THREAD_POLL_MS = 4000;
 
-function hashStr(s) {
-  let h = 0;
-  for (let i = 0; i < String(s).length; i++) h = (h * 31 + String(s).charCodeAt(i)) | 0;
-  return Math.abs(h);
-}
-function avatarColor(seed) {
-  return AVATAR_COLORS[hashStr(seed || "?") % AVATAR_COLORS.length];
-}
+const hashStr = (s) => { let h = 0; for (let i = 0; i < String(s).length; i++) h = (h * 31 + String(s).charCodeAt(i)) | 0; return Math.abs(h); };
+const avatarColor = (seed) => AVATAR_COLORS[hashStr(seed || "?") % AVATAR_COLORS.length];
 function initials(name, phone) {
   const n = String(name || "").trim();
-  if (n) {
-    const parts = n.split(/\s+/);
-    return ((parts[0]?.[0] || "") + (parts[1]?.[0] || "")).toUpperCase() || n.slice(0, 2).toUpperCase();
-  }
+  if (n) { const p = n.split(/\s+/); return ((p[0]?.[0] || "") + (p[1]?.[0] || "")).toUpperCase() || n.slice(0, 2).toUpperCase(); }
   const d = String(phone || "").replace(/\D/g, "");
   return d ? d.slice(-2) : "?";
 }
-function contactName(c) {
-  if (!c) return "Unknown";
-  return c.name || c.email || c.phone || "Unknown";
-}
-function timeAgo(iso) {
-  if (!iso) return "";
-  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
-  if (diff < 60) return "now";
-  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
-  return new Date(iso).toLocaleDateString("en-AU", { day: "numeric", month: "short" });
-}
-function clockTime(iso) {
-  if (!iso) return "";
-  return new Date(iso).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" });
-}
-function dayLabel(iso) {
-  const d = new Date(iso);
-  const today = new Date();
-  const y = new Date();
-  y.setDate(today.getDate() - 1);
-  if (d.toDateString() === today.toDateString()) return "Today";
-  if (d.toDateString() === y.toDateString()) return "Yesterday";
-  return d.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
-}
-function money(v, cur) {
-  if (v == null) return "";
-  return `${cur || "AUD"} ${Number(v).toLocaleString("en-AU", { minimumFractionDigits: 2 })}`;
-}
+const contactName = (c) => (!c ? "Unknown" : c.name || c.email || c.phone || "Unknown");
+function timeAgo(iso) { if (!iso) return ""; const d = (Date.now() - new Date(iso).getTime()) / 1000; if (d < 60) return "now"; if (d < 3600) return `${Math.floor(d / 60)}m`; if (d < 86400) return `${Math.floor(d / 3600)}h`; return new Date(iso).toLocaleDateString("en-AU", { day: "numeric", month: "short" }); }
+const clockTime = (iso) => (iso ? new Date(iso).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" }) : "");
+function dayLabel(iso) { const d = new Date(iso), t = new Date(), y = new Date(); y.setDate(t.getDate() - 1); if (d.toDateString() === t.toDateString()) return "Today"; if (d.toDateString() === y.toDateString()) return "Yesterday"; return d.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short", year: "numeric" }); }
+const money = (v, cur) => (v == null ? "" : `${cur || "AUD"} ${Number(v).toLocaleString("en-AU", { minimumFractionDigits: 2 })}`);
+const dateShort = (iso) => (iso ? new Date(iso).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }) : "");
 function statusTone(fin, ful) {
   if (fin === "paid") return { bg: "#e7f6ec", color: "#1a7f43", label: "Paid" };
   if (ful === "fulfilled") return { bg: "#e7f6ec", color: "#1a7f43", label: "Fulfilled" };
   if (fin === "refunded") return { bg: "#fdecea", color: "#b42318", label: "Refunded" };
-  return { bg: "#fef7e6", color: "#b25c00", label: (fin || ful || "Open") };
+  return { bg: "#fef7e6", color: "#b25c00", label: fin || ful || "Open" };
+}
+// Linkify a message body, rendering product links as CTA buttons.
+function renderBody(body) {
+  const text = String(body || "");
+  const parts = text.split(/(https?:\/\/[^\s]+)/g);
+  return parts.map((part, i) => {
+    if (/^https?:\/\//.test(part)) {
+      if (part.includes("/products/")) {
+        return <a key={i} className="pa-cta" href={part} target="_blank" rel="noreferrer">View product ↗</a>;
+      }
+      return <a key={i} href={part} target="_blank" rel="noreferrer">{part}</a>;
+    }
+    return <span key={i}>{part}</span>;
+  });
 }
 
-export default function InboxPage() {
+export default function InboxPage({ initialThreadId } = {}) {
   const [threads, setThreads] = useState([]);
-  const [selectedId, setSelectedId] = useState(null);
+  const [stats, setStats] = useState({});
+  const [selectedId, setSelectedId] = useState(initialThreadId || null);
   const [detail, setDetail] = useState(null);
   const [contact, setContact] = useState(null);
   const [search, setSearch] = useState("");
   const [channelFilter, setChannelFilter] = useState(null);
-  const [unreadOnly, setUnreadOnly] = useState(false);
+  const [folder, setFolder] = useState("all");
   const [composer, setComposer] = useState("");
   const [channel, setChannel] = useState("sms");
   const [sending, setSending] = useState(false);
   const [calling, setCalling] = useState(false);
   const [error, setError] = useState(null);
+  const [banner, setBanner] = useState(null);
+  const [canned, setCanned] = useState([]);
+  const [cannedOpen, setCannedOpen] = useState(false);
+  const [editingContact, setEditingContact] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [tagInput, setTagInput] = useState("");
+  const [notesDraft, setNotesDraft] = useState("");
+  const [newMsg, setNewMsg] = useState(null); // {to, channel, body}
   const scrollRef = useRef(null);
   const channelInitFor = useRef(null);
 
   const loadThreads = useCallback(async () => {
     try {
-      const params = new URLSearchParams();
-      if (search) params.set("q", search);
-      const data = await dashboardFetch(`/api/comms/threads?${params}`);
+      const p = new URLSearchParams();
+      if (search) p.set("q", search);
+      if (folder) p.set("folder", folder);
+      if (channelFilter) p.set("channel", channelFilter);
+      const data = await dashboardFetch(`/api/comms/threads?${p}`);
       setThreads(data.items || []);
-    } catch (err) {
-      setError(err.message);
-    }
-  }, [search]);
+    } catch (err) { setError(err.message); }
+  }, [search, folder, channelFilter]);
+
+  const loadStats = useCallback(async () => {
+    try { setStats(await dashboardFetch("/api/comms/stats")); } catch { /* non-critical */ }
+  }, []);
 
   const loadThread = useCallback(async (id) => {
     if (!id) return;
@@ -107,164 +113,164 @@ export default function InboxPage() {
         const lc = data.thread?.last_channel;
         if (lc === "whatsapp" || lc === "sms") setChannel(lc);
       }
-    } catch (err) {
-      setError(err.message);
-    }
+    } catch (err) { setError(err.message); }
   }, []);
 
   const loadContact = useCallback(async (id) => {
     if (!id) return;
-    setContact(null);
+    setContact(null); setEditingContact(false);
     try {
-      setContact(await dashboardFetch(`/api/comms/contact?id=${encodeURIComponent(id)}`));
-    } catch {
-      /* contact panel is best-effort */
-    }
+      const data = await dashboardFetch(`/api/comms/contact?id=${encodeURIComponent(id)}`);
+      setContact(data);
+      setNotesDraft(data.contact?.notes || "");
+    } catch { /* best effort */ }
   }, []);
 
-  useEffect(() => {
-    loadThreads();
-    const t = setInterval(loadThreads, THREADS_POLL_MS);
-    return () => clearInterval(t);
-  }, [loadThreads]);
-
+  useEffect(() => { if (initialThreadId) setSelectedId(initialThreadId); }, [initialThreadId]);
+  useEffect(() => { loadThreads(); const t = setInterval(loadThreads, THREADS_POLL_MS); return () => clearInterval(t); }, [loadThreads]);
+  useEffect(() => { loadStats(); const t = setInterval(loadStats, THREADS_POLL_MS); return () => clearInterval(t); }, [loadStats]);
+  useEffect(() => { dashboardFetch("/api/comms/canned").then((d) => setCanned(d.items || [])).catch(() => {}); }, []);
   useEffect(() => {
     if (!selectedId) return;
-    loadThread(selectedId);
-    loadContact(selectedId);
+    loadThread(selectedId); loadContact(selectedId);
     const t = setInterval(() => loadThread(selectedId), THREAD_POLL_MS);
     return () => clearInterval(t);
   }, [selectedId, loadThread, loadContact]);
+  useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [detail?.messages?.length, selectedId]);
 
-  useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [detail?.messages?.length, selectedId]);
+  const handleSelect = (id) => { setSelectedId(id); setDetail(null); setThreads((p) => p.map((t) => (t.id === id ? { ...t, unread_count: 0 } : t))); };
 
-  const visibleThreads = useMemo(() => {
-    return threads.filter((t) => {
-      if (channelFilter && t.last_channel !== channelFilter) return false;
-      if (unreadOnly && !(t.unread_count > 0)) return false;
-      return true;
-    });
-  }, [threads, channelFilter, unreadOnly]);
+  const patchDetailThread = (patch) => setDetail((p) => (p ? { ...p, thread: { ...p.thread, ...patch } } : p));
 
-  const handleSelect = (id) => {
-    setSelectedId(id);
-    setDetail(null);
-    setThreads((prev) => prev.map((t) => (t.id === id ? { ...t, unread_count: 0 } : t)));
+  const threadUpdate = async (fields) => {
+    if (!detail?.thread?.id) return;
+    setError(null);
+    try {
+      const data = await dashboardFetch("/api/comms/thread-update", { method: "POST", body: JSON.stringify({ threadId: detail.thread.id, ...fields }) });
+      if (data.thread) patchDetailThread(data.thread);
+      loadThreads(); loadStats();
+    } catch (err) { setError(err.message); }
   };
 
   const handleSend = async () => {
     if (!composer.trim() || !detail?.thread?.id) return;
-    setSending(true);
-    setError(null);
+    setSending(true); setError(null);
     try {
-      await dashboardFetch("/api/comms/send", {
-        method: "POST",
-        body: JSON.stringify({ threadId: detail.thread.id, channel, body: composer.trim() }),
-      });
-      setComposer("");
-      await loadThread(detail.thread.id);
-      loadThreads();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSending(false);
-    }
+      await dashboardFetch("/api/comms/send", { method: "POST", body: JSON.stringify({ threadId: detail.thread.id, channel, body: composer.trim() }) });
+      setComposer(""); await loadThread(detail.thread.id); loadThreads();
+    } catch (err) { setError(err.message); } finally { setSending(false); }
   };
 
   const handleControl = async (mode) => {
     if (!detail?.thread?.id) return;
     setError(null);
     try {
-      const data = await dashboardFetch("/api/comms/control", {
-        method: "POST",
-        body: JSON.stringify({ threadId: detail.thread.id, control_mode: mode }),
-      });
-      setDetail((p) => (p ? { ...p, thread: { ...p.thread, control_mode: data.thread.control_mode } } : p));
-      loadThreads();
-    } catch (err) {
-      setError(err.message);
-    }
+      const data = await dashboardFetch("/api/comms/control", { method: "POST", body: JSON.stringify({ threadId: detail.thread.id, control_mode: mode }) });
+      patchDetailThread({ control_mode: data.thread.control_mode }); loadThreads();
+    } catch (err) { setError(err.message); }
   };
 
   const handleCall = async () => {
     if (!detail?.thread?.id) return;
     if (!window.confirm("Place an outbound recorded AI call to this customer now?")) return;
-    setCalling(true);
-    setError(null);
-    try {
-      await dashboardFetch("/api/comms/call", {
-        method: "POST",
-        body: JSON.stringify({ threadId: detail.thread.id }),
-      });
-      await loadThread(detail.thread.id);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setCalling(false);
-    }
+    setCalling(true); setError(null);
+    try { await dashboardFetch("/api/comms/call", { method: "POST", body: JSON.stringify({ threadId: detail.thread.id }) }); await loadThread(detail.thread.id); }
+    catch (err) { setError(err.message); } finally { setCalling(false); }
   };
 
-  const onComposerKey = (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
+  const saveContact = async (patch, note) => {
+    if (!detail?.thread?.id) return;
+    setError(null);
+    try {
+      const data = await dashboardFetch("/api/comms/contact-update", { method: "POST", body: JSON.stringify({ threadId: detail.thread.id, ...patch }) });
+      await loadContact(detail.thread.id); loadThreads();
+      if (data.shopifyError) setBanner(`Saved locally. Shopify sync issue: ${data.shopifyError}`);
+      else if (data.shopifySynced) setBanner(note || "Saved and synced to Shopify.");
+      else setBanner(note || "Saved.");
+      setTimeout(() => setBanner(null), 4000);
+    } catch (err) { setError(err.message); }
   };
+
+  const addTag = () => {
+    const t = tagInput.trim(); if (!t) return;
+    const current = contact?.shopify?.tags || contact?.contact?.tags || [];
+    if (!current.includes(t)) saveContact({ tags: [...current, t] }, "Tag added.");
+    setTagInput("");
+  };
+  const removeTag = (tag) => {
+    const current = contact?.shopify?.tags || contact?.contact?.tags || [];
+    saveContact({ tags: current.filter((x) => x !== tag) }, "Tag removed.");
+  };
+
+  const addLabel = () => {
+    const l = window.prompt("Label name"); if (!l || !l.trim()) return;
+    const cur = detail?.thread?.labels || [];
+    if (!cur.includes(l.trim())) threadUpdate({ labels: [...cur, l.trim()] });
+  };
+  const removeLabel = (label) => { const cur = detail?.thread?.labels || []; threadUpdate({ labels: cur.filter((x) => x !== label) }); };
+
+  const sendNewMessage = async () => {
+    if (!newMsg?.to?.trim() || !newMsg?.body?.trim()) return;
+    setError(null);
+    try {
+      await dashboardFetch("/api/comms/send", { method: "POST", body: JSON.stringify({ to: newMsg.to.trim(), channel: newMsg.channel, body: newMsg.body.trim() }) });
+      const digits = newMsg.to.replace(/\D/g, "");
+      setNewMsg(null);
+      await loadThreads(); loadStats();
+      const data = await dashboardFetch(`/api/comms/threads?q=${encodeURIComponent(digits.slice(-9))}`);
+      const found = (data.items || [])[0];
+      if (found) handleSelect(found.id);
+    } catch (err) { setError(err.message); }
+  };
+
+  const onComposerKey = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } };
 
   const thread = detail?.thread;
   const c = thread?.contact;
   const isHuman = thread?.control_mode && thread.control_mode !== "ai";
+  const tags = contact?.shopify?.tags || contact?.contact?.tags || [];
+
+  const channelCounts = stats.channels || {};
 
   return (
     <div className="pa-inbox">
-      {/* Top bar */}
       <div className="pa-topbar">
         <div className="pa-chan-tabs">
           <button className={`pa-chan-tab ${!channelFilter ? "is-active" : ""}`} onClick={() => setChannelFilter(null)}>All</button>
           {Object.entries(CHANNELS).map(([key, cfg]) => (
-            <button
-              key={key}
-              className={`pa-chan-tab ${channelFilter === key ? "is-active" : ""}`}
-              onClick={() => setChannelFilter(channelFilter === key ? null : key)}
-            >
-              <span className="pa-dot" style={{ background: cfg.color }} />
-              {cfg.label}
+            <button key={key} className={`pa-chan-tab ${channelFilter === key ? "is-active" : ""}`} onClick={() => setChannelFilter(channelFilter === key ? null : key)}>
+              <span className="pa-dot" style={{ background: cfg.color }} />{cfg.label}
+              {channelCounts[key] > 0 && <span className="pa-tab-count">{channelCounts[key]}</span>}
             </button>
           ))}
         </div>
-        <input
-          className="pa-search"
-          placeholder="Search name, phone, message…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        <input className="pa-search" placeholder="Search name, phone, message…" value={search} onChange={(e) => setSearch(e.target.value)} />
       </div>
 
-      {error && (
-        <div style={{ padding: "8px 14px", background: "#fdecea", color: "#b42318", fontSize: 13, cursor: "pointer" }} onClick={() => setError(null)}>
-          {error} — dismiss
+      {(error || banner) && (
+        <div style={{ padding: "8px 14px", background: error ? "#fdecea" : "#e7f6ec", color: error ? "#b42318" : "#1a7f43", fontSize: 13, cursor: "pointer" }} onClick={() => { setError(null); setBanner(null); }}>
+          {error || banner} — dismiss
         </div>
       )}
 
       <div className="pa-body">
-        {/* Conversation list */}
+        {/* List */}
         <div className="pa-col-list">
-          <div className="pa-list-filters">
-            <button className={`pa-chip ${!unreadOnly ? "is-active" : ""}`} onClick={() => setUnreadOnly(false)}>All</button>
-            <button className={`pa-chip ${unreadOnly ? "is-active" : ""}`} onClick={() => setUnreadOnly(true)}>Unread</button>
+          <div className="pa-list-head">
+            <select className="pa-folder-select" value={folder} onChange={(e) => setFolder(e.target.value)}>
+              {FOLDERS.map((f) => {
+                const n = f.value === "unread" ? stats.unread : f.value === "starred" ? stats.starred : f.value === "pinned" ? stats.pinned : f.value === "mine" ? stats.mine : f.value === "unassigned" ? stats.unassigned : (stats.status && stats.status[f.value]);
+                return <option key={f.value} value={f.value}>{f.label}{n ? ` (${n})` : ""}</option>;
+              })}
+            </select>
+            <button className="pa-newmsg" title="New message" onClick={() => setNewMsg({ to: "", channel: "sms", body: "" })}>+</button>
           </div>
           <div className="pa-conv-scroll">
-            {visibleThreads.length === 0 && (
-              <div className="pa-empty" style={{ minHeight: 200 }}>
-                <div className="pa-empty-title">No conversations</div>
-                <div className="pa-muted">Messages appear here as customers reach out.</div>
-              </div>
+            {threads.length === 0 && (
+              <div className="pa-empty" style={{ minHeight: 160 }}><div className="pa-empty-title">No conversations</div><div className="pa-muted">Messages appear here as customers reach out.</div></div>
             )}
-            {visibleThreads.map((t) => {
-              const nm = contactName(t.contact);
-              const ch = CHANNELS[t.last_channel] || {};
+            {threads.map((t) => {
+              const nm = contactName(t.contact); const ch = CHANNELS[t.last_channel] || {};
               return (
                 <div key={t.id} className={`pa-conv ${t.id === selectedId ? "is-active" : ""}`} onClick={() => handleSelect(t.id)}>
                   <div className="pa-avatar" style={{ background: avatarColor(t.contact?.phone || nm) }}>
@@ -273,15 +279,16 @@ export default function InboxPage() {
                   </div>
                   <div className="pa-conv-main">
                     <div className="pa-conv-top">
-                      <span className="pa-conv-name">{nm}</span>
+                      <span className="pa-conv-name">{t.pinned ? "📌 " : ""}{nm}</span>
                       <span className="pa-conv-time">{timeAgo(t.last_message_at)}</span>
                     </div>
                     <div className="pa-conv-sub">
                       <span className="pa-conv-preview">{t.last_message_preview || "—"}</span>
-                      {t.control_mode && t.control_mode !== "ai" && (
-                        <span className="pa-ch-label" style={{ background: "#fff4e5", color: "#b25c00" }}>Human</span>
-                      )}
-                      {t.unread_count > 0 && <span className="pa-unread">{t.unread_count}</span>}
+                      <span className="pa-conv-flags">
+                        {t.starred && <span className="pa-star is-on">★</span>}
+                        {t.control_mode && t.control_mode !== "ai" && <span className="pa-ch-label" style={{ background: "#fff4e5", color: "#b25c00" }}>Human</span>}
+                        {t.unread_count > 0 && <span className="pa-unread">{t.unread_count}</span>}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -290,36 +297,36 @@ export default function InboxPage() {
           </div>
         </div>
 
-        {/* Conversation thread */}
+        {/* Thread */}
         <div className="pa-col-thread">
           {!thread ? (
-            <div className="pa-empty">
-              <div className="pa-empty-title">Select a conversation</div>
-              <div className="pa-muted">Pick a customer on the left to see the full history.</div>
-            </div>
+            <div className="pa-empty"><div className="pa-empty-title">Select a conversation</div><div className="pa-muted">Pick a customer on the left to see the full history.</div></div>
           ) : (
             <>
               <div className="pa-thread-header">
                 <div className="pa-th-id">
-                  <div className="pa-avatar" style={{ background: avatarColor(c?.phone || contactName(c)) }}>
-                    {initials(c?.name, c?.phone)}
-                  </div>
+                  <div className="pa-avatar" style={{ background: avatarColor(c?.phone || contactName(c)) }}>{initials(c?.name, c?.phone)}</div>
                   <div style={{ minWidth: 0 }}>
                     <div className="pa-th-name">{contactName(c)}</div>
                     <div className="pa-th-sub">{c?.phone || ""}{c?.email ? ` · ${c.email}` : ""}</div>
                   </div>
                 </div>
                 <div className="pa-th-actions">
-                  <span className={`pa-status-pill ${isHuman ? "pa-status-human" : "pa-status-ai"}`}>
-                    {isHuman ? "Human control" : "AI active"}
-                  </span>
+                  <select className="pa-select" value={thread.status || "open"} onChange={(e) => threadUpdate({ status: e.target.value })}>
+                    {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                  </select>
+                  <button className={`pa-icon-btn ${thread.starred ? "is-on" : ""}`} title="Star" onClick={() => threadUpdate({ starred: !thread.starred })}>★</button>
+                  <button className={`pa-icon-btn ${thread.pinned ? "is-on" : ""}`} title="Pin" onClick={() => threadUpdate({ pinned: !thread.pinned })}>📌</button>
+                  <button className="pa-icon-btn" title="Assign to me / unassign" onClick={() => threadUpdate({ assign: thread.assigned_to ? "none" : "me" })}>{thread.assigned_to ? "👤" : "○"}</button>
+                  <span className={`pa-status-pill ${isHuman ? "pa-status-human" : "pa-status-ai"}`}>{isHuman ? "Human" : "AI"}</span>
                   {c?.phone && <button className="pa-btn" disabled={calling} onClick={handleCall}>{calling ? "Calling…" : "Call"}</button>}
-                  {isHuman ? (
-                    <button className="pa-btn" onClick={() => handleControl("ai")}>Hand to AI</button>
-                  ) : (
-                    <button className="pa-btn pa-btn-danger" onClick={() => handleControl("human")}>Take over</button>
-                  )}
+                  {isHuman ? <button className="pa-btn" onClick={() => handleControl("ai")}>Hand to AI</button> : <button className="pa-btn pa-btn-danger" onClick={() => handleControl("human")}>Take over</button>}
                 </div>
+              </div>
+
+              <div className="pa-labels">
+                {(thread.labels || []).map((l) => <span key={l} className="pa-label-chip">{l}<button onClick={() => removeLabel(l)}>×</button></span>)}
+                <button className="pa-label-add" onClick={addLabel}>+ Label</button>
               </div>
 
               <div className="pa-messages" ref={scrollRef}>
@@ -334,14 +341,10 @@ export default function InboxPage() {
                       {showDay && <div className="pa-day">{dayLabel(m.sent_at)}</div>}
                       <div className={`pa-msg-row ${out ? "is-out" : ""} ${m.author === "system" ? "is-system" : ""}`}>
                         <div>
-                          <div className="pa-bubble">{m.body || (m.media ? "[media]" : "—")}</div>
+                          <div className="pa-bubble">{m.body ? renderBody(m.body) : m.media ? "[media]" : "—"}</div>
                           <div className="pa-msg-meta">
-                            {author} · {(CHANNELS[m.channel]?.label) || m.channel} · {clockTime(m.sent_at)}
-                            {out && m.status && (
-                              <span className={`pa-tick ${read ? "is-read" : ""}`}>
-                                {m.status === "failed" ? " · failed" : ["delivered", "read"].includes(m.status) ? " ✓✓" : " ✓"}
-                              </span>
-                            )}
+                            {author} · {CHANNELS[m.channel]?.label || m.channel} · {clockTime(m.sent_at)}
+                            {out && m.status && <span className={`pa-tick ${read ? "is-read" : ""}`}>{m.status === "failed" ? " · failed" : ["delivered", "read"].includes(m.status) ? " ✓✓" : " ✓"}</span>}
                           </div>
                         </div>
                       </div>
@@ -352,25 +355,33 @@ export default function InboxPage() {
               </div>
 
               <div className="pa-composer">
+                <div className="pa-composer-tools">
+                  <button className="pa-tool-btn" onClick={() => setCannedOpen((v) => !v)}>⚡ Quick replies</button>
+                  {cannedOpen && (
+                    <div className="pa-popover">
+                      {canned.length === 0 && <div className="pa-muted" style={{ padding: 10 }}>No quick replies yet.</div>}
+                      {canned.map((q) => (
+                        <button key={q.id} className="pa-canned-item" onClick={() => { setComposer((b) => (b ? b + " " : "") + q.body); setCannedOpen(false); }}>
+                          <div className="pa-canned-title">{q.title}</div>
+                          <div className="pa-canned-body">{q.body}</div>
+                        </button>
+                      ))}
+                      <button className="pa-canned-item" style={{ color: "var(--pa-accent)", fontWeight: 600 }} onClick={async () => {
+                        const title = window.prompt("Quick reply title"); if (!title) return;
+                        const body = window.prompt("Message text"); if (!body) return;
+                        try { const d = await dashboardFetch("/api/comms/canned", { method: "POST", body: JSON.stringify({ title, body }) }); setCanned((p) => [...p, d.item]); } catch (err) { setError(err.message); }
+                      }}>+ New quick reply</button>
+                    </div>
+                  )}
+                </div>
                 <div className="pa-composer-row">
                   <select className="pa-chan-select" value={channel} onChange={(e) => setChannel(e.target.value)}>
                     {SENDABLE.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
-                  <textarea
-                    className="pa-input"
-                    placeholder={`Reply as a human via ${CHANNELS[channel]?.label}…`}
-                    value={composer}
-                    onChange={(e) => setComposer(e.target.value)}
-                    onKeyDown={onComposerKey}
-                    rows={1}
-                  />
-                  <button className="pa-btn pa-btn-primary" disabled={sending || !composer.trim()} onClick={handleSend}>
-                    {sending ? "Sending…" : "Send"}
-                  </button>
+                  <textarea className="pa-input" placeholder={`Reply as a human via ${CHANNELS[channel]?.label}…`} value={composer} onChange={(e) => setComposer(e.target.value)} onKeyDown={onComposerKey} rows={1} />
+                  <button className="pa-btn pa-btn-primary" disabled={sending || !composer.trim()} onClick={handleSend}>{sending ? "Sending…" : "Send"}</button>
                 </div>
-                {!isHuman && (
-                  <div className="pa-composer-hint">AI is active on this thread and will keep auto-replying. Use “Take over” to pause it.</div>
-                )}
+                {!isHuman && <div className="pa-composer-hint">AI is active on this thread and will keep auto-replying. Use "Take over" to pause it.</div>}
               </div>
             </>
           )}
@@ -380,64 +391,91 @@ export default function InboxPage() {
         {thread && (
           <div className="pa-col-contact">
             <div className="pa-c-head">
-              <div className="pa-c-avatar" style={{ background: avatarColor(c?.phone || contactName(c)) }}>
-                {initials(c?.name, c?.phone)}
-              </div>
-              <div className="pa-c-name">{contact?.shopify?.name || contactName(c)}</div>
-              <span className={`pa-c-badge ${contact?.shopify ? "is-customer" : "is-lead"}`}>
-                {contact?.shopify ? "Shopify customer" : "Lead"}
-              </span>
+              <div className="pa-c-avatar" style={{ background: avatarColor(c?.phone || contactName(c)) }}>{initials(c?.name, c?.phone)}</div>
+              {editingContact ? (
+                <>
+                  <input className="pa-c-input" value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Name" />
+                  <input className="pa-c-input" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} placeholder="Email" />
+                  <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
+                    <button className="pa-btn pa-btn-primary" onClick={() => { saveContact({ name: editName, email: editEmail }, "Contact saved."); setEditingContact(false); }}>Save</button>
+                    <button className="pa-btn" onClick={() => setEditingContact(false)}>Cancel</button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="pa-c-name">{contact?.shopify?.name || contactName(c)}</div>
+                  <span className={`pa-c-badge ${contact?.shopify ? "is-customer" : "is-lead"}`}>{contact?.shopify ? "Shopify customer" : "Lead"}</span>
+                  <div><button className="pa-link-btn" onClick={() => { setEditName(c?.name || contact?.shopify?.name || ""); setEditEmail(c?.email || contact?.shopify?.email || ""); setEditingContact(true); }}>Edit</button></div>
+                </>
+              )}
             </div>
 
             <div className="pa-section">
               <div className="pa-section-title">Contact</div>
               {c?.phone && <div className="pa-field"><span className="pa-field-ic">☎</span>{c.phone}</div>}
               {(contact?.shopify?.email || c?.email) && <div className="pa-field"><span className="pa-field-ic">✉</span>{contact?.shopify?.email || c.email}</div>}
-              {contact?.stats?.channels?.length > 0 && (
-                <div className="pa-field">
-                  <span className="pa-field-ic">◍</span>
-                  <span>{contact.stats.channels.map((ch) => CHANNELS[ch]?.label || ch).join(", ")}</span>
-                </div>
-              )}
+              {contact?.stats?.channels?.length > 0 && <div className="pa-field"><span className="pa-field-ic">◍</span><span>{contact.stats.channels.map((x) => CHANNELS[x]?.label || x).join(", ")}</span></div>}
             </div>
 
-            {contact?.shopify?.tags?.length > 0 && (
-              <div className="pa-section">
-                <div className="pa-section-title">Tags</div>
-                <div className="pa-tags">{contact.shopify.tags.map((t) => <span key={t} className="pa-tag">{t}</span>)}</div>
+            <div className="pa-section">
+              <div className="pa-section-title">Tags{contact?.shopify ? " (synced to Shopify)" : ""}</div>
+              <div className="pa-tags">
+                {tags.map((t) => <span key={t} className="pa-tag">{t}<button className="pa-tag-x" onClick={() => removeTag(t)}>×</button></span>)}
+                <input className="pa-tag-input" placeholder="+ tag" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addTag(); }} />
               </div>
-            )}
+            </div>
 
             <div className="pa-section">
-              <div className="pa-section-title">Recent orders</div>
-              {contact?.shopify?.orders?.length > 0 ? (
-                contact.shopify.orders.map((o) => {
-                  const tone = statusTone(o.financial_status, o.fulfillment_status);
-                  return (
-                    <div key={o.name} className="pa-order">
-                      <div className="pa-order-top">
-                        <span className="pa-order-name">{o.name}</span>
-                        <span className="pa-order-badge" style={{ background: tone.bg, color: tone.color }}>{tone.label}</span>
-                      </div>
-                      <div className="pa-order-meta">{money(o.total_price, o.currency)} · {o.created_at ? new Date(o.created_at).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }) : ""}</div>
-                      {o.items?.length > 0 && <div className="pa-order-items">{o.items.join(", ")}</div>}
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="pa-muted">{contact?.shopify ? "No recent orders." : "Not linked to a Shopify customer."}</div>
-              )}
+              <div className="pa-section-head"><div className="pa-section-title" style={{ margin: 0 }}>Notes</div></div>
+              <textarea className="pa-c-notes" value={notesDraft} onChange={(e) => setNotesDraft(e.target.value)} placeholder="Internal note (synced to the Shopify customer note)…" />
+              <div style={{ marginTop: 6 }}><button className="pa-btn pa-btn-primary" onClick={() => saveContact({ notes: notesDraft }, "Note saved.")}>Save note</button></div>
+            </div>
+
+            <div className="pa-section">
+              <div className="pa-section-head">
+                <div className="pa-section-title" style={{ margin: 0 }}>Recent orders</div>
+                {contact?.shopify?.customer_id && <a className="pa-link-btn" href={`${ADMIN_BASE}/customers/${contact.shopify.customer_id}`} target="_blank" rel="noreferrer">View all</a>}
+              </div>
+              {contact?.shopify?.orders?.length > 0 ? contact.shopify.orders.map((o) => {
+                const tone = statusTone(o.financial_status, o.fulfillment_status);
+                return (
+                  <a key={o.name} className="pa-order pa-order-link" href={o.id ? `${ADMIN_BASE}/orders/${o.id}` : undefined} target="_blank" rel="noreferrer">
+                    <div className="pa-order-top"><span className="pa-order-name">{o.name}</span><span className="pa-order-badge" style={{ background: tone.bg, color: tone.color }}>{tone.label}</span></div>
+                    <div className="pa-order-meta">{money(o.total_price, o.currency)} · {dateShort(o.created_at)}</div>
+                    {o.items?.length > 0 && <div className="pa-order-items">{o.items.join(", ")}</div>}
+                  </a>
+                );
+              }) : <div className="pa-muted">{contact?.shopify ? "No recent orders." : "Not linked to a Shopify customer."}</div>}
             </div>
 
             <div className="pa-section" style={{ borderBottom: "none" }}>
               <div className="pa-section-title">Conversation history</div>
-              <div className="pa-hist-row"><span>First contact</span><span>{contact?.stats?.first_contact ? new Date(contact.stats.first_contact).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }) : "—"}</span></div>
+              <div className="pa-hist-row"><span>First contact</span><span>{dateShort(contact?.stats?.first_contact) || "—"}</span></div>
               <div className="pa-hist-row"><span>Messages</span><span>{contact?.stats?.messages_count ?? "—"}</span></div>
               <div className="pa-hist-row"><span>Last seen</span><span>{contact?.stats?.last_seen ? timeAgo(contact.stats.last_seen) + " ago" : "—"}</span></div>
             </div>
           </div>
         )}
       </div>
+
+      {/* New message modal */}
+      {newMsg && (
+        <div className="pa-modal-overlay" onClick={() => setNewMsg(null)}>
+          <div className="pa-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>New message</h3>
+            <label>To (phone, E.164)</label>
+            <input value={newMsg.to} onChange={(e) => setNewMsg({ ...newMsg, to: e.target.value })} placeholder="+61400000000" />
+            <label>Channel</label>
+            <select value={newMsg.channel} onChange={(e) => setNewMsg({ ...newMsg, channel: e.target.value })}>{SENDABLE.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
+            <label>Message</label>
+            <textarea rows={3} value={newMsg.body} onChange={(e) => setNewMsg({ ...newMsg, body: e.target.value })} placeholder="Type a message…" />
+            <div className="pa-modal-actions">
+              <button className="pa-btn" onClick={() => setNewMsg(null)}>Cancel</button>
+              <button className="pa-btn pa-btn-primary" disabled={!newMsg.to.trim() || !newMsg.body.trim()} onClick={sendNewMessage}>Send</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
