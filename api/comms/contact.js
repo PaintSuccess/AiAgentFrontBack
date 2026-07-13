@@ -45,7 +45,9 @@ module.exports = async function handler(req, res) {
             customer_id: ctx.customer_id,
             name: ctx.customer_name,
             email: ctx.customer_email,
-            tags: String(ctx.customer_tags || "")
+            // Use the FULL customer tag list (ctx.customer_tags is truncated to 8),
+            // so editing tags never drops the customer's other Shopify tags.
+            tags: String(ctx.customer?.tags || "")
               .split(",")
               .map((s) => s.trim())
               .filter(Boolean),
