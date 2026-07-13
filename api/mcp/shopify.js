@@ -32,11 +32,18 @@ const {
   sendCustomerEmailViaShopify,
   setOpsMetafield,
 } = require("../../lib/shopify-ops");
+const {
+  commsSearchThreads,
+  commsGetThread,
+  commsSendMessage,
+  commsTakeOver,
+  commsHandBack,
+} = require("../../lib/comms/mcp-tools");
 
 const MCP_PROTOCOL_VERSION = "2025-03-26";
 
 const SERVER_INSTRUCTIONS =
-  "PaintAccess Operations MCP exposes narrow Shopify, Gmail, and Google Drive operations for ChatGPT Workspace Agents. Use read tools first, write only to known orders/resources, and treat cancellation, refund, payment, email send, and final fulfilment as approval-required. For operational order logging, use Shopify order timeline entries; do not leave operations logs in the persistent Shopify Notes field.";
+  "PaintAccess Operations MCP exposes narrow Shopify, Gmail, Google Drive, and unified customer communications operations for ChatGPT Workspace Agents. Use read tools first, write only to known orders/resources, and treat cancellation, refund, payment, email send, customer SMS/WhatsApp send, and final fulfilment as approval-required. Use comms_search_threads/comms_get_thread to read a customer's full cross-channel history, comms_send_message to reply (approval_reference required), and comms_take_over/comms_hand_back to control whether the AI auto-replies. For operational order logging, use Shopify order timeline entries; do not leave operations logs in the persistent Shopify Notes field.";
 
 const SECURITY_SCHEMES = [{ type: "oauth2", scopes: DEFAULT_SCOPES }];
 
@@ -62,6 +69,11 @@ const TOOL_HANDLERS = {
   drive_search_files: driveSearchFiles,
   drive_get_file: driveGetFile,
   drive_create_text_file: driveCreateTextFile,
+  comms_search_threads: commsSearchThreads,
+  comms_get_thread: commsGetThread,
+  comms_send_message: commsSendMessage,
+  comms_take_over: commsTakeOver,
+  comms_hand_back: commsHandBack,
 };
 
 const tools = withSecurity([
@@ -426,6 +438,73 @@ const tools = withSecurity([
     ),
     annotations: { readOnlyHint: false, destructiveHint: false },
   },
+  {
+    name: "comms_search_threads",
+    title: "Search communication threads",
+    description:
+      "Search the unified communications inbox (SMS, WhatsApp, chat, voice) for customer conversation threads by name, phone, email, or message text. Read-only.",
+    inputSchema: objectSchema({
+      query: stringProp("Free-text search over contact name, phone, email, and last message."),
+      channel: enumProp("Optional channel filter.", ["sms", "whatsapp", "email", "chat", "voice"]),
+      status: enumProp("Optional thread status filter.", ["open", "closed", "snoozed"]),
+      limit: numberProp("Maximum threads to return, 1-100."),
+    }),
+    annotations: { readOnlyHint: true, destructiveHint: false },
+  },
+  {
+    name: "comms_get_thread",
+    title: "Get communication thread",
+    description:
+      "Read one customer's full cross-channel conversation history (all messages, directions, statuses). Identify the thread by thread_id, phone, or email. Read-only.",
+    inputSchema: objectSchema({
+      thread_id: stringProp("Thread id from comms_search_threads."),
+      phone: stringProp("Customer phone in E.164, e.g. +61400000000."),
+      email: stringProp("Customer email address."),
+    }),
+    annotations: { readOnlyHint: true, destructiveHint: false },
+  },
+  {
+    name: "comms_send_message",
+    title: "Send customer message",
+    description:
+      "Send an SMS or WhatsApp message to a customer as a human agent and log it to the conversation. Identify the recipient by thread_id, phone, or email. Requires approval_reference. WhatsApp free text only works inside the 24h customer service window.",
+    inputSchema: objectSchema(
+      {
+        channel: enumProp("Channel to send on.", ["sms", "whatsapp"]),
+        thread_id: stringProp("Thread id to reply into."),
+        phone: stringProp("Recipient phone in E.164 (overrides thread lookup)."),
+        email: stringProp("Recipient email to resolve the thread (used only to find the phone)."),
+        body: stringProp("Message text to send."),
+        approval_reference: stringProp("Required approval reference before sending a customer message."),
+      },
+      ["channel", "body", "approval_reference"]
+    ),
+    annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: true },
+  },
+  {
+    name: "comms_take_over",
+    title: "Take over conversation from AI",
+    description:
+      "Pause the AI on a customer thread so a human owns the conversation — the AI stops auto-replying to inbound messages. Identify by thread_id, phone, or email.",
+    inputSchema: objectSchema({
+      thread_id: stringProp("Thread id."),
+      phone: stringProp("Customer phone in E.164."),
+      email: stringProp("Customer email address."),
+    }),
+    annotations: { readOnlyHint: false, destructiveHint: false },
+  },
+  {
+    name: "comms_hand_back",
+    title: "Hand conversation back to AI",
+    description:
+      "Return a customer thread to AI control so the AI resumes auto-replying to inbound messages. Identify by thread_id, phone, or email.",
+    inputSchema: objectSchema({
+      thread_id: stringProp("Thread id."),
+      phone: stringProp("Customer phone in E.164."),
+      email: stringProp("Customer email address."),
+    }),
+    annotations: { readOnlyHint: false, destructiveHint: false },
+  },
 ]);
 
 module.exports = async function handler(req, res) {
@@ -537,6 +616,16 @@ function toolResult(result) {
 }
 
 function summarizeResult(result) {
+  if (result?.threads) return `Found ${result.threads.length} conversation thread(s).`;
+  if (result?.conversation && result?.messages) {
+    return `Conversation ${result.conversation.thread_id}: ${result.messages.length} message(s).`;
+  }
+  if (result?.sent && result?.channel) {
+    return `Sent ${result.channel} message${result.to ? ` to ${result.to}` : ""}.`;
+  }
+  if (result?.control_mode && result?.thread_id) {
+    return `Thread ${result.thread_id} set to ${result.control_mode} control.`;
+  }
   if (result?.orders) return `Found ${result.orders.length} Shopify order(s).`;
   if (result?.messages) return `Found ${result.messages.length} Gmail message(s).`;
   if (result?.files) return `Found ${result.files.length} Google Drive file(s).`;
