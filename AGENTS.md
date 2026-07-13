@@ -56,9 +56,10 @@ This prevents overwriting client edits made through the Shopify admin UI.
 | `api/shopify/products.js` | Product search for the agent |
 | `api/shopify/order.js` | Order lookup |
 | `api/dashboard/knowledge-base.js` | CRUD proxy for ElevenLabs KB |
-| `api/dashboard/conversations.js` | Conversation history proxy |
-| `api/dashboard/conversation.js` | Single conversation details |
+| `api/comms/*.js` | Inbox endpoints: threads, thread, contact, send, control, call |
+| `lib/comms/{store,queries,send}.js` | Comms spine: write / read / send layers |
 | `lib/dashboard-auth.js` | HMAC/JWT auth helpers for dashboard APIs |
+| `src/pages/InboxPage.jsx` | Unified communications inbox UI |
 | `src/pages/KnowledgeBasePage.jsx` | KB editor UI |
 | `src/App.jsx` | App shell, routing, and navigation |
 

@@ -59,9 +59,11 @@ Never use `inventoryQuantity > 0` alone as the availability check. For this stor
 | `api/shopify/products.js` | Product search for the agent |
 | `api/shopify/order.js` | Order lookup |
 | `api/dashboard/knowledge-base.js` | CRUD proxy for ElevenLabs KB |
-| `api/dashboard/conversations.js` | Conversation history proxy |
-| `api/dashboard/conversation.js` | Single conversation details |
+| `api/comms/*.js` | Inbox endpoints: threads, thread, contact, send, control, call |
+| `lib/comms/{store,queries,send,call,mcp-tools}.js` | Comms spine: write/read/send/call layers + ChatGPT MCP tools |
+| `supabase/migrations/` | Comms spine schema (contacts/threads/messages/voice_calls/events) |
 | `lib/dashboard-auth.js` | HMAC/JWT auth helpers for dashboard APIs |
+| `src/pages/InboxPage.jsx` | Unified communications inbox UI (+ `src/pages/inbox.css`) |
 | `src/pages/KnowledgeBasePage.jsx` | KB editor UI |
 | `src/App.jsx` | App shell, routing, and navigation |
 | `_store/theme/snippets/ai-support-widget.liquid` | Shopify storefront widget snippet |
