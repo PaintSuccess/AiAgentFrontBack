@@ -39,6 +39,17 @@ const contactName = (c) => (!c ? "Unknown" : c.name || c.email || c.phone || "Un
 function timeAgo(iso) { if (!iso) return ""; const d = (Date.now() - new Date(iso).getTime()) / 1000; if (d < 60) return "now"; if (d < 3600) return `${Math.floor(d / 60)}m`; if (d < 86400) return `${Math.floor(d / 3600)}h`; return new Date(iso).toLocaleDateString("en-AU", { day: "numeric", month: "short" }); }
 const clockTime = (iso) => (iso ? new Date(iso).toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" }) : "");
 const formatDur = (s) => { s = Number(s) || 0; const m = Math.floor(s / 60); const r = s % 60; return m ? `${m}m ${r}s` : `${r}s`; };
+const FAIL_REASONS = {
+  "63016": "Outside the 24-hour WhatsApp window — reconnect with an approved template message.",
+  "63024": "Not a valid WhatsApp recipient (number isn't on WhatsApp or hasn't opted in).",
+  "63003": "WhatsApp couldn't reach this recipient.",
+  "63015": "This recipient hasn't opted in to WhatsApp messages.",
+  "21408": "SMS isn't enabled for this number's region — enable it in Twilio Geo Permissions.",
+  "21211": "Invalid phone number.",
+  "21614": "Not an SMS-capable (mobile) number.",
+  "21610": "This recipient has unsubscribed from your messages.",
+};
+const failReason = (code, msg) => FAIL_REASONS[String(code || "")] || msg || (code ? `Delivery failed (error ${code}).` : "Delivery failed.");
 function dayLabel(iso) { const d = new Date(iso), t = new Date(), y = new Date(); y.setDate(t.getDate() - 1); if (d.toDateString() === t.toDateString()) return "Today"; if (d.toDateString() === y.toDateString()) return "Yesterday"; return d.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short", year: "numeric" }); }
 const money = (v, cur) => (v == null ? "" : `${cur || "AUD"} ${Number(v).toLocaleString("en-AU", { minimumFractionDigits: 2 })}`);
 const dateShort = (iso) => (iso ? new Date(iso).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }) : "");
@@ -385,6 +396,9 @@ export default function InboxPage({ initialThreadId } = {}) {
                             {author} · {CHANNELS[m.channel]?.label || m.channel} · {clockTime(m.sent_at)}
                             {out && m.status && <span className={`pa-tick ${read ? "is-read" : ""}`}>{m.status === "failed" ? " · failed" : ["delivered", "read"].includes(m.status) ? " ✓✓" : " ✓"}</span>}
                           </div>
+                          {out && m.status === "failed" && (
+                            <div className="pa-fail-reason">⚠ {failReason(m.error_code, m.error_message)}</div>
+                          )}
                         </div>
                       </div>
                     </React.Fragment>
