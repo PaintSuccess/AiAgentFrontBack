@@ -39,6 +39,7 @@ const {
   commsTakeOver,
   commsHandBack,
   commsStartCall,
+  commsSendWhatsAppTemplate,
 } = require("../../lib/comms/mcp-tools");
 
 const MCP_PROTOCOL_VERSION = "2025-03-26";
@@ -76,6 +77,7 @@ const TOOL_HANDLERS = {
   comms_take_over: commsTakeOver,
   comms_hand_back: commsHandBack,
   comms_start_call: commsStartCall,
+  comms_send_whatsapp_template: commsSendWhatsAppTemplate,
 };
 
 const tools = withSecurity([
@@ -518,6 +520,25 @@ const tools = withSecurity([
         phone: stringProp("Recipient phone in E.164 (overrides thread lookup)."),
         email: stringProp("Recipient email to resolve the thread."),
         approval_reference: stringProp("Required approval reference before calling a customer."),
+      },
+      ["approval_reference"]
+    ),
+    annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: true },
+  },
+  {
+    name: "comms_send_whatsapp_template",
+    title: "Send WhatsApp template",
+    description:
+      "Send a Meta-approved WhatsApp template to a customer (use to reopen a conversation outside the 24-hour window or to reach a number that hasn't messaged). Identify by thread_id, phone, or email. Provide template_name and any variables (positional: {\"1\":\"...\"}). Requires approval_reference. Marketing-category templates need the customer opted in.",
+    inputSchema: objectSchema(
+      {
+        template_name: stringProp("Approved template name, e.g. paintaccess_support_followup."),
+        template_sid: stringProp("Template ContentSid (alternative to name)."),
+        variables: { type: "object", description: "Positional variables, e.g. {\"1\":\"Anton\",\"2\":\"Graco 495\"}.", additionalProperties: true },
+        thread_id: stringProp("Thread id to send into."),
+        phone: stringProp("Recipient phone in E.164 (overrides thread lookup)."),
+        email: stringProp("Recipient email to resolve the thread."),
+        approval_reference: stringProp("Required approval reference before sending a customer message."),
       },
       ["approval_reference"]
     ),

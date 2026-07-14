@@ -50,6 +50,7 @@ const FAIL_REASONS = {
   "21610": "This recipient has unsubscribed from your messages.",
 };
 const failReason = (code, msg) => FAIL_REASONS[String(code || "")] || msg || (code ? `Delivery failed (error ${code}).` : "Delivery failed.");
+const fillTemplate = (body, vars = {}) => String(body || "").replace(/\{\{(\d+)\}\}/g, (_, n) => (vars[n] ? String(vars[n]) : `{{${n}}}`));
 function dayLabel(iso) { const d = new Date(iso), t = new Date(), y = new Date(); y.setDate(t.getDate() - 1); if (d.toDateString() === t.toDateString()) return "Today"; if (d.toDateString() === y.toDateString()) return "Yesterday"; return d.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short", year: "numeric" }); }
 const money = (v, cur) => (v == null ? "" : `${cur || "AUD"} ${Number(v).toLocaleString("en-AU", { minimumFractionDigits: 2 })}`);
 const dateShort = (iso) => (iso ? new Date(iso).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }) : "");
@@ -93,6 +94,8 @@ export default function InboxPage({ initialThreadId } = {}) {
   const [banner, setBanner] = useState(null);
   const [canned, setCanned] = useState([]);
   const [cannedOpen, setCannedOpen] = useState(false);
+  const [templates, setTemplates] = useState([]);
+  const [tplModal, setTplModal] = useState(null); // { stage:"pick"|"fill", template, vars }
   const [editingContact, setEditingContact] = useState(false);
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
@@ -147,6 +150,7 @@ export default function InboxPage({ initialThreadId } = {}) {
   useEffect(() => { loadThreads(); const t = setInterval(loadThreads, THREADS_POLL_MS); return () => clearInterval(t); }, [loadThreads]);
   useEffect(() => { loadStats(); const t = setInterval(loadStats, THREADS_POLL_MS); return () => clearInterval(t); }, [loadStats]);
   useEffect(() => { dashboardFetch("/api/comms/canned").then((d) => setCanned(d.items || [])).catch(() => {}); }, []);
+  useEffect(() => { dashboardFetch("/api/comms/wa-templates").then((d) => setTemplates(d.items || [])).catch(() => {}); }, []);
   useEffect(() => {
     if (!selectedId) return;
     loadThread(selectedId); loadContact(selectedId);
@@ -241,6 +245,32 @@ export default function InboxPage({ initialThreadId } = {}) {
   };
 
   const onComposerKey = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } };
+
+  const waWindowClosed = useMemo(() => {
+    const msgs = detail?.messages || [];
+    const lastIn = [...msgs].reverse().find((m) => m.direction === "inbound" && m.channel === "whatsapp");
+    if (!lastIn) return msgs.some((m) => m.channel === "whatsapp");
+    return Date.now() - new Date(lastIn.sent_at).getTime() > 24 * 3600 * 1000;
+  }, [detail]);
+
+  const pickTemplate = (t) => {
+    const ct = detail?.thread?.contact;
+    const vars = {};
+    (t.variables || []).forEach((v) => { vars[v.index] = v.index === "1" && ct?.name ? String(ct.name).split(/\s+/)[0] : ""; });
+    setTplModal({ stage: "fill", template: t, vars });
+  };
+  const sendTemplate = async () => {
+    if (!tplModal?.template || !detail?.thread?.id) return;
+    setSending(true); setError(null);
+    try {
+      await dashboardFetch("/api/comms/send", {
+        method: "POST",
+        body: JSON.stringify({ threadId: detail.thread.id, channel: "whatsapp", template: { sid: tplModal.template.sid, variables: tplModal.vars } }),
+      });
+      setTplModal(null);
+      await loadThread(detail.thread.id); loadThreads();
+    } catch (err) { setError(err.message); } finally { setSending(false); }
+  };
 
   const thread = detail?.thread;
   const c = thread?.contact;
@@ -408,8 +438,15 @@ export default function InboxPage({ initialThreadId } = {}) {
               </div>
 
               <div className="pa-composer">
+                {channel === "whatsapp" && waWindowClosed && (
+                  <div className="pa-wa-banner">
+                    ⏳ 24-hour WhatsApp window is closed — a free-form message won't deliver.
+                    <button onClick={() => setTplModal({ stage: "pick" })}>Use a template</button>
+                  </div>
+                )}
                 <div className="pa-composer-tools">
                   <button className="pa-tool-btn" onClick={() => setCannedOpen((v) => !v)}>⚡ Quick replies</button>
+                  <button className="pa-tool-btn" onClick={() => setTplModal({ stage: "pick" })}>🧩 Template</button>
                   {cannedOpen && (
                     <div className="pa-popover">
                       {canned.length === 0 && <div className="pa-muted" style={{ padding: 10 }}>No quick replies yet.</div>}
@@ -530,6 +567,57 @@ export default function InboxPage({ initialThreadId } = {}) {
               <button className="pa-btn" onClick={() => setNewMsg(null)}>Cancel</button>
               <button className="pa-btn pa-btn-primary" disabled={!newMsg.to.trim() || !newMsg.body.trim()} onClick={sendNewMessage}>Send</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* WhatsApp template picker / fill-in */}
+      {tplModal && (
+        <div className="pa-modal-overlay" onClick={() => setTplModal(null)}>
+          <div className="pa-modal" onClick={(e) => e.stopPropagation()}>
+            {tplModal.stage === "pick" ? (
+              <>
+                <h3>Choose a WhatsApp template</h3>
+                {templates.length === 0 && <div className="pa-muted">No approved templates found.</div>}
+                {["UTILITY", "MARKETING", "AUTHENTICATION"].map((cat) => {
+                  const inCat = templates.filter((t) => (t.category || "UTILITY") === cat);
+                  if (!inCat.length) return null;
+                  return (
+                    <div key={cat} style={{ marginTop: 10 }}>
+                      <div className="pa-section-title">{cat === "MARKETING" ? "Marketing (needs opt-in)" : cat.charAt(0) + cat.slice(1).toLowerCase()}</div>
+                      {inCat.map((t) => (
+                        <button key={t.sid} className="pa-canned-item" onClick={() => pickTemplate(t)}>
+                          <div className="pa-canned-title">{t.name}</div>
+                          <div className="pa-canned-body">{t.body}</div>
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })}
+                <div className="pa-modal-actions"><button className="pa-btn" onClick={() => setTplModal(null)}>Close</button></div>
+              </>
+            ) : (
+              <>
+                <h3>{tplModal.template.name}</h3>
+                <div style={{ fontSize: 12, color: "var(--pa-ink-2)", marginBottom: 6 }}>
+                  {tplModal.template.category === "MARKETING" ? "Marketing template — recipient should be opted in." : "Utility template."}
+                </div>
+                {(tplModal.template.variables || []).map((v) => (
+                  <div key={v.index}>
+                    <label>Variable {v.index} <span style={{ color: "#9aa0aa", fontWeight: 400 }}>(e.g. {v.example})</span></label>
+                    <input value={tplModal.vars[v.index] || ""} onChange={(e) => setTplModal((m) => ({ ...m, vars: { ...m.vars, [v.index]: e.target.value } }))} />
+                  </div>
+                ))}
+                <label>Preview</label>
+                <div style={{ padding: "10px 12px", background: "var(--pa-accent-soft)", borderRadius: 9, fontSize: 14, whiteSpace: "pre-wrap", lineHeight: 1.45 }}>
+                  {fillTemplate(tplModal.template.body, tplModal.vars)}
+                </div>
+                <div className="pa-modal-actions">
+                  <button className="pa-btn" onClick={() => setTplModal({ stage: "pick" })}>Back</button>
+                  <button className="pa-btn pa-btn-primary" disabled={sending} onClick={sendTemplate}>{sending ? "Sending…" : "Send template"}</button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

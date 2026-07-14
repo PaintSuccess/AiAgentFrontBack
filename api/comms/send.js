@@ -36,7 +36,7 @@ module.exports = async function handler(req, res) {
     }
     if (!to) return res.status(400).json({ error: "No recipient phone for this channel" });
 
-    const result = await sendMessage({ channel, to, body: text, media, author: "human" });
+    const result = await sendMessage({ channel, to, body: text, media, author: "human", template: body.template || null });
     return res.status(200).json({ ok: true, result });
   } catch (err) {
     console.error("[comms/send]", err.message);
