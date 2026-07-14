@@ -96,6 +96,8 @@ export default function InboxPage({ initialThreadId } = {}) {
   const [cannedOpen, setCannedOpen] = useState(false);
   const [templates, setTemplates] = useState([]);
   const [tplModal, setTplModal] = useState(null); // { stage:"pick"|"fill", template, vars }
+  const [consentBusy, setConsentBusy] = useState({});
+  const [consentRowError, setConsentRowError] = useState({});
   const [editingContact, setEditingContact] = useState(false);
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
@@ -225,7 +227,8 @@ export default function InboxPage({ initialThreadId } = {}) {
 
   const handleConsent = async (channel, status) => {
     if (!detail?.thread?.id) return;
-    setError(null);
+    setConsentBusy((p) => ({ ...p, [channel]: true }));
+    setConsentRowError((p) => ({ ...p, [channel]: null }));
     try {
       const data = await dashboardFetch("/api/comms/consent", {
         method: "POST",
@@ -234,7 +237,11 @@ export default function InboxPage({ initialThreadId } = {}) {
       await loadContact(detail.thread.id);
       setBanner(data.shopifySynced ? "Consent saved and synced to Shopify." : "Consent saved.");
       setTimeout(() => setBanner(null), 3000);
-    } catch (err) { setError(err.message); }
+    } catch (err) {
+      setConsentRowError((p) => ({ ...p, [channel]: err.message || "Save failed." }));
+    } finally {
+      setConsentBusy((p) => ({ ...p, [channel]: false }));
+    }
   };
 
   const addLabel = () => {
@@ -538,13 +545,20 @@ export default function InboxPage({ initialThreadId } = {}) {
               {[["email", "Email"], ["sms", "SMS"], ["whatsapp", "WhatsApp"], ["calls", "Calls"]].map(([ch, label]) => {
                 const st = contact?.consent?.[ch] || "unknown";
                 const on = st === "subscribed";
+                const busy = !!consentBusy[ch];
+                const rowErr = consentRowError[ch];
                 return (
-                  <div key={ch} className="pa-consent-row">
-                    <span style={{ flex: 1 }}>{label}</span>
-                    <span className={`pa-consent-pill ${on ? "on" : st === "unsubscribed" ? "off" : "unk"}`}>
-                      {on ? "Subscribed" : st === "unsubscribed" ? "Unsubscribed" : st === "not_subscribed" ? "Not subscribed" : "Unknown"}
-                    </span>
-                    <button className="pa-consent-btn" onClick={() => handleConsent(ch, on ? "unsubscribed" : "subscribed")}>{on ? "Opt out" : "Opt in"}</button>
+                  <div key={ch}>
+                    <div className="pa-consent-row">
+                      <span style={{ flex: 1 }}>{label}</span>
+                      <span className={`pa-consent-pill ${on ? "on" : st === "unsubscribed" ? "off" : "unk"}`}>
+                        {on ? "Subscribed" : st === "unsubscribed" ? "Unsubscribed" : st === "not_subscribed" ? "Not subscribed" : "Unknown"}
+                      </span>
+                      <button className="pa-consent-btn" disabled={busy} onClick={() => handleConsent(ch, on ? "unsubscribed" : "subscribed")}>
+                        {busy ? "Saving…" : on ? "Opt out" : "Opt in"}
+                      </button>
+                    </div>
+                    {rowErr && <div className="pa-fail-reason" style={{ marginTop: -3, marginBottom: 6 }}>⚠ {rowErr}</div>}
                   </div>
                 );
               })}
