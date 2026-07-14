@@ -7,6 +7,7 @@
 const { requireDashboardAuth } = require("../../lib/dashboard-auth");
 const queries = require("../../lib/comms/queries");
 const { getCustomerContextByPhone } = require("../../lib/shopify-customer-context");
+const consentLib = require("../../lib/comms/consent");
 
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -37,9 +38,10 @@ module.exports = async function handler(req, res) {
     };
 
     let shopify = null;
+    let ctx = null;
     if (contact.phone) {
       try {
-        const ctx = await getCustomerContextByPhone(contact.phone);
+        ctx = await getCustomerContextByPhone(contact.phone);
         if (ctx?.found) {
           shopify = {
             customer_id: ctx.customer_id,
@@ -68,7 +70,24 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    return res.status(200).json({ contact, stats, shopify });
+    // Consent: mirror Shopify email/sms into the local contact, then build the view.
+    let cc = contact;
+    if (ctx?.found && ctx.customer) {
+      const synced = await consentLib.syncFromShopify(contact.id, ctx.customer).catch(() => null);
+      if (synced) cc = synced;
+    }
+    const consent = {
+      email: cc.email_marketing || "unknown",
+      sms: cc.sms_marketing || "unknown",
+      whatsapp: cc.whatsapp_marketing || "unknown",
+      calls: cc.calls_consent || "unknown",
+      do_not_call: !!cc.do_not_call,
+      source: cc.consent_source || null,
+      updated_at: cc.consent_updated_at || null,
+      linkedToShopify: !!(shopify && shopify.customer_id),
+    };
+
+    return res.status(200).json({ contact, stats, shopify, consent });
   } catch (err) {
     console.error("[comms/contact]", err.message);
     return res.status(500).json({ error: "Failed to load contact" });

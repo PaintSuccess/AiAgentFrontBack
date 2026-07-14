@@ -5,6 +5,7 @@ const { getCustomerContextByPhone } = require("../../lib/shopify-customer-contex
 const { loadTwilioTextHistory } = require("../../lib/twilio-text-history");
 const commsStore = require("../../lib/comms/store");
 const commsQueries = require("../../lib/comms/queries");
+const commsConsent = require("../../lib/comms/consent");
 
 // Validate Twilio webhook signature to prevent spoofed requests
 function verifyTwilioSignature(req) {
@@ -102,6 +103,9 @@ module.exports = async function handler(req, res) {
       res.setHeader("Content-Type", "text/xml");
       return res.status(200).send(`<?xml version="1.0" encoding="UTF-8"?>\n<Response></Response>`);
     }
+
+    // Record STOP/START keyword opt-out/in (fail-safe).
+    await commsConsent.applyKeywordConsent(from, "sms", body);
 
     // AI-control gate: stay silent if a human is actively handling this thread
     // (auto-hands back to the AI once the takeover window lapses).

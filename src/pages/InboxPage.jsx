@@ -223,6 +223,20 @@ export default function InboxPage({ initialThreadId } = {}) {
     saveContact({ tags: current.filter((x) => x !== tag) }, "Tag removed.");
   };
 
+  const handleConsent = async (channel, status) => {
+    if (!detail?.thread?.id) return;
+    setError(null);
+    try {
+      const data = await dashboardFetch("/api/comms/consent", {
+        method: "POST",
+        body: JSON.stringify({ threadId: detail.thread.id, channel, status }),
+      });
+      await loadContact(detail.thread.id);
+      setBanner(data.shopifySynced ? "Consent saved and synced to Shopify." : "Consent saved.");
+      setTimeout(() => setBanner(null), 3000);
+    } catch (err) { setError(err.message); }
+  };
+
   const addLabel = () => {
     const l = window.prompt("Label name"); if (!l || !l.trim()) return;
     const cur = detail?.thread?.labels || [];
@@ -517,6 +531,24 @@ export default function InboxPage({ initialThreadId } = {}) {
                 {tags.map((t) => <span key={t} className="pa-tag">{t}<button className="pa-tag-x" onClick={() => removeTag(t)}>×</button></span>)}
                 <input className="pa-tag-input" placeholder="+ tag" value={tagInput} onChange={(e) => setTagInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addTag(); }} />
               </div>
+            </div>
+
+            <div className="pa-section">
+              <div className="pa-section-title">Marketing consent</div>
+              {[["email", "Email"], ["sms", "SMS"], ["whatsapp", "WhatsApp"], ["calls", "Calls"]].map(([ch, label]) => {
+                const st = contact?.consent?.[ch] || "unknown";
+                const on = st === "subscribed";
+                return (
+                  <div key={ch} className="pa-consent-row">
+                    <span style={{ flex: 1 }}>{label}</span>
+                    <span className={`pa-consent-pill ${on ? "on" : st === "unsubscribed" ? "off" : "unk"}`}>
+                      {on ? "Subscribed" : st === "unsubscribed" ? "Unsubscribed" : st === "not_subscribed" ? "Not subscribed" : "Unknown"}
+                    </span>
+                    <button className="pa-consent-btn" onClick={() => handleConsent(ch, on ? "unsubscribed" : "subscribed")}>{on ? "Opt out" : "Opt in"}</button>
+                  </div>
+                );
+              })}
+              {contact?.consent?.linkedToShopify && <div className="pa-muted" style={{ fontSize: 11, marginTop: 5 }}>Email &amp; SMS sync to the Shopify customer.</div>}
             </div>
 
             <div className="pa-section">

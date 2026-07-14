@@ -5,6 +5,7 @@ const { getCustomerContextByPhone } = require("../../lib/shopify-customer-contex
 const { loadTwilioTextHistory } = require("../../lib/twilio-text-history");
 const commsStore = require("../../lib/comms/store");
 const commsQueries = require("../../lib/comms/queries");
+const commsConsent = require("../../lib/comms/consent");
 const {
   parseWhatsAppInbound,
   sendWhatsAppMessage,
@@ -191,6 +192,9 @@ module.exports = async function handler(req, res) {
       }
       return res.status(200).json({ ok: true, duplicate: true });
     }
+
+    // Record STOP/START keyword opt-out/in (fail-safe).
+    await commsConsent.applyKeywordConsent(inbound.from, "whatsapp", inbound.text);
 
     // AI-control gate: stay silent if a human is actively handling this thread
     // (auto-hands back to the AI once the takeover window lapses).
