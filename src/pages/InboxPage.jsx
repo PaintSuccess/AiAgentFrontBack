@@ -541,7 +541,12 @@ export default function InboxPage({ initialThreadId } = {}) {
             </div>
 
             <div className="pa-section">
-              <div className="pa-section-title">Marketing consent</div>
+              <div
+                className="pa-section-title"
+                title="Records that the customer told you (by phone, chat, or a reply) whether they want marketing on this channel. It doesn't change what you can send today — templates work regardless — it's the record future campaigns will use, and it protects your WhatsApp number's standing with Meta."
+              >
+                Marketing consent ⓘ
+              </div>
               {[["email", "Email"], ["sms", "SMS"], ["whatsapp", "WhatsApp"], ["calls", "Calls"]].map(([ch, label]) => {
                 const st = contact?.consent?.[ch] || "unknown";
                 const on = st === "subscribed";
@@ -562,7 +567,10 @@ export default function InboxPage({ initialThreadId } = {}) {
                   </div>
                 );
               })}
-              {contact?.consent?.linkedToShopify && <div className="pa-muted" style={{ fontSize: 11, marginTop: 5 }}>Email &amp; SMS sync to the Shopify customer.</div>}
+              <div className="pa-muted" style={{ fontSize: 11, marginTop: 5 }}>
+                Manual record of consent the customer gave you directly — not a technical send permission.
+                {contact?.consent?.linkedToShopify && " Email & SMS sync to the Shopify customer."}
+              </div>
             </div>
 
             <div className="pa-section">
