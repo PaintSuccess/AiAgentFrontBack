@@ -111,10 +111,13 @@ export default function InboxPage({ initialThreadId } = {}) {
     try {
       const data = await dashboardFetch(`/api/comms/thread?id=${encodeURIComponent(id)}`);
       setDetail(data);
+      // Default the composer to the channel the customer actually uses (the last
+      // SMS/WhatsApp message), not last_channel (which can be chat/voice).
       if (channelInitFor.current !== id) {
         channelInitFor.current = id;
-        const lc = data.thread?.last_channel;
-        if (lc === "whatsapp" || lc === "sms") setChannel(lc);
+        const msgs = data.messages || [];
+        const lastSendable = [...msgs].reverse().find((m) => m.channel === "sms" || m.channel === "whatsapp");
+        setChannel(lastSendable ? lastSendable.channel : "sms");
       }
     } catch (err) { setError(err.message); }
   }, []);
@@ -417,7 +420,11 @@ export default function InboxPage({ initialThreadId } = {}) {
                   <textarea className="pa-input" placeholder={`Reply as a human via ${CHANNELS[channel]?.label}…`} value={composer} onChange={(e) => setComposer(e.target.value)} onKeyDown={onComposerKey} rows={1} />
                   <button className="pa-btn pa-btn-primary" disabled={sending || !composer.trim()} onClick={handleSend}>{sending ? "Sending…" : "Send"}</button>
                 </div>
-                {!isHuman && <div className="pa-composer-hint">AI is active on this thread and will keep auto-replying. Use "Take over" to pause it.</div>}
+                <div className="pa-composer-hint">
+                  {isHuman
+                    ? "You're handling this conversation — the AI is paused and auto-returns after 30 min with no reply. Use “Hand to AI” to give it back now."
+                    : "The AI is answering this thread. Sending a reply takes over automatically and pauses the AI."}
+                </div>
               </div>
             </>
           )}

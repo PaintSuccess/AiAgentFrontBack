@@ -192,10 +192,11 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ ok: true, duplicate: true });
     }
 
-    // AI-control gate: if a human has taken over this thread, do not auto-reply.
-    const control = await commsQueries.getControlByPhone(inbound.from);
-    if (control && control.control_mode !== "ai") {
-      console.log(`[WhatsApp] Thread in '${control.control_mode}' mode — AI staying silent.`);
+    // AI-control gate: stay silent if a human is actively handling this thread
+    // (auto-hands back to the AI once the takeover window lapses).
+    const control = await commsQueries.evaluateInboundControl(inbound.from);
+    if (control && control.aiEnabled === false) {
+      console.log("[WhatsApp] Human is handling this thread — AI staying silent.");
       if (inbound.provider === "twilio") {
         res.setHeader("Content-Type", "text/xml");
         return res.status(200).send(`<?xml version="1.0" encoding="UTF-8"?>\n<Response></Response>`);
