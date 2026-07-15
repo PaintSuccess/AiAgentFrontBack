@@ -32,7 +32,14 @@
     // Ring sizes: button is 56px; ring SVG is 76px and centered with -10px
     // offsets. Inner/outer radii keep the two arcs on separate tracks.
     var css = ''
-      + '.pa-sw-root{position:fixed;right:20px;bottom:100px;z-index:2147483600;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}'
+      // z-index: was 2147483600 (essentially max signed 32-bit int) -- guaranteed
+      // to always win against literally anything, including widgets we don't
+      // control. Confirmed live this was not the actual cause of the Inbox
+      // collision (the overlay-padding fix above was), but an unbounded
+      // "always win" z-index is still a latent conflict waiting to happen with
+      // any future widget. 1,000,000 comfortably clears Shopify Inbox's
+      // confirmed 999998 with room to spare, without being maximal.
+      + '.pa-sw-root{position:fixed;right:20px;bottom:100px;z-index:1000000;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}'
       + '.pa-sw-root *{box-sizing:border-box;}'
       // Launcher (closed state)
       + '.pa-sw-launcher{width:60px;height:60px;border-radius:50%;background:#FF6128;color:#fff;border:none;cursor:pointer;box-shadow:0 8px 22px rgba(0,0,0,0.24);display:flex;align-items:center;justify-content:center;position:relative;transition:transform .2s ease,box-shadow .2s ease;}'
@@ -62,7 +69,7 @@
       + '.pa-sw-row.whatsapp:hover .pa-sw-action.whatsapp{background:linear-gradient(180deg,#5DFA7A 0%,#00B93A 100%);color:#fff;box-shadow:0 9px 22px rgba(9,199,67,.34);}'
       + '.pa-sw-action.close{background:#FFFFFF;color:#3A2A2F;border-color:rgba(221,214,208,.8);box-shadow:0 5px 14px rgba(0,0,0,0.16);}'
       + '.pa-sw-action.close svg{width:20px;height:20px;}'
-      // Email remains hidden; WhatsApp is live through the Twilio WhatsApp sender.
+      // Email remains preserved for rollback, but hidden in the support panel.
       + '.pa-sw-row.email{display:none!important;}'
       // Hover ring — two incomplete arcs spin in opposite directions.
       + '.pa-sw-ring{position:absolute;top:-10px;left:-10px;width:76px;height:76px;pointer-events:none;overflow:visible;z-index:0;}'
@@ -110,14 +117,14 @@
       + '.pa-sw-status.error{display:block;background:#FFF4E8;color:#8A3A12;border:1px solid #FFD2A9;}'
       + '.pa-sw-status.success{display:block;background:#EDF8F0;color:#1D6B3A;border:1px solid #CDEDD7;}'
       + '.pa-sw-disclaimer{font-size:11px;color:#666;line-height:1.35;margin:10px 0 0;}'
-      + '.pa-sw-eleven-close{position:fixed;width:36px;height:36px;border-radius:50%;border:2px solid #e0e0e0;background:#fff;color:#444;box-shadow:0 2px 8px rgba(0,0,0,0.18);cursor:pointer;z-index:2147483700;display:none;align-items:center;justify-content:center;}'
+      + '.pa-sw-eleven-close{position:fixed;width:36px;height:36px;border-radius:50%;border:2px solid #e0e0e0;background:#fff;color:#444;box-shadow:0 2px 8px rgba(0,0,0,0.18);cursor:pointer;z-index:1000100;display:none;align-items:center;justify-content:center;}'
       + '.pa-sw-eleven-close svg{width:16px;height:16px;}'
       + '.pa-sw-eleven-close:hover{background:#f3f3f3;}'
       // Voice → chat product results overlay (rendered when the agent
       // calls the display_products_in_chat client tool). Positioned to
       // the LEFT of the ElevenLabs widget panel so it sits beside the
       // call view instead of covering it.
-      + '.pa-sw-results{position:fixed;z-index:2147483650;width:340px;max-width:calc(100vw - 32px);max-height:70vh;overflow-y:auto;background:#fff;border-radius:14px;box-shadow:0 12px 36px rgba(0,0,0,0.28);padding:14px 14px 18px;display:none;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}'
+      + '.pa-sw-results{position:fixed;z-index:1000050;width:340px;max-width:calc(100vw - 32px);max-height:70vh;overflow-y:auto;background:#fff;border-radius:14px;box-shadow:0 12px 36px rgba(0,0,0,0.28);padding:14px 14px 18px;display:none;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;}'
       + '.pa-sw-results[data-open="1"]{display:block;animation:pa-sw-fold-in .22s ease both;}'
       + '.pa-sw-results-head{display:flex;align-items:center;justify-content:space-between;margin:0 0 10px;}'
       + '.pa-sw-results-head h4{margin:0;font-size:14px;font-weight:600;color:#1a1a1a;}'
@@ -165,7 +172,13 @@
       +   '.pa-sw-eleven-close svg{width:18px;height:18px;}'
       + '}'
       + '@media(max-width:480px){'
-      +   '.pa-sw-root{right:12px;}'
+      // right:24px centers our 56px launcher 52px from the viewport's right
+      // edge (24 + 56/2), matching Shopify's native Inbox chat launcher
+      // (inbox-online-store-chat: 72px wide, 16px right offset -> also 52px
+      // center-from-edge) -- confirmed live at both 375px and 414px widths so
+      // the two buttons sit on the same vertical axis instead of visually
+      // staggered.
+      +   '.pa-sw-root{right:24px;}'
       +   '.pa-sw-form{width:calc(100vw - 32px);max-height:calc(100dvh - 160px);overflow-y:auto;padding:18px;}'
       +   '.pa-sw-form-head h3{font-size:16px;}'
       +   '.pa-sw-launcher{width:56px;height:56px;}'
@@ -758,7 +771,11 @@
       if (!elevenScriptLoaded) {
         elevenScriptLoaded = true;
         var s = document.createElement('script');
-        s.src = 'https://unpkg.com/@elevenlabs/convai-widget-embed';
+        // Pinned -- was unpinned "latest", which silently pulled in a breaking
+        // ElevenLabs release (new mandatory consent screen + shadow-DOM changes)
+        // with zero warning. Bump this deliberately after testing a new version,
+        // not automatically.
+        s.src = 'https://unpkg.com/@elevenlabs/convai-widget-embed@0.14.10';
         s.async = true;
         s.type = 'text/javascript';
         document.body.appendChild(s);
@@ -844,15 +861,17 @@
       });
       // Voice auto-start is driven by one guarded click in driveWidget().
       // Do not also set start-call="true"; using both can create two calls.
-      // Shift the panel left so it clears our FAB launcher button. On mobile
-      // the launcher is smaller (52-56px) and tucked into the corner, so we
-      // need less overlay padding — otherwise the widget's own panel ends up
-      // hanging off the right edge of the screen.
-      // --el-overlay-padding shifts the panel left from the right viewport edge.
-      // On mobile the shadow CSS already constrains width/position, so keep
-      // this small to avoid the panel being pushed off-screen to the left.
-      var overlayPad = window.matchMedia('(max-width:768px)').matches ? '0px' : '90px';
-      elevenEl.style.setProperty('--el-overlay-padding', overlayPad);
+      // --el-overlay-padding insets the widget's own floating corner (launcher
+      // bubble + panel) from BOTH the right and bottom viewport edges at once
+      // (confirmed empirically -- it is not axis-specific despite the name).
+      // On desktop this clears our FAB launcher button. On mobile it was 0px,
+      // which let the widget's bubble/consent panel sit flush in the same
+      // corner as Shopify's native Inbox chat launcher (inbox-online-store-chat,
+      // z-index 999998, ~81px tall) -- confirmed live to visually collide with
+      // it. 90px (matching desktop) clears Inbox with a small margin and still
+      // clears our own launcher button, verified against the live shadow DOM
+      // at 375x812.
+      elevenEl.style.setProperty('--el-overlay-padding', '90px');
       document.body.appendChild(elevenEl);
       return elevenEl;
     }
@@ -1059,12 +1078,32 @@
       var phase = 'launcher'; // launcher → opened
       var voiceStartClicked = false;
       var tries = 0;
+      var consentTries = 0;
+      var NORMAL_MAX_TRIES = 80;   // ~12s @ 150ms -- normal widget-mount polling
+      var CONSENT_MAX_TRIES = 400; // ~60s @ 150ms -- see below
       driveWidgetInterval = setInterval(function () {
-        tries++;
         if (token !== elevenOpenToken || el !== elevenEl) { clearInterval(driveWidgetInterval); driveWidgetInterval = null; return; }
-        if (tries > 80) { clearInterval(driveWidgetInterval); driveWidgetInterval = null; return; } // ~16s
         var sr = el.shadowRoot;
-        if (!sr) return;
+        if (!sr) { tries++; if (tries > NORMAL_MAX_TRIES) { clearInterval(driveWidgetInterval); driveWidgetInterval = null; } return; }
+
+        // The widget can show a one-time consent/terms screen before its own
+        // launcher bubble exists (".rounded-compact-sheet"). Wait it out on a
+        // separate, longer budget instead of burning the normal ~12s window --
+        // this is a real human decision (read + tap Accept/Cancel), not
+        // mount latency. Without this, a user who takes more than ~12s causes
+        // us to silently give up driving the widget for the rest of the
+        // session: the custom close button never positions, mobile compact
+        // styling never applies, and the product-results overlay can no
+        // longer anchor itself (it depends on ".sheet", which also only
+        // appears after this screen is dismissed).
+        if (sr.querySelector('.terms')) {
+          consentTries++;
+          if (consentTries > CONSENT_MAX_TRIES) { clearInterval(driveWidgetInterval); driveWidgetInterval = null; }
+          return;
+        }
+
+        tries++;
+        if (tries > NORMAL_MAX_TRIES) { clearInterval(driveWidgetInterval); driveWidgetInterval = null; return; }
 
         if (phase === 'launcher') {
           if (clickLauncherBubble(sr)) phase = 'opening';
