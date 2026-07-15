@@ -6,6 +6,7 @@ const { loadTwilioTextHistory } = require("../../lib/twilio-text-history");
 const commsStore = require("../../lib/comms/store");
 const commsQueries = require("../../lib/comms/queries");
 const commsConsent = require("../../lib/comms/consent");
+const { isStaffNumber } = require("../../lib/comms/handoff");
 
 // Validate Twilio webhook signature to prevent spoofed requests
 function verifyTwilioSignature(req) {
@@ -59,6 +60,14 @@ module.exports = async function handler(req, res) {
 
     if (!from || !body) {
       return res.status(400).send("<Response><Message>Invalid request</Message></Response>");
+    }
+
+    // Staff replying to a handoff alert (or texting the support number) — never
+    // route this through the customer-facing AI or create a customer thread.
+    if (isStaffNumber(from)) {
+      console.log(`[SMS] Staff number ${from} — skipping AI.`);
+      res.setHeader("Content-Type", "text/xml");
+      return res.status(200).send(`<?xml version="1.0" encoding="UTF-8"?>\n<Response></Response>`);
     }
 
     let replyText = "Thanks for contacting Paint Access! We're processing your message. For immediate help, call us at 02 5838 5959 or visit paintaccess.com.au";

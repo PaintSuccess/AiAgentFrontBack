@@ -6,6 +6,7 @@ const { loadTwilioTextHistory } = require("../../lib/twilio-text-history");
 const commsStore = require("../../lib/comms/store");
 const commsQueries = require("../../lib/comms/queries");
 const commsConsent = require("../../lib/comms/consent");
+const { isStaffNumber } = require("../../lib/comms/handoff");
 const {
   parseWhatsAppInbound,
   sendWhatsAppMessage,
@@ -132,6 +133,17 @@ module.exports = async function handler(req, res) {
         return res.status(400).send(twimlMessage("Invalid request"));
       }
       return res.status(400).json({ error: "Invalid request" });
+    }
+
+    // Staff replying to a handoff alert (or messaging the support number) —
+    // never route this through the customer-facing AI or create a customer thread.
+    if (isStaffNumber(inbound.from)) {
+      console.log(`[WhatsApp] Staff number ${inbound.from} — skipping AI.`);
+      if (inbound.provider === "twilio") {
+        res.setHeader("Content-Type", "text/xml");
+        return res.status(200).send(`<?xml version="1.0" encoding="UTF-8"?>\n<Response></Response>`);
+      }
+      return res.status(200).json({ ok: true, staff: true });
     }
 
     try {
