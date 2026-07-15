@@ -106,6 +106,12 @@ function runReferentialFollowUpTests() {
     "that one, whats the price",
     "what about the other one",
     "can you grab those",
+    // Verb + pronoun pointing back at products we already showed. Narrowing this
+    // predicate once dropped these, which silently lost the resend/link summary.
+    "send it",
+    "send me that",
+    "can you get it",
+    "resend it",
   ];
   const shouldNotFollowUp = [
     "Can I get 10% discount code for my order please?",
@@ -114,6 +120,7 @@ function runReferentialFollowUpTests() {
     "do you offer any discounts?",
     "can you get someone to call me",
     "I need to send my order back",
+    "get me a quote for 10 drums",
   ];
   for (const t of shouldFollowUp) {
     assert.equal(looksLikeReferentialProductFollowUp(t), true, `should be a product follow-up: ${t}`);
