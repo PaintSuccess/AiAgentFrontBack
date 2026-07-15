@@ -258,24 +258,23 @@ const AUSTRALIAN_VOICE_ID = "e1nbKcfTL4XYy71tZn9J";
 
 // ─── First Message ───
 //
-// DO NOT put {{customer_greeting}} (or any {{variable}}) in here without first making
-// EVERY channel send that variable. Tried and reverted 2026-07-15:
+// {{customer_greeting}} is a preformatted first-name suffix — " Daniel" or "" — so a known
+// customer hears "Hi Daniel, I'm Jess..." and everyone else hears the original line
+// unchanged. We already know who logged-in widget visitors and matched callers are.
 //
-//   first_message: "Hi{{customer_greeting}}, I'm Jess from PaintAccess..."
-//   -> SMS/WhatsApp stopped replying entirely ("ElevenLabs text response timed out").
+// ANY {{variable}} used here MUST be sent by EVERY channel, always, even when empty.
+// dynamic_variable_placeholders do NOT cover a caller that supplies its own
+// dynamic_variables object omitting the key — first_message is emitted on text channels
+// too, so an unresolved variable means the conversation never starts. A first attempt on
+// 2026-07-15 shipped this while lib/elevenlabs-text.js omitted the key and took SMS and
+// WhatsApp down completely ("ElevenLabs text response timed out").
 //
-// dynamic_variable_placeholders below did NOT save it. The placeholder was live and set
-// to "", but a caller that supplies its own `dynamic_variables` object omitting the key
-// still fails to resolve — and lib/elevenlabs-text.js sends exactly such an object, with
-// no customer_greeting. first_message is emitted on text channels too, so the conversation
-// never started. The widget and api/webhooks/elevenlabs-twilio-personalization.js both do
-// send it; only the text path does not.
-//
-// To personalise this properly: add customer_greeting to the dynamic_variables in
-// lib/elevenlabs-text.js first, confirm the WIDGET still opens for ANONYMOUS visitors
-// (it must send the key even when nobody is logged in), and only then change this line.
+// All three senders verified to emit customer_greeting unconditionally:
+//   widget : ai-support-widget.liquid — `CFG.customerFirstName ? ' ' + ... : ''`
+//   phone  : lib/shopify-customer-context.js baseDynamicVariables()
+//   text   : lib/elevenlabs-text.js dynamic_variables (added after the outage above)
 const firstMessage =
-  "Hi, I'm Jess from PaintAccess. I can help you find the right product, track your order, or answer painting and sprayer questions. How can I help today?";
+  "Hi{{customer_greeting}}, I'm Jess from PaintAccess. I can help you find the right product, track your order, or answer painting and sprayer questions. How can I help today?";
 
 // Defaults for dynamic variables a channel may not send. Without an entry here, a
 // {{variable}} referenced in the prompt or first_message that isn't supplied is a hard
