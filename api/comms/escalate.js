@@ -23,6 +23,7 @@ module.exports = async function handler(req, res) {
     const result = await escalateToHuman({
       channel: sanitizeInput(body.channel, 20) || "chat",
       phone: body.customer_phone || body.phone,
+      email: sanitizeInput(body.customer_email || body.email, 320),
       name: sanitizeInput(body.customer_name || body.name, 100),
       reason: sanitizeInput(body.reason, 300),
       preferred: sanitizeInput(body.preferred_method || body.preferred, 20),

@@ -17,10 +17,11 @@ const toolDef = {
     name: "escalate_to_human",
     description:
       "Use whenever a customer asks to speak with a person, a human, the team, a manager, or says the AI/bot can't help them — on ANY channel (voice call, SMS, WhatsApp, or the website chat widget). " +
-      "This is the ONLY correct handoff action. NEVER attempt to transfer, forward, or connect a phone call to a human number — voice calls must stay with you; this tool texts the customer a link instead. " +
-      "Default handoff is WhatsApp: the tool gives the customer a link to chat with our support team directly. If the customer says they don't use WhatsApp or would rather not use it, call this tool again is not needed — instead pass preferred_method \"sms\" and our team will follow up by SMS. " +
-      "Always pass customer_phone from the customer_phone dynamic variable when you have it. On a voice call you always have it. On chat widget you may not — call the tool anyway with channel \"chat\" and no phone number if none is known; it still works. " +
-      "After the tool returns, relay exactly what its `message` field says to the customer (read it naturally, don't read the raw link character-by-character if you're on voice — the link was already texted to them). Then continue the conversation normally. Do not call this tool more than once for the same request.",
+      "This is the ONLY correct handoff action. NEVER attempt to transfer, forward, or connect a phone call to a human number — voice calls must stay with you; this tool handles the handoff. " +
+      "Default handoff is WhatsApp: the tool gives the customer a link to chat with our support team directly. If the customer says they don't use WhatsApp or would rather not, pass preferred_method \"sms\" and our team will follow up by SMS instead. " +
+      "For `channel`, use the CURRENT surface: on a website voice or text chat use \"chat\" (there is no phone number — that's normal, the tool still works and shows the link on screen); use \"voice\" ONLY for an actual phone call; use \"sms\" or \"whatsapp\" on those text channels. " +
+      "Always pass customer_phone and customer_email from the dynamic variables when you have them (helps our team identify the customer, especially on the website widget where there's no phone number). " +
+      "After the tool returns, relay exactly what its `message` field says to the customer, then continue normally. Do not call this tool more than once for the same request; if it ever returns an error, apologise and give the customer the support number 02 5838 5959.",
     force_pre_tool_speech: true,
     pre_tool_speech: "force",
     tool_call_sound: "typing",
@@ -44,6 +45,11 @@ const toolDef = {
             type: "string",
             description:
               "Customer's phone number from the customer_phone dynamic variable, if known. Required on voice calls.",
+          },
+          customer_email: {
+            type: "string",
+            description:
+              "Customer's email from the customer_email dynamic variable, if known. Helps the team identify the customer when there's no phone number (e.g. website widget).",
           },
           customer_name: {
             type: "string",
