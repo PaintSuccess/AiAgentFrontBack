@@ -60,14 +60,43 @@ const BINDINGS = {
   customer_phone: "customer_phone",
 };
 
+/**
+ * Return the lookup_order tool ACTUALLY ATTACHED to this agent.
+ *
+ * Selecting by name alone is unsafe here: create-tools.js POSTs new standalone tools on
+ * every run, so the workspace accumulates duplicates (a 2026-07-15 audit found 30 tools,
+ * 22 of them unattached orphans). Picking whichever the account-level list returns first
+ * would happily patch an orphan and report success while the live agent stayed unbound —
+ * the worst kind of failure, since it looks like it worked.
+ */
 async function getTool() {
+  const agentId = process.env.ELEVENLABS_AGENT_ID;
+  if (!agentId) throw new Error("ELEVENLABS_AGENT_ID missing");
+
+  const ar = await fetch(`${BASE}/convai/agents/${agentId}`, { headers });
+  if (!ar.ok) throw new Error(`get agent failed: ${ar.status}`);
+  const attachedIds = (await ar.json()).conversation_config?.agent?.prompt?.tool_ids || [];
+  if (!attachedIds.length) throw new Error("agent has no attached tool_ids");
+
   const r = await fetch(`${BASE}/convai/tools`, { headers });
   if (!r.ok) throw new Error(`list tools failed: ${r.status}`);
-  const j = await r.json();
-  const tools = j.tools || j || [];
-  const t = tools.find((x) => (x.tool_config?.name || x.name) === "lookup_order");
-  if (!t) throw new Error("lookup_order tool not found");
-  return t;
+  const tools = (await r.json()).tools || [];
+
+  const named = tools.filter((x) => (x.tool_config?.name || x.name) === "lookup_order");
+  const attached = named.filter((x) => attachedIds.includes(x.id));
+
+  if (!attached.length) {
+    throw new Error(
+      `no lookup_order tool is attached to ${agentId} (${named.length} exist in the workspace but none are attached)`
+    );
+  }
+  if (attached.length > 1) {
+    throw new Error(`ambiguous: ${attached.length} attached tools named lookup_order (${attached.map((x) => x.id).join(", ")})`);
+  }
+  if (named.length > attached.length) {
+    console.log(`  note: ${named.length - attached.length} orphaned lookup_order tool(s) in the workspace are being ignored`);
+  }
+  return attached[0];
 }
 
 async function main() {
