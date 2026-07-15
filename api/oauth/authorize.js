@@ -25,10 +25,35 @@ module.exports = async function handler(req, res) {
   if (!params.client_id) return res.status(400).send("Missing client_id.");
   if (!isAllowedRedirectUri(params.redirect_uri)) return res.status(400).send("Unsupported redirect_uri.");
 
+  // PKCE is required (see verifyPkce). Reject here rather than at the token endpoint so
+  // a non-PKCE client fails immediately with a clear reason instead of after consent.
+  if (!params.code_challenge) {
+    return res.status(400).send("PKCE required: missing code_challenge.");
+  }
+  if (String(params.code_challenge_method || "S256").toUpperCase() !== "S256") {
+    return res.status(400).send("PKCE required: code_challenge_method must be S256.");
+  }
+
   const pin = cleanEnv("MCP_OAUTH_PIN");
-  const autoApprove = cleanEnv("MCP_OAUTH_AUTO_APPROVE") === "true";
+  const isProduction = cleanEnv("VERCEL_ENV") === "production";
+  // Auto-approve is a local/preview convenience and must never apply in production --
+  // same rule verifyMcpRequest() already applies to its unauthenticated escape hatch.
+  const autoApprove = cleanEnv("MCP_OAUTH_AUTO_APPROVE") === "true" && !isProduction;
+
+  // A missing PIN must not mean "everybody passes". `pinOk = !pin || ...` did exactly
+  // that: with no MCP_OAUTH_PIN set, anyone could POST approve=1 and be issued an
+  // authorization code for the full Operations MCP scope, with no human involved.
+  // Without a configured PIN there is no way to prove the approver is staff, so refuse
+  // to issue codes at all.
+  if (!autoApprove && !pin) {
+    return res.status(503).send(
+      "<h1>OAuth is not configured</h1>" +
+        "<p>Set <code>MCP_OAUTH_PIN</code> before authorizing a connector.</p>"
+    );
+  }
+
   const approved = req.method === "POST" && input.approve === "1";
-  const pinOk = !pin || safeEqual(input.pin || "", pin);
+  const pinOk = safeEqual(input.pin || "", pin);
 
   if (!autoApprove && (!approved || !pinOk)) {
     return res

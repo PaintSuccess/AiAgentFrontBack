@@ -27,10 +27,18 @@ module.exports = async function handler(req, res) {
 
   const pinCheck = verifyAdminPin(req);
   if (!pinCheck.ok) {
-    return res.status(401).send(
+    // "not_configured" means no PIN exists server-side, so telling the caller to pass
+    // ?pin=... would be misleading — there is nothing they could pass. The flow is shut
+    // until an admin sets the env var.
+    const notConfigured = pinCheck.reason === "not_configured";
+    return res.status(notConfigured ? 503 : 401).send(
       htmlPage(
-        "Google OAuth admin PIN required",
-        `<h1>Admin PIN required</h1>
+        notConfigured ? "Google OAuth is not configured" : "Google OAuth admin PIN required",
+        notConfigured
+          ? `<h1>Not configured</h1>
+        <p>Set <code>GOOGLE_OAUTH_ADMIN_PIN</code> (or <code>MCP_OAUTH_PIN</code>) before connecting a Google account.</p>
+        <p class="muted">This flow writes a refresh token into production, so it stays closed until a PIN exists.</p>`
+          : `<h1>Admin PIN required</h1>
         <p>Open this URL with <code>?pin=...</code> using <code>GOOGLE_OAUTH_ADMIN_PIN</code>.</p>
         <p class="muted">Example: <code>/api/google/oauth-start?pin=YOUR_PIN</code></p>`,
         "#b42318"
