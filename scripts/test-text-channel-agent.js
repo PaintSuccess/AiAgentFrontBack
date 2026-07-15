@@ -19,7 +19,11 @@ function loadDotEnv(path = ".env") {
 
 loadDotEnv();
 
-const { askElevenLabsTextAgent, looksLikeHumanHandoffIntent } = require("../lib/elevenlabs-text");
+const {
+  askElevenLabsTextAgent,
+  looksLikeHumanHandoffIntent,
+  looksLikeReferentialProductFollowUp,
+} = require("../lib/elevenlabs-text");
 const { shopifyFetch } = require("../lib/shopify");
 const { getCustomerContextByPhone } = require("../lib/shopify-customer-context");
 const { normalizeOrderNumber } = require("../lib/customer-order-lookup");
@@ -90,8 +94,38 @@ function runHandoffIntentTests() {
   }
 }
 
+// A referential follow-up lets us re-derive products from history and DISCARD the
+// model's own reply, so a false positive answers the wrong question entirely. Live
+// case: "Can I get 10% discount code for my order please?" matched on the bare word
+// "get" and the customer was sent a list of roller covers instead of an answer.
+function runReferentialFollowUpTests() {
+  const shouldFollowUp = [
+    "What about brushes I asked?",
+    "send me the link",
+    "the black one please",
+    "that one, whats the price",
+    "what about the other one",
+    "can you grab those",
+  ];
+  const shouldNotFollowUp = [
+    "Can I get 10% discount code for my order please?",
+    "how do I clean it",
+    "Is that price right?",
+    "do you offer any discounts?",
+    "can you get someone to call me",
+    "I need to send my order back",
+  ];
+  for (const t of shouldFollowUp) {
+    assert.equal(looksLikeReferentialProductFollowUp(t), true, `should be a product follow-up: ${t}`);
+  }
+  for (const t of shouldNotFollowUp) {
+    assert.equal(looksLikeReferentialProductFollowUp(t), false, `should NOT be a product follow-up: ${t}`);
+  }
+}
+
 async function run() {
   runHandoffIntentTests();
+  runReferentialFollowUpTests();
   const customerContext = await customerContextFromTestOrder();
   const base = {
     channel: "whatsapp",
