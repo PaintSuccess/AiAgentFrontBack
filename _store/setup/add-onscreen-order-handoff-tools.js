@@ -33,20 +33,24 @@ const orderTool = {
     required: ["order_number"],
     properties: {
       order_number: { type: "string", description: "e.g. #44542" },
-      date: { type: "string" },
-      payment_status: { type: "string" },
-      fulfillment_status: { type: "string" },
-      total: { type: "string", description: "e.g. '39.00 AUD'" },
+      date: { type: "string", description: "Order date, e.g. '30 June 2026'." },
+      payment_status: { type: "string", description: "Payment status, e.g. 'paid' or 'pending'." },
+      fulfillment_status: { type: "string", description: "Fulfilment status, e.g. 'fulfilled'." },
+      total: { type: "string", description: "Order total, e.g. '39.00 AUD'." },
       items: {
         type: "array",
+        description: "Line items on the order.",
         items: {
           type: "object",
-          properties: { title: { type: "string" }, quantity: { type: "number" } },
+          properties: {
+            title: { type: "string", description: "Item title." },
+            quantity: { type: "number", description: "Quantity ordered." },
+          },
         },
       },
       order_url: { type: "string", description: "Customer order status page link." },
-      tracking_url: { type: "string" },
-      tracking_company: { type: "string" },
+      tracking_url: { type: "string", description: "Carrier tracking link, if any." },
+      tracking_company: { type: "string", description: "Carrier name, if any." },
     },
   },
 };
@@ -66,7 +70,7 @@ const handoffTool = {
     required: ["link"],
     properties: {
       link: { type: "string", description: "The wa.me link from the escalate_to_human result." },
-      reason: { type: "string" },
+      reason: { type: "string", description: "Short reason the customer wants a human, if known." },
     },
   },
 };
