@@ -36,6 +36,24 @@ Body: { id, name, content, usage_mode }
 
 This prevents overwriting client edits made through the Shopify admin UI.
 
+### Every KB change re-indexes — `auto` docs are invisible without a RAG index
+
+ElevenLabs text docs cannot be PATCHed: an "update" is delete + recreate, so the doc gets
+a **new id with no RAG index**. `auto` docs are reachable only via RAG, so an unindexed one
+is silently unretrievable — attached, fine in the editor, permanently invisible to the
+agent. Found 2026-07-15 with ~61k chars of this KB in exactly that state.
+
+`api/dashboard/knowledge-base.js` rebuilds the index automatically (`ensureRagIndex`).
+After any KB change made outside it, verify:
+
+```powershell
+cd "C:\Active Projects\Shopify-PaintAccess-Site\app\_store\setup"
+node build-kb-rag-index.js --status   # every `auto` doc must say succeeded
+```
+
+`prompt` docs are always in context and need no index. See
+`_store/docs/VOICE-STACK-2026-07-15.md`.
+
 ## KB Documents
 
 | File | usage_mode | Purpose |

@@ -86,12 +86,16 @@ module.exports = async function handler(req, res) {
       const newDocId = created.id;
 
       // 2. Attach to agent
-      const attachErr = await attachDocToAgent(newDocId, name, usage_mode || "auto", headers);
+      const mode = usage_mode || "auto";
+      const attachErr = await attachDocToAgent(newDocId, name, mode, headers);
       if (attachErr) {
         return res.status(502).json({ error: attachErr });
       }
 
-      return res.status(201).json({ id: newDocId, name, usage_mode: usage_mode || "auto" });
+      // 3. An `auto` doc is unreachable until it is indexed — see ensureRagIndex.
+      const indexWarning = await ensureRagIndex(newDocId, mode, headers);
+
+      return res.status(201).json({ id: newDocId, name, usage_mode: mode, warning: indexWarning || undefined });
     }
 
     // ── UPDATE ──
@@ -148,7 +152,16 @@ module.exports = async function handler(req, res) {
           return res.status(502).json({ error: detachErr });
         }
 
-        return res.status(200).json({ id: created.id, name: finalName, usage_mode: finalMode });
+        // The recreated doc is a NEW id with NO index. Without this, saving an edit in the
+        // KB editor silently makes an `auto` document unretrievable — see ensureRagIndex.
+        const indexWarning = await ensureRagIndex(created.id, finalMode, headers);
+
+        return res.status(200).json({
+          id: created.id,
+          name: finalName,
+          usage_mode: finalMode,
+          warning: indexWarning || undefined,
+        });
       }
 
       // Only usage_mode changed — update agent config
@@ -195,6 +208,42 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ error: "Internal server error" });
   }
 };
+
+/**
+ * Build the RAG embedding index for a document, if it needs one.
+ *
+ * MUST be called after every create/update of an `auto` document. ElevenLabs text docs
+ * cannot be PATCHed, so an "update" here is really delete + recreate — the doc comes back
+ * with a NEW id and NO index. `auto` docs are reachable ONLY via RAG, so an unindexed one
+ * is invisible to the agent: it is attached, it looks fine in the editor, and it can never
+ * be retrieved. That is not hypothetical — it is how ~61k chars of this KB (including the
+ * whole DAN'S product section) sat unreachable until 2026-07-15, while the always-loaded
+ * rules still told the agent to "use Product Recommendation Details".
+ *
+ * `prompt` docs are always in context and need no index.
+ * Indexing is additive and async; it never alters document content.
+ */
+async function ensureRagIndex(docId, usageMode, headers) {
+  if (usageMode !== "auto") return null;
+  try {
+    const cfg = await getAgentKB(headers);
+    const model = cfg?.rag?.embedding_model || "e5_mistral_7b_instruct";
+    const r = await fetch(`${BASE}/convai/knowledge-base/${docId}/rag-index`, {
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({ model }),
+    });
+    if (!r.ok) {
+      const t = await r.text();
+      console.error("KB rag-index build failed:", docId, r.status, t.slice(0, 200));
+      return `Document saved, but its search index failed to build (${r.status}). It will not be findable by the agent until reindexed.`;
+    }
+    return null;
+  } catch (err) {
+    console.error("KB rag-index build threw:", docId, err.message);
+    return "Document saved, but its search index failed to build. It will not be findable by the agent until reindexed.";
+  }
+}
 
 // ── Helper: get current agent KB config ──
 async function getAgentKB(headers) {

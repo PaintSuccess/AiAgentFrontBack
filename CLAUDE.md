@@ -83,6 +83,36 @@ Body: { id, name, content, usage_mode }
 
 This prevents overwriting client edits made through the Shopify admin UI.
 
+### ⚠ Every KB change re-indexes: `auto` docs are invisible without a RAG index
+
+ElevenLabs text docs **cannot be PATCHed**. An "update" is really *delete + recreate*, so
+the doc comes back with a **new id and no RAG index**. `auto` docs are reachable **only**
+via RAG — an unindexed one is attached, looks perfect in the editor, and **can never be
+retrieved**. It fails silently: no error, no warning, the agent just doesn't know the
+answer and starts guessing.
+
+This is not hypothetical. Found 2026-07-15: **every** doc had `{"indexes":[]}`, so ~61k
+chars (the whole DAN'S product section, the 30k sprayer troubleshooting guide, the paint
+calculation logic) had never been visible to the agent — while the always-loaded rules
+still told it to "use Product Recommendation Details".
+
+- `api/dashboard/knowledge-base.js` now rebuilds the index automatically on create/update
+  (`ensureRagIndex`) and returns a `warning` if that fails. **Do not remove it.**
+- After ANY KB change made outside that endpoint (ElevenLabs dashboard, scripts, manual),
+  rebuild and verify:
+
+```powershell
+cd "C:\Active Projects\Shopify-PaintAccess-Site\app\_store\setup"
+node build-kb-rag-index.js --status    # every `auto` doc must say succeeded
+node build-kb-rag-index.js --commit    # build any that are missing
+```
+
+- `prompt` docs are always in context and need no index.
+- Keep total `auto` content under `rag.max_documents_length` (currently 50,000) in mind —
+  above it, RAG is the *only* way in, so an index is mandatory, not optional.
+
+See `_store/docs/VOICE-STACK-2026-07-15.md`.
+
 ## Inventory Availability
 
 Never use `inventoryQuantity > 0` alone as the availability check. For this store, `inventoryPolicy: CONTINUE` means the product is orderable even when quantity is zero or negative. Use the `available` field returned by `api/shopify/inventory.js` and `api/shopify/products.js`.
