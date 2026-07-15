@@ -3,6 +3,15 @@
 _2026-07-15. Audit + fix plan after live widget voice tests (conv_6201, conv_9101).
 Supersedes the quick patches; this covers every channel and the dependent UI._
 
+> **STATUS: backend + agent LIVE 2026-07-15. Widget theme deploy PENDING.**
+> Deployed: backend (order card payload + URL-free spoken message + handoff payload)
+> and the live agent (client tools `display_order_in_chat` tool_3701kxj3bhrmeze82be4bybxf7h8
+> + `open_whatsapp_handoff` tool_3701kxj3bjb7eq1bwr3hhzf5xy36; prompt point 4 rewritten;
+> escalate tool description updated). **Not yet done:** deploy the updated widget snippet
+> to the live Shopify theme (`npm run deploy-theme`, needs Chrome on :9222 + Shopify login)
+> — until then the on-screen order card / WhatsApp button won't render even though the
+> agent + backend are ready. Then re-test every channel.
+
 ---
 
 ## What the latest test proved (conv_6201, widget voice)
