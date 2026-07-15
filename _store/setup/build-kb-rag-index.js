@@ -86,17 +86,48 @@ async function main() {
   const model = rag.embedding_model || "e5_mistral_7b_instruct";
   console.log(`rag.enabled=${rag.enabled}  embedding_model=${model}  max_documents_length=${rag.max_documents_length}\n`);
 
+  // An index only counts if it actually SUCCEEDED. A `failed` entry still matches on
+  // model, so testing "is there an index for this model" would treat a broken index as
+  // done — the script would cheerfully report "nothing to do" while the document stayed
+  // unretrievable. That is the same silent-success failure this whole script exists to
+  // undo, so be explicit about status.
+  const isUsable = (r) => r.indexes.some((i) => i.model === model && i.status === "succeeded");
+  const isInFlight = (r) =>
+    r.indexes.some((i) => i.model === model && ["new", "created", "processing"].includes(i.status));
+
   const rows = [];
   for (const d of kb) {
     const st = await indexState(d.id);
     const idx = (st.indexes || []).map((i) => `${i.model}:${i.status}`).join(", ") || "(none)";
     rows.push({ ...d, idx, indexes: st.indexes || [] });
-    console.log(`  ${String(d.usage_mode).padEnd(7)} ${d.name.slice(0, 46).padEnd(46)} ${idx}`);
+    const flag =
+      d.usage_mode !== "auto" ? "" : isUsable({ indexes: st.indexes || [] }) ? "" : "   <-- NOT RETRIEVABLE";
+    console.log(`  ${String(d.usage_mode).padEnd(7)} ${d.name.slice(0, 46).padEnd(46)} ${idx}${flag}`);
   }
-  if (statusOnly) return;
+  if (statusOnly) {
+    const broken = rows.filter((r) => r.usage_mode === "auto" && !isUsable(r));
+    if (broken.length) {
+      console.log(`\n${broken.length} auto doc(s) are NOT retrievable. Run with --commit.`);
+      process.exitCode = 1; // so CI / a scripted check fails loudly
+    } else {
+      console.log("\nAll auto docs are indexed and retrievable.");
+    }
+    return;
+  }
 
   // Only `auto` docs are retrieved via RAG; `prompt` docs are always in context.
-  const need = rows.filter((r) => r.usage_mode === "auto" && !r.indexes.some((i) => i.model === model));
+  // Rebuild anything not succeeded — including previously FAILED indexes. Leave in-flight
+  // ones alone rather than stacking duplicate builds on top of them.
+  const inFlight = rows.filter((r) => r.usage_mode === "auto" && !isUsable(r) && isInFlight(r));
+  const need = rows.filter((r) => r.usage_mode === "auto" && !isUsable(r) && !isInFlight(r));
+
+  if (inFlight.length) {
+    console.log(`\n${inFlight.length} doc(s) already building: ${inFlight.map((n) => n.name).join(", ")} — re-run --status shortly.`);
+  }
+  const retrying = need.filter((r) => r.indexes.some((i) => i.model === model));
+  if (retrying.length) {
+    console.log(`\n${retrying.length} doc(s) have a FAILED index and will be retried: ${retrying.map((n) => n.name).join(", ")}`);
+  }
   console.log(`\n${need.length} auto doc(s) need an index: ${need.map((n) => n.name).join(", ") || "(none)"}`);
   if (!need.length) { console.log("Nothing to do."); return; }
 
