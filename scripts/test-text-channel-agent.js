@@ -19,7 +19,7 @@ function loadDotEnv(path = ".env") {
 
 loadDotEnv();
 
-const { askElevenLabsTextAgent } = require("../lib/elevenlabs-text");
+const { askElevenLabsTextAgent, looksLikeHumanHandoffIntent } = require("../lib/elevenlabs-text");
 const { shopifyFetch } = require("../lib/shopify");
 const { getCustomerContextByPhone } = require("../lib/shopify-customer-context");
 const { normalizeOrderNumber } = require("../lib/customer-order-lookup");
@@ -55,7 +55,43 @@ async function customerContextFromTestOrder() {
   return getCustomerContextByPhone(phone);
 }
 
+// Pure/offline. Guards the SMS+WhatsApp deterministic handoff trigger: a false
+// positive pages Daniel for nothing, a miss leaves a customer stranded. Never add
+// a live agent turn for this intent — that would fire a real escalation.
+function runHandoffIntentTests() {
+  const shouldEscalate = [
+    "Ok, would you please connect me with the human?",
+    "can I talk to a human",
+    "I'd like to speak with someone",
+    "connect me to your team",
+    "get me a real person",
+    "transfer me to an agent",
+    "I need a human",
+    "put me through to a manager",
+    "Can I speak to a real person please",
+  ];
+  const shouldNotEscalate = [
+    "Are you a human?",
+    "are you a bot or human",
+    "is this a real person or AI?",
+    "am I talking to a bot",
+    "I need a sprayer for my team",
+    "Do you have someone who can install it?",
+    "I spoke to a manager last week about this",
+    "what is the status of my order 44542",
+    "I need a Graco 650",
+    "my team needs 5 sprayers",
+  ];
+  for (const t of shouldEscalate) {
+    assert.equal(looksLikeHumanHandoffIntent(t), true, `should escalate: ${t}`);
+  }
+  for (const t of shouldNotEscalate) {
+    assert.equal(looksLikeHumanHandoffIntent(t), false, `should NOT escalate: ${t}`);
+  }
+}
+
 async function run() {
+  runHandoffIntentTests();
   const customerContext = await customerContextFromTestOrder();
   const base = {
     channel: "whatsapp",
