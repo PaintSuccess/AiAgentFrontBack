@@ -15,7 +15,7 @@ Also read `AGENTS.md` before changing application files. Do not edit `.github/` 
 - AI agent: ElevenLabs Conversational AI, currently `agent_1001kn99pk1xefprh4gb665f6j3p`.
 - Production backend: `https://ai-agent-front-back.vercel.app`.
 - Shopify store: `zgmzge-0d.myshopify.com` for `paintaccess.com.au`.
-- Theme/widget files: tracked under `_store/theme/`, especially `_store/theme/snippets/ai-support-widget.liquid`.
+- Theme/widget files: **NOT in this repo.** The Shopify theme lives in a separate repo — see "Shopify Theme" below.
 - Operations/agent automation: `automation/`, `.agents/skills/`, and `.codex/skills/`.
 
 ## Working Rules
@@ -26,6 +26,42 @@ Also read `AGENTS.md` before changing application files. Do not edit `.github/` 
 - Use existing patterns: Vite, React, Polaris, CommonJS serverless handlers, and helpers under `lib/`.
 - For frontend dashboard API calls, use `dashboardFetch()` from `src/utils/fetch.js` so the Shopify App Bridge JWT is attached.
 - Run `npm run build` after code changes that affect runtime behavior or frontend compilation. Documentation-only workflow updates do not require a build.
+
+## Shopify Theme — lives in a SEPARATE repo, deploy with the Shopify CLI
+
+**The theme is NOT in this repo.** It is `../frontend/` → `PaintSuccess/PaintAccessTheme2023` (private).
+This repo (`AiAgentFrontBack`) is **PUBLIC** and is backend/app only.
+
+> History: `_store/theme/` used to hold a *mirror* of the theme, deployed by
+> `_store/setup/deploy-theme.js`. **Both were deleted 2026-07-15.** The mirror had
+> silently drifted behind the real theme (stale `unpkg` URL, old z-index, stale
+> `header.liquid`/`top-bar.liquid`), so deploying from it would have reverted live
+> production fixes. There is now one source of truth: `../frontend/`.
+
+| Thing | Value |
+| --- | --- |
+| Theme repo | `../frontend/` (`PaintSuccess/PaintAccessTheme2023`, private) |
+| Widget snippet | `../frontend/shopify/snippets/ai-support-widget.liquid` |
+| Branch to work on | `feature/theme-local-sync` (long-lived, open PR **#121** → main) |
+| Store | `zgmzge-0d.myshopify.com` |
+| Live theme id | `138089922663` — "Copy of PantAccess [min order amount by brands]" |
+
+**Deploy (Shopify CLI is installed globally and already authenticated):**
+
+```powershell
+cd "C:\Active Projects\Shopify-PaintAccess-Site\frontend"
+yarn deploy                                             # webpack build + shopify theme push
+# single file (safer for a snippet-only change):
+cd shopify; shopify theme push --only snippets/ai-support-widget.liquid
+# verify what is actually live:
+shopify theme pull --store zgmzge-0d.myshopify.com --theme 138089922663 --only snippets/ai-support-widget.liquid --path <tmpdir>
+```
+
+Rules:
+- Always commit theme changes to `frontend/` on `feature/theme-local-sync` and push (PR #121 updates itself).
+- `shopify/assets/bundle.js|css` are webpack build output — never edit by hand.
+- The Shopify **Admin API token in `.env` has no theme scope** (403) — it cannot read/write theme assets. Use the CLI.
+- Backend repo: work on **`main` only** — no feature branches/PRs there.
 
 ## Knowledge Base Sync
 
@@ -67,7 +103,7 @@ Never use `inventoryQuantity > 0` alone as the availability check. For this stor
 | `src/pages/InboxPage.jsx` | Unified communications inbox UI (+ `src/pages/inbox.css`) |
 | `src/pages/KnowledgeBasePage.jsx` | KB editor UI |
 | `src/App.jsx` | App shell, routing, and navigation |
-| `_store/theme/snippets/ai-support-widget.liquid` | Shopify storefront widget snippet |
+| `../frontend/shopify/snippets/ai-support-widget.liquid` | Shopify storefront widget snippet (**separate theme repo** — see "Shopify Theme") |
 | `api/mcp/shopify.js` | PaintAccess Operations MCP endpoint |
 | `api/callback.js` | Outbound AI callback (draft order + live ElevenLabs call). **Disabled by default** (`ENABLE_AI_CALLBACK` unset) — not wired to any UI, and needs a product/compliance decision (consent capture, Do Not Call Register) before re-enabling. |
 
@@ -131,4 +167,4 @@ Live account access is not portable through Git. Claude can read the skills and 
 
 - Boris Does/AWS: separate Amazon-hosted project; leave it alone for now.
 - ChatGPT agents/Operations Desk: separate formal agent automation project, stored here in `automation/` and `.agents/`; Claude should follow the same workflows as Codex.
-- Shopify app/backend/widget/frontend theme: separate formal product project, currently together in this repo under `api/`, `src/`, `lib/`, and `_store/theme/`.
+- Shopify app/backend/widget: this repo, under `api/`, `src/`, and `lib/`. The **storefront theme is a separate repo** (`../frontend/`) — see "Shopify Theme".
