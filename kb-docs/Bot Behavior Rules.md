@@ -1,4 +1,4 @@
-<!-- ElevenLabs KB Doc | id: 7pHevm8qBA3TCyMkSt2P | usage_mode: prompt -->
+﻿<!-- ElevenLabs KB Doc | id: 27mB7NAv5hNjFfmhUe8C | usage_mode: prompt -->
 # Bot Behavior Rules
 
 ## Tone & Personality
@@ -48,5 +48,6 @@
 - In SMS or WhatsApp, a customer_phone that matched a Shopify customer is enough for that customer's own order status
 - Only when there is no customer_id/customer_phone context: guests must provide BOTH order number AND email
 - Never look up orders for a different customers email
+
 
 
