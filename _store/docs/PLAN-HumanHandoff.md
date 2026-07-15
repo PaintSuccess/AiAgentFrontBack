@@ -4,10 +4,13 @@ _2026-07-14. Cross-channel human escalation: when a customer on any AI channel
 (voice call, WhatsApp, SMS, chat widget) asks for a human/team, hand them off to
 Daniel (+ a manager) correctly — never by transferring a phone call._
 
-> **STATUS: Option 1 (deep-link) BUILT 2026-07-15 — code deployed, live agent tool
-> registration pending.** Option 2 (auto WhatsApp group) remains documented below as a
-> future upgrade, not built — OBA is confirmed available but Option 2 needs its own
-> Twilio-vs-Meta-Cloud-API decision and shouldn't block Option 1 shipping.
+> **STATUS: Option 1 (deep-link) LIVE 2026-07-15.** Code deployed to production,
+> env vars set on Vercel, `escalate_to_human` registered on the live ElevenLabs agent
+> (tool_0501kxhyyx8yfjx9ssx65j71w8cf, alongside the existing 8 tools). Not yet done:
+> a real end-to-end test through the live agent on each channel. Option 2 (auto
+> WhatsApp group) remains documented below as a future upgrade, not built — OBA is
+> confirmed available but Option 2 needs its own Twilio-vs-Meta-Cloud-API decision and
+> shouldn't block Option 1 shipping.
 >
 > **2026-07-15 update — OBA confirmed.** Checked live in Meta Business Manager
 > (business_id 1953771224878899): Business Portfolio shows **"Verification successful"**
@@ -33,9 +36,10 @@ Daniel (+ a manager) correctly — never by transferring a phone call._
 > `isStaffNumber()` to `handoff.js` and an early-exit guard in both
 > `api/twilio/sms-inbound.js` and `api/whatsapp/inbound.js`: any inbound message from
 > a number in `HUMAN_SUPPORT_NOTIFY_NUMBERS`/`HUMAN_SUPPORT_WA_NUMBER` now skips the
-> AI and customer-thread pipeline entirely. Still remaining: set env vars on Vercel
-> production, deploy, run the tool-registration script, and do a real end-to-end test
-> through the live agent.
+> AI and customer-thread pipeline entirely. Env vars set on Vercel
+> production, deployed, and `_store/setup/add-escalate-to-human-tool.js` run against
+> the live agent successfully. Still remaining: a real end-to-end test through the
+> live agent (ask it to connect you to a human on voice, SMS, WhatsApp, and widget).
 
 ---
 
