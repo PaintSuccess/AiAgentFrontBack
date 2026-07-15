@@ -1,6 +1,6 @@
-﻿# KB Docs — ElevenLabs Knowledge Base Local Mirror
+# KB Docs — ElevenLabs Knowledge Base Local Mirror
 Agent ID: agent_1001kn99pk1xefprh4gb665f6j3p
-Last synced: 2026-07-15 16:05
+Last synced: 2026-07-15 16:12
 
 Variant 3 refactor published to ElevenLabs: 2026-06-30 20:12
 

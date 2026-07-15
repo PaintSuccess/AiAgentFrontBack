@@ -1,4 +1,4 @@
-﻿<!-- ElevenLabs KB Doc | id: 8k7aHXxI2TAzsoLdui4x | usage_mode: auto -->
+<!-- ElevenLabs KB Doc | id: 8k7aHXxI2TAzsoLdui4x | usage_mode: auto -->
 # Product Recommendation Details
 
 Use this document only when the customer's question matches one of these product topics. For voice calls, summarize the relevant part in 1-3 sentences and ask one next question.

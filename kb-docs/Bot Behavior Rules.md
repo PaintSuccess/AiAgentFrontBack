@@ -1,4 +1,4 @@
-﻿<!-- ElevenLabs KB Doc | id: 27mB7NAv5hNjFfmhUe8C | usage_mode: prompt -->
+<!-- ElevenLabs KB Doc | id: 27mB7NAv5hNjFfmhUe8C | usage_mode: prompt -->
 # Bot Behavior Rules
 
 ## Tone & Personality

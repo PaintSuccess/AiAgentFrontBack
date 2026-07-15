@@ -1,4 +1,4 @@
-﻿<!-- ElevenLabs KB Doc | id: YyJzX0Gm875wmW7KIv14 | usage_mode: prompt -->
+<!-- ElevenLabs KB Doc | id: YyJzX0Gm875wmW7KIv14 | usage_mode: prompt -->
 # Excluded Products & Restrictions
 
 ## Availability Priority

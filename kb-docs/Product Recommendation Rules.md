@@ -1,4 +1,4 @@
-﻿<!-- ElevenLabs KB Doc | id: EQutE4iYTvz4lZPcYa9i | usage_mode: prompt -->
+<!-- ElevenLabs KB Doc | id: EQutE4iYTvz4lZPcYa9i | usage_mode: prompt -->
 # Product Recommendation Rules for PaintAccess AI Agent
 
 ## Purpose

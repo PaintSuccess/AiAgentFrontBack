@@ -1,4 +1,4 @@
-﻿<!-- ElevenLabs KB Doc | id: jzhZn0lbuIURjxAeVIDf | usage_mode: auto -->
+<!-- ElevenLabs KB Doc | id: jzhZn0lbuIURjxAeVIDf | usage_mode: auto -->
 # Product Knowledge & Painting Guides
 
 ## Paint Types

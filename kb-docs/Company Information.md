@@ -1,4 +1,4 @@
-﻿<!-- ElevenLabs KB Doc | id: rVqMNfjLnuc0Q5qMydnB | usage_mode: prompt -->
+<!-- ElevenLabs KB Doc | id: rVqMNfjLnuc0Q5qMydnB | usage_mode: prompt -->
 # Paint Access - Company Information
 
 ## About Us
