@@ -6,6 +6,23 @@ const crypto = require("crypto");
 const { cleanEnv } = require("../../lib/shopify");
 const { triggerDeployHook, upsertVercelEnv } = require("../../lib/vercel-env");
 
+// `shop` is interpolated into the token-exchange URL below, and that request carries
+// SHOPIFY_APP_CLIENT_SECRET. Anything but a real Shopify shop domain here means we
+// would hand the app secret to whoever the caller names, so this is an allowlist, not
+// a sanity check. Shopify shop domains are always "<handle>.myshopify.com".
+const SHOP_DOMAIN_RE = /^[a-z0-9][a-z0-9-]*\.myshopify\.com$/;
+
+function isValidShopDomain(shop) {
+  return SHOP_DOMAIN_RE.test(String(shop || "").trim().toLowerCase());
+}
+
+function timingSafeEqualHex(a, b) {
+  const bufA = Buffer.from(String(a || ""), "utf8");
+  const bufB = Buffer.from(String(b || ""), "utf8");
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader("Content-Type", "text/html; charset=utf-8");
 
@@ -22,6 +39,13 @@ module.exports = async function handler(req, res) {
     `);
   }
 
+  if (!isValidShopDomain(shop)) {
+    return res.status(400).send(`
+      <h1>Invalid shop</h1>
+      <p>'shop' must be a myshopify.com domain.</p>
+    `);
+  }
+
   const clientId = cleanEnv("SHOPIFY_APP_CLIENT_ID") || cleanEnv("SHOPIFY_CLIENT_ID");
   const clientSecret = cleanEnv("SHOPIFY_APP_CLIENT_SECRET");
 
@@ -32,8 +56,17 @@ module.exports = async function handler(req, res) {
     `);
   }
 
-  // Verify HMAC if present
-  if (hmac) {
+  // HMAC is REQUIRED. It used to be verified only `if (hmac)`, which meant an attacker
+  // could skip the check entirely just by omitting the parameter — and the request below
+  // sends our client secret, so an unverified caller must never reach it.
+  if (!hmac) {
+    return res.status(403).send(`
+      <h1>Missing signature</h1>
+      <p>The 'hmac' parameter is required on the Shopify OAuth redirect.</p>
+    `);
+  }
+
+  {
     const params = { ...req.query };
     delete params.hmac;
     const sortedParams = Object.keys(params)
@@ -44,7 +77,7 @@ module.exports = async function handler(req, res) {
       .createHmac("sha256", clientSecret)
       .update(sortedParams)
       .digest("hex");
-    if (computed !== hmac) {
+    if (!timingSafeEqualHex(computed, hmac)) {
       return res.status(403).send(`
         <h1>HMAC verification failed</h1>
         <p>The request signature is invalid.</p>

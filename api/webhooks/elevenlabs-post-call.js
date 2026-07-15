@@ -19,7 +19,11 @@ function getRawBody(req) {
 }
 
 function verifySignature(req) {
-  if (!WEBHOOK_SECRET) return true;
+  // Fail CLOSED. This used to `return true`, and because verifyWebhookAuth() below
+  // short-circuits on it, an unset secret accepted EVERY request and the
+  // API_SECRET_TOKEN fallback was never even consulted. Returning false instead just
+  // means "no signature proof", so callers fall through to that bearer-token path.
+  if (!WEBHOOK_SECRET) return false;
 
   const signature = req.headers["elevenlabs-signature"];
   if (!signature) return false;
