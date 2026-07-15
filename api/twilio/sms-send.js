@@ -255,6 +255,16 @@ module.exports = async function handler(req, res) {
     console.log("[SMS Send] Sent:", twilioMessage.sid, "to", to);
 
     // Persist the outbound message to the comms spine (fail-safe).
+    //
+    // NOTE: `email` is deliberately NOT passed as an identity field. This endpoint is a
+    // public, unauthenticated form, so the address is whatever the sender typed — it is
+    // a lead detail, not proof of identity. resolveContact() resolves by phone and then
+    // falls back to matching on email, and back-fills any missing field on whatever it
+    // matched. Passing an unverified email would therefore let anyone bind THEIR phone
+    // number to a stranger's contact by typing that stranger's address, and drop this
+    // message into their thread — after which a staff reply from that thread goes to
+    // the wrong person. The phone is the identity here (it's what we texted); the
+    // address is preserved on the Shopify lead above and in metadata for staff.
     await commsStore.recordOutbound({
       channel: "sms",
       toPhone: to,
@@ -264,7 +274,7 @@ module.exports = async function handler(req, res) {
       externalId: twilioMessage.sid,
       status: twilioMessage.status || "queued",
       name: customerName,
-      email,
+      metadata: { form_email: email },
     });
 
     return res.status(200).json({
