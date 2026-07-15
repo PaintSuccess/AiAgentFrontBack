@@ -20,10 +20,12 @@ function loadDotEnv(path = ".env") {
 loadDotEnv();
 
 const {
+  agentAskedForOrderDetails,
   extractEmail,
   extractOrderNumber,
   formatOrderReply,
   formatRecentOrdersReply,
+  hasExplicitOrderReference,
   looksLikeOrderIntent,
   lookupCustomerOrder,
   normalizeOrderNumber,
@@ -58,6 +60,46 @@ async function runUnitTests() {
   assert.equal(extractEmail("please check GLUKED@gmail.com #44542"), "gluked@gmail.com");
   assert.equal(looksLikeOrderIntent("Can you check my orders by this phone?"), true);
   assert.equal(looksLikeOrderIntent("I need an oval brush"), false);
+
+  // A generic logistics question is not an order-status request. Live bug: "do you
+  // ship to South Africa?" was answered with "send your order number and email".
+  assert.equal(
+    looksLikeOrderIntent("Hi Paint Access, do you ship to South Africa? What method of shipping do you use"),
+    false
+  );
+
+  // Numeric model names must never read as order references. Live bug: a customer
+  // asking to book a service for a "graco 650 pc pro ultra max" was told
+  // "I couldn't find order #650."
+  for (const modelText of [
+    "Hi, I would like to book in a heavy duty service for a graco 650 pc pro ultra max.",
+    "do you have the graco 495 in stock",
+    "I need a GH 200 sprayer",
+    "Uni-Pro 230 roller kit price?",
+  ]) {
+    assert.equal(looksLikeOrderIntent(modelText), false, `model text read as order intent: ${modelText}`);
+    assert.equal(hasExplicitOrderReference(modelText), false, `model text read as order ref: ${modelText}`);
+  }
+
+  // A phone number is far too long to be one of this store's order numbers.
+  // (ACMA numbers reserved for fiction — this repo is public, so never use a real
+  // customer's number as a fixture.)
+  assert.equal(extractOrderNumber("61491570156"), "");
+  assert.equal(extractOrderNumber("+61491570157"), "");
+
+  // "#" is what marks a number as an order reference on sight.
+  assert.equal(hasExplicitOrderReference("Order number #44550"), true);
+  assert.equal(hasExplicitOrderReference("#44550"), true);
+  assert.equal(hasExplicitOrderReference("44550"), false);
+
+  // A bare number only counts as an order number when we just asked for one.
+  const askedHistory = [
+    { role: "agent", text: "For security, please send your order number and the email used for that order." },
+  ];
+  const chitchatHistory = [{ role: "agent", text: "No worries! What are you after today?" }];
+  assert.equal(agentAskedForOrderDetails(askedHistory), true);
+  assert.equal(agentAskedForOrderDetails(chitchatHistory), false);
+  assert.equal(agentAskedForOrderDetails([]), false);
 
   const reply = formatOrderReply(sampleOrder());
   assert.match(reply, /#44542/);
