@@ -134,6 +134,21 @@
       + '.pa-sw-badge--green{background:#d4edda;color:#1a6130;}'
       + '.pa-sw-badge--amber{background:#fff3cd;color:#7a5700;}'
       + '.pa-sw-card-note{font-size:12px;color:#555;margin:4px 0 0;line-height:1.4;}'
+      // Order card + handoff button (reuse the results panel).
+      + '.pa-sw-order{border:1px solid #ececec;border-radius:10px;padding:12px 14px;margin-bottom:10px;}'
+      + '.pa-sw-order-num{font-size:15px;font-weight:700;color:#1a1a1a;margin:0 0 2px;}'
+      + '.pa-sw-order-date{font-size:12px;color:#888;margin:0 0 8px;}'
+      + '.pa-sw-order-row{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px;}'
+      + '.pa-sw-order-items{list-style:none;padding:0;margin:0 0 10px;}'
+      + '.pa-sw-order-items li{font-size:13px;color:#333;line-height:1.5;}'
+      + '.pa-sw-order-total{font-size:13px;font-weight:600;color:#1a1a1a;margin:0 0 10px;}'
+      + '.pa-sw-btn{display:block;width:100%;box-sizing:border-box;text-align:center;text-decoration:none;font-size:14px;font-weight:600;border-radius:10px;padding:11px 14px;margin:0 0 8px;cursor:pointer;border:1px solid transparent;transition:filter .15s,background .15s;}'
+      + '.pa-sw-btn--primary{background:#FF6128;color:#fff;}'
+      + '.pa-sw-btn--primary:hover{filter:brightness(0.94);}'
+      + '.pa-sw-btn--wa{background:#25D366;color:#fff;}'
+      + '.pa-sw-btn--wa:hover{filter:brightness(0.94);}'
+      + '.pa-sw-btn--ghost{background:#fff;color:#1a1a1a;border-color:#e0e0e0;}'
+      + '.pa-sw-btn--ghost:hover{background:#fafafa;}'
       // Mobile responsiveness:
       //   - Tablet/phone (≤768px): hide hover tooltips (touch has no hover),
       //     keep the panel close to the corner, give Eleven's close button a
@@ -382,7 +397,7 @@
     elevenResults.setAttribute('aria-live', 'polite');
     elevenResults.innerHTML =
       '<div class="pa-sw-results-head">'
-      + '<h4>Recommended for you</h4>'
+      + '<h4 data-pa-title>Recommended for you</h4>'
       + '<button type="button" class="pa-sw-results-close" aria-label="Hide results">' + ICON.close + '</button>'
       + '</div>'
       + '<p class="pa-sw-results-intro" data-pa-intro></p>'
@@ -442,8 +457,16 @@
         return true;
       });
     }
+    // Swap the panel heading so the same overlay can show products, an order,
+    // or a human-handoff button.
+    function setPanelTitle(title) {
+      var el = elevenResults && elevenResults.querySelector('[data-pa-title]');
+      if (el) el.textContent = title || 'Recommended for you';
+    }
+
     function showResults(payload) {
       if (!elevenResults) { console.error('showResults: elevenResults not ready'); return; }
+      setPanelTitle('Recommended for you');
       var intro = (payload && payload.intro) || '';
       var incomingProducts = (payload && Array.isArray(payload.products)) ? payload.products : [];
       var now = Date.now();
@@ -485,6 +508,74 @@
         || '<p class="pa-sw-card-note">No matching products.</p>';
       elevenResults.setAttribute('data-open', '1');
       positionResults();
+    }
+
+    // ---- On-screen ORDER card -------------------------------------------------
+    var lastOrderKey = '';
+    function statusBadge(status, kind) {
+      if (!status) return '';
+      var s = String(status).toLowerCase();
+      var cls = 'pa-sw-badge--amber';
+      if (kind === 'fulfillment' && /fulfilled|delivered|shipped|complete/.test(s)) cls = 'pa-sw-badge--green';
+      if (kind === 'payment' && /paid|complete/.test(s)) cls = 'pa-sw-badge--green';
+      var label = (kind === 'payment' ? 'Payment: ' : 'Fulfilment: ') + escapeHTML(status);
+      return '<span class="pa-sw-badge ' + cls + '">' + label + '</span>';
+    }
+    function showOrder(payload) {
+      if (!elevenResults || !payload) return;
+      var num = escapeHTML(payload.order_number || 'Your order');
+      var key = String(payload.order_number || '') + '|' + String(payload.fulfillment_status || '');
+      lastOrderKey = key;
+      setPanelTitle('Your order');
+      elevenResults.querySelector('[data-pa-intro]').textContent = '';
+      var items = (Array.isArray(payload.items) ? payload.items : []).map(function (i) {
+        return '<li>' + escapeHTML(i.title) + (i.quantity ? ' ×' + escapeHTML(i.quantity) : '') + '</li>';
+      }).join('');
+      var orderUrl = payload.order_url ? safeUrl(payload.order_url) : '';
+      var trackUrl = payload.tracking_url ? safeUrl(payload.tracking_url) : '';
+      var html = ''
+        + '<div class="pa-sw-order">'
+        +   '<p class="pa-sw-order-num">' + num + '</p>'
+        +   (payload.date ? '<p class="pa-sw-order-date">' + escapeHTML(payload.date) + '</p>' : '')
+        +   '<div class="pa-sw-order-row">'
+        +     statusBadge(payload.payment_status, 'payment')
+        +     statusBadge(payload.fulfillment_status, 'fulfillment')
+        +   '</div>'
+        +   (items ? '<ul class="pa-sw-order-items">' + items + '</ul>' : '')
+        +   (payload.total ? '<p class="pa-sw-order-total">Total: ' + escapeHTML(payload.total) + '</p>' : '')
+        + '</div>'
+        + (orderUrl && orderUrl !== '#' ? '<a class="pa-sw-btn pa-sw-btn--primary" href="' + orderUrl + '" target="_blank" rel="noopener">View order details</a>' : '')
+        + (trackUrl && trackUrl !== '#' ? '<a class="pa-sw-btn pa-sw-btn--ghost" href="' + trackUrl + '" target="_blank" rel="noopener">Track shipment</a>' : '');
+      elevenResults.querySelector('[data-pa-cards]').innerHTML = html;
+      elevenResults.setAttribute('data-open', '1');
+      positionResults();
+    }
+
+    // ---- On-screen WHATSAPP HANDOFF button ------------------------------------
+    var lastHandoffLink = '';
+    function showHandoff(payload) {
+      if (!elevenResults || !payload) return;
+      var link = safeUrl(payload.link || '');
+      if (!link || link === '#') return;
+      var isNew = (link !== lastHandoffLink);
+      lastHandoffLink = link;
+      setPanelTitle('Talk to our team');
+      elevenResults.querySelector('[data-pa-intro]').textContent =
+        'Tap below to chat with the Paint Access team on WhatsApp.';
+      elevenResults.querySelector('[data-pa-cards]').innerHTML =
+        '<a class="pa-sw-btn pa-sw-btn--wa" href="' + link + '" target="_blank" rel="noopener" data-pa-wa-open>Chat on WhatsApp</a>';
+      elevenResults.setAttribute('data-open', '1');
+      positionResults();
+      // Silent auto-open attempt (only when the link is new). window.open() here is
+      // NOT a user gesture, so most browsers will popup-block it — that's expected;
+      // the button above is the reliable one-tap path. We try anyway for browsers
+      // that allow it.
+      if (isNew) {
+        try {
+          var w = window.open(link, '_blank');
+          if (w) { try { w.opener = null; } catch (e) {} }
+        } catch (e) {}
+      }
     }
 
     var productAutoDisplayInstalled = false;
@@ -567,12 +658,27 @@
       });
     }
 
-    function scanForProductPayloads(value, depth) {
+    function autoDisplayOrderFromPayload(p) {
+      if (!p || !p.order_number) return;
+      var key = String(p.order_number) + '|' + String(p.fulfillment_status || '');
+      if (key === lastOrderKey) return;
+      showOrder(p);
+    }
+    function autoDisplayHandoffFromPayload(p) {
+      if (!p || !p.link) return;
+      if (String(p.link) === lastHandoffLink) return;
+      showHandoff(p);
+    }
+
+    // The safety-net is the RELIABLE path: it fires off the webhook tool RESULT
+    // regardless of whether the LLM chains the follow-up client tool (which it
+    // often skips). Handles products, orders, and the human-handoff link.
+    function scanForPayloads(value, depth) {
       if (depth > 7 || value == null) return;
       value = parseMaybeJSON(value);
 
       if (Array.isArray(value)) {
-        value.forEach(function (item) { scanForProductPayloads(item, depth + 1); });
+        value.forEach(function (item) { scanForPayloads(item, depth + 1); });
         return;
       }
 
@@ -582,8 +688,23 @@
         autoDisplayProductsFromPayload(value);
       }
 
+      // Order card: prefer the explicit payload from api/shopify/order.js; fall
+      // back to a bare order-shaped object.
+      if (value.display_order_in_chat_payload && typeof value.display_order_in_chat_payload === 'object') {
+        autoDisplayOrderFromPayload(value.display_order_in_chat_payload);
+      } else if (value.order_number && (value.order_url || Array.isArray(value.items))) {
+        autoDisplayOrderFromPayload(value);
+      }
+
+      // Human handoff: explicit payload from api/comms/escalate.js, or any wa.me link.
+      if (value.open_whatsapp_handoff_payload && value.open_whatsapp_handoff_payload.link) {
+        autoDisplayHandoffFromPayload(value.open_whatsapp_handoff_payload);
+      } else if (typeof value.link === 'string' && /wa\.me\//i.test(value.link)) {
+        autoDisplayHandoffFromPayload({ link: value.link });
+      }
+
       Object.keys(value).forEach(function (key) {
-        scanForProductPayloads(value[key], depth + 1);
+        scanForPayloads(value[key], depth + 1);
       });
     }
 
@@ -593,7 +714,7 @@
 
       // `agent_tool_response` payloads are the ideal path, but the recursive
       // scan also catches provider shape changes and nested JSON strings.
-      scanForProductPayloads(data, 0);
+      scanForPayloads(data, 0);
     }
 
     // ---- Client tools exposed to the ElevenLabs widget --------------------
@@ -604,6 +725,14 @@
       display_products_in_chat: function (params) {
         try { showResults(params || {}); } catch (e) { console.error('display_products_in_chat failed:', e); }
         return 'displayed';
+      },
+      display_order_in_chat: function (params) {
+        try { showOrder(params || {}); } catch (e) { console.error('display_order_in_chat failed:', e); }
+        return 'displayed';
+      },
+      open_whatsapp_handoff: function (params) {
+        try { showHandoff(params || {}); } catch (e) { console.error('open_whatsapp_handoff failed:', e); }
+        return 'opened';
       },
       end_conversation: function () {
         // Agent calls this tool when ending the conversation. We schedule the
