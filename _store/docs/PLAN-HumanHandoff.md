@@ -4,13 +4,26 @@ _2026-07-14. Cross-channel human escalation: when a customer on any AI channel
 (voice call, WhatsApp, SMS, chat widget) asks for a human/team, hand them off to
 Daniel (+ a manager) correctly — never by transferring a phone call._
 
-> **STATUS: Option 1 (deep-link) LIVE 2026-07-15.** Code deployed to production,
-> env vars set on Vercel, `escalate_to_human` registered on the live ElevenLabs agent
-> (tool_0501kxhyyx8yfjx9ssx65j71w8cf, alongside the existing 8 tools). Not yet done:
-> a real end-to-end test through the live agent on each channel. Option 2 (auto
-> WhatsApp group) remains documented below as a future upgrade, not built — OBA is
-> confirmed available but Option 2 needs its own Twilio-vs-Meta-Cloud-API decision and
-> shouldn't block Option 1 shipping.
+> **STATUS: Option 1 (deep-link) LIVE 2026-07-15, patched same day after first
+> live test.** Code deployed to production, env vars set on Vercel, `escalate_to_human`
+> registered on the live ElevenLabs agent (tool_0501kxhyyx8yfjx9ssx65j71w8cf, alongside
+> the existing 8 tools). Option 2 (auto WhatsApp group) remains documented below as a
+> future upgrade, not built.
+>
+> **2026-07-15 — first live test (website widget, voice) found & fixed two bugs:**
+> (1) **escalate_to_human returned HTTP 400** on a website-widget voice chat, because
+> the handoff required a phone number for channel "voice" — but widget voice is WebRTC
+> with NO phone number (it has a screen instead). Fixed: never require a phone; only
+> SMS the link on a real phone call (voice + has caller number), otherwise return the
+> link in the message for on-screen display. Added customer_email passthrough so staff
+> can identify no-phone (widget) customers. (2) **lookup_order failed for a logged-in
+> customer** (customer_id 8654449573991, order #44542) — the agent never passed
+> customer_id and instead chased the customer's *spoken* email, which voice
+> transcription mangled (gluked→"glookit"→"gluket"), so nothing matched. Backend was
+> fine; root cause was the agent prompt weakly saying "you may pass customer_id".
+> Fixed agent-side (`_store/setup/fix-handoff-and-orderlookup.js`): prompt now says
+> MUST pass customer_id, never rely on a spoken email; escalate tool description/schema
+> refreshed in place. Still not done: a clean end-to-end re-test through the live agent.
 >
 > **2026-07-15 update — OBA confirmed.** Checked live in Meta Business Manager
 > (business_id 1953771224878899): Business Portfolio shows **"Verification successful"**
