@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import InboxPage from "./pages/InboxPage";
 import OrdersPage from "./pages/OrdersPage";
 import ContactsPage from "./pages/ContactsPage";
+import MarketingPage from "./pages/MarketingPage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 import "./app-shell.css";
 
@@ -26,10 +27,17 @@ const OrdersIcon = (
   </svg>
 );
 
+const MarketingIcon = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3.5 9.5v4a1 1 0 0 0 1 1h3l5.5 4V4.5L8 8.5H4.5a1 1 0 0 0-1 1z" /><path d="M17 9a4 4 0 0 1 0 6" /><path d="M19.5 6.5a7.5 7.5 0 0 1 0 11" />
+  </svg>
+);
+
 const NAV = [
   { key: "inbox", label: "Comms Hub", title: "Communication Hub", icon: InboxIcon },
   { key: "orders", label: "Orders", icon: OrdersIcon },
   { key: "contacts", label: "Contacts", icon: ContactsIcon },
+  { key: "marketing", label: "Marketing", icon: MarketingIcon },
   { key: "knowledge-base", label: "Knowledge", icon: KbIcon },
 ];
 
@@ -57,6 +65,7 @@ export default function App() {
         {page === "inbox" && <InboxPage target={inboxTarget} />}
         {page === "orders" && <OrdersPage onOpenInbox={openInbox} />}
         {page === "contacts" && <ContactsPage onOpenThread={openThread} />}
+        {page === "marketing" && <MarketingPage />}
         {page === "knowledge-base" && <KnowledgeBasePage onBack={() => setPage("inbox")} />}
       </main>
     </div>
