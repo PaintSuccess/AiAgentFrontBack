@@ -11,9 +11,6 @@ const WEBHOOK_TOKEN =
   cleanEnv("ELEVENLABS_TWILIO_PERSONALIZATION_TOKEN") ||
   cleanEnv("API_SECRET_TOKEN");
 
-const DEFAULT_FIRST_MESSAGE =
-  "Hi, I'm Jess from PaintAccess. I can help you find the right product, track your order, or answer painting and sprayer questions. How can I help today?";
-
 function safeEqual(a, b) {
   if (!a || !b) return false;
   const aa = Buffer.from(String(a));
@@ -39,13 +36,6 @@ function getParam(req, key) {
     req.body?.metadata?.[key] ||
     ""
   );
-}
-
-function firstMessageFor(context) {
-  if (context?.found && context.customer_first_name) {
-    return `Hi ${context.customer_first_name}, I'm Jess from PaintAccess. I can help with products, sprayer questions, or recent order details after a quick security check. What would you like to know today?`;
-  }
-  return DEFAULT_FIRST_MESSAGE;
 }
 
 module.exports = async function handler(req, res) {
@@ -93,14 +83,19 @@ module.exports = async function handler(req, res) {
     twilio_call_sid: getParam(req, "call_sid"),
   };
 
+  // NO conversation_config_override. The agent's overrides allowlist
+  // (platform_settings.overrides) has agent.first_message = false and agent.language =
+  // false, so sending either one makes ElevenLabs reject the WHOLE conversation:
+  //   status=failed, 0 turns, "Override for field 'first_message' is not allowed by config."
+  // The caller hears nothing and hangs up. Every inbound call was failing this way.
+  //
+  // We greet by name through the dynamic variable instead: the agent's own first_message
+  // is "Hi{{customer_greeting}}, I'm Jess from PaintAccess...", and getCustomerContextByPhone
+  // already sets customer_greeting to " <FirstName>" (or "" when unknown), so phone now
+  // personalises the same way the widget and SMS/WhatsApp do — one template, no override.
+  // agent.language is already "en" on the agent, so dropping that override changes nothing.
   return res.status(200).json({
     type: "conversation_initiation_client_data",
-    conversation_config_override: {
-      agent: {
-        first_message: firstMessageFor(context),
-        language: "en",
-      },
-    },
     dynamic_variables: dynamicVariables,
   });
 };
