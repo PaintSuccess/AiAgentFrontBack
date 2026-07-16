@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import InboxPage from "./pages/InboxPage";
+import OrdersPage from "./pages/OrdersPage";
 import ContactsPage from "./pages/ContactsPage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 import "./app-shell.css";
@@ -19,18 +20,27 @@ const KbIcon = (
     <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5V5.5z" /><path d="M8 7h8M8 10.5h6" />
   </svg>
 );
+const OrdersIcon = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 2.5h12l1.5 4.5H4.5L6 2.5z" /><path d="M4.5 7v12.5A1.5 1.5 0 0 0 6 21h12a1.5 1.5 0 0 0 1.5-1.5V7" /><path d="M9.5 11a2.5 2.5 0 0 0 5 0" />
+  </svg>
+);
 
 const NAV = [
   { key: "inbox", label: "Comms Hub", title: "Communication Hub", icon: InboxIcon },
+  { key: "orders", label: "Orders", icon: OrdersIcon },
   { key: "contacts", label: "Contacts", icon: ContactsIcon },
   { key: "knowledge-base", label: "Knowledge", icon: KbIcon },
 ];
 
 export default function App() {
   const [page, setPage] = useState("inbox");
-  const [openThreadId, setOpenThreadId] = useState(null);
+  // `token` makes every request distinct so InboxPage re-applies it even when the
+  // same thread is opened twice in a row (otherwise the effect wouldn't re-fire).
+  const [inboxTarget, setInboxTarget] = useState(null);
 
-  const openThread = (threadId) => { setOpenThreadId(threadId); setPage("inbox"); };
+  const openInbox = (target) => { setInboxTarget({ ...target, token: Date.now() }); setPage("inbox"); };
+  const openThread = (threadId) => openInbox({ threadId });
 
   return (
     <div className="pa-shell">
@@ -44,7 +54,8 @@ export default function App() {
         ))}
       </nav>
       <main className="pa-content">
-        {page === "inbox" && <InboxPage initialThreadId={openThreadId} />}
+        {page === "inbox" && <InboxPage target={inboxTarget} />}
+        {page === "orders" && <OrdersPage onOpenInbox={openInbox} />}
         {page === "contacts" && <ContactsPage onOpenThread={openThread} />}
         {page === "knowledge-base" && <KnowledgeBasePage onBack={() => setPage("inbox")} />}
       </main>

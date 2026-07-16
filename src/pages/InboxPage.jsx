@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { dashboardFetch } from "../utils/fetch";
+import { ADMIN_BASE, money, dateShort, statusTone } from "../utils/shopify";
 import "./inbox.css";
 
-const ADMIN_BASE = "https://admin.shopify.com/store/zgmzge-0d";
 const CHANNELS = {
   sms: { label: "SMS", color: "#2f7ed8" },
   whatsapp: { label: "WhatsApp", color: "#25b366" },
@@ -52,14 +52,6 @@ const FAIL_REASONS = {
 const failReason = (code, msg) => FAIL_REASONS[String(code || "")] || msg || (code ? `Delivery failed (error ${code}).` : "Delivery failed.");
 const fillTemplate = (body, vars = {}) => String(body || "").replace(/\{\{(\d+)\}\}/g, (_, n) => (vars[n] ? String(vars[n]) : `{{${n}}}`));
 function dayLabel(iso) { const d = new Date(iso), t = new Date(), y = new Date(); y.setDate(t.getDate() - 1); if (d.toDateString() === t.toDateString()) return "Today"; if (d.toDateString() === y.toDateString()) return "Yesterday"; return d.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short", year: "numeric" }); }
-const money = (v, cur) => (v == null ? "" : `${cur || "AUD"} ${Number(v).toLocaleString("en-AU", { minimumFractionDigits: 2 })}`);
-const dateShort = (iso) => (iso ? new Date(iso).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }) : "");
-function statusTone(fin, ful) {
-  if (fin === "paid") return { bg: "#e7f6ec", color: "#1a7f43", label: "Paid" };
-  if (ful === "fulfilled") return { bg: "#e7f6ec", color: "#1a7f43", label: "Fulfilled" };
-  if (fin === "refunded") return { bg: "#fdecea", color: "#b42318", label: "Refunded" };
-  return { bg: "#fef7e6", color: "#b25c00", label: fin || ful || "Open" };
-}
 // Linkify a message body, rendering product links as CTA buttons.
 function renderBody(body) {
   const text = String(body || "");
@@ -75,10 +67,10 @@ function renderBody(body) {
   });
 }
 
-export default function InboxPage({ initialThreadId } = {}) {
+export default function InboxPage({ target } = {}) {
   const [threads, setThreads] = useState([]);
   const [stats, setStats] = useState({});
-  const [selectedId, setSelectedId] = useState(initialThreadId || null);
+  const [selectedId, setSelectedId] = useState(target?.threadId || null);
   const [detail, setDetail] = useState(null);
   const [contact, setContact] = useState(null);
   const [search, setSearch] = useState("");
@@ -103,9 +95,12 @@ export default function InboxPage({ initialThreadId } = {}) {
   const [editEmail, setEditEmail] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [notesDraft, setNotesDraft] = useState("");
-  const [newMsg, setNewMsg] = useState(null); // {to, channel, body}
+  const [newMsg, setNewMsg] = useState(null); // {to, channel, body, contact?, cold?}
   const scrollRef = useRef(null);
   const channelInitFor = useRef(null);
+  // A channel explicitly requested by another page (e.g. the Orders page's WhatsApp
+  // button). loadThread otherwise auto-picks the channel, which would overwrite it.
+  const pendingChannel = useRef(null);
 
   const loadThreads = useCallback(async () => {
     try {
@@ -129,11 +124,18 @@ export default function InboxPage({ initialThreadId } = {}) {
       setDetail(data);
       // Default the composer to the channel the customer actually uses (the last
       // SMS/WhatsApp message), not last_channel (which can be chat/voice).
+      // An explicitly requested channel wins — it's a deliberate user choice.
       if (channelInitFor.current !== id) {
         channelInitFor.current = id;
-        const msgs = data.messages || [];
-        const lastSendable = [...msgs].reverse().find((m) => m.channel === "sms" || m.channel === "whatsapp");
-        setChannel(lastSendable ? lastSendable.channel : "sms");
+        const requested = pendingChannel.current;
+        pendingChannel.current = null;
+        if (requested) {
+          setChannel(requested);
+        } else {
+          const msgs = data.messages || [];
+          const lastSendable = [...msgs].reverse().find((m) => m.channel === "sms" || m.channel === "whatsapp");
+          setChannel(lastSendable ? lastSendable.channel : "sms");
+        }
       }
     } catch (err) { setError(err.message); }
   }, []);
@@ -148,7 +150,31 @@ export default function InboxPage({ initialThreadId } = {}) {
     } catch { /* best effort */ }
   }, []);
 
-  useEffect(() => { if (initialThreadId) setSelectedId(initialThreadId); }, [initialThreadId]);
+  // Apply a target handed over by another page (Orders/Contacts). Keyed on `token`
+  // rather than the id so re-opening the SAME thread still re-selects it.
+  useEffect(() => {
+    if (!target?.token) return;
+    if (target.threadId) {
+      if (target.channel && SENDABLE.some((o) => o.value === target.channel)) {
+        pendingChannel.current = target.channel;
+        channelInitFor.current = null; // force loadThread to re-init the channel
+      }
+      setSelectedId(target.threadId);
+      setDetail(null);
+      setThreads((p) => p.map((t) => (t.id === target.threadId ? { ...t, unread_count: 0 } : t)));
+    } else if (target.compose?.to) {
+      // No conversation exists yet — open the composer. The contact and thread are
+      // created server-side by /api/comms/send only once this is actually sent, and
+      // `contact` names it so it isn't created as a bare phone number.
+      setNewMsg({
+        to: target.compose.to,
+        channel: SENDABLE.some((o) => o.value === target.channel) ? target.channel : "sms",
+        body: "",
+        contact: target.compose.contact || null,
+        cold: true, // resolve-thread found no conversation → WhatsApp needs a template
+      });
+    }
+  }, [target?.token]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { loadThreads(); const t = setInterval(loadThreads, THREADS_POLL_MS); return () => clearInterval(t); }, [loadThreads]);
   useEffect(() => { loadStats(); const t = setInterval(loadStats, THREADS_POLL_MS); return () => clearInterval(t); }, [loadStats]);
   useEffect(() => { dashboardFetch("/api/comms/canned").then((d) => setCanned(d.items || [])).catch(() => {}); }, []);
@@ -177,6 +203,8 @@ export default function InboxPage({ initialThreadId } = {}) {
 
   const handleSend = async () => {
     if (!composer.trim() || !detail?.thread?.id) return;
+    // Guard here too, not just on the button: Enter calls this directly.
+    if (channel === "whatsapp" && waWindowClosed) return;
     setSending(true); setError(null);
     try {
       await dashboardFetch("/api/comms/send", { method: "POST", body: JSON.stringify({ threadId: detail.thread.id, channel, body: composer.trim() }) });
@@ -251,45 +279,78 @@ export default function InboxPage({ initialThreadId } = {}) {
   };
   const removeLabel = (label) => { const cur = detail?.thread?.labels || []; threadUpdate({ labels: cur.filter((x) => x !== label) }); };
 
+  /** Locate the thread that a `to` send just created, so we can open it. */
+  const findThreadByPhone = async (phone) => {
+    const digits = String(phone || "").replace(/\D/g, "");
+    if (!digits) return null;
+    const data = await dashboardFetch(`/api/comms/threads?q=${encodeURIComponent(digits.slice(-9))}`);
+    return (data.items || [])[0]?.id || null;
+  };
+
   const sendNewMessage = async () => {
     if (!newMsg?.to?.trim() || !newMsg?.body?.trim()) return;
     setError(null);
     try {
-      await dashboardFetch("/api/comms/send", { method: "POST", body: JSON.stringify({ to: newMsg.to.trim(), channel: newMsg.channel, body: newMsg.body.trim() }) });
-      const digits = newMsg.to.replace(/\D/g, "");
+      await dashboardFetch("/api/comms/send", {
+        method: "POST",
+        body: JSON.stringify({ to: newMsg.to.trim(), channel: newMsg.channel, body: newMsg.body.trim(), contact: newMsg.contact || null }),
+      });
+      const to = newMsg.to;
       setNewMsg(null);
       await loadThreads(); loadStats();
-      const data = await dashboardFetch(`/api/comms/threads?q=${encodeURIComponent(digits.slice(-9))}`);
-      const found = (data.items || [])[0];
-      if (found) handleSelect(found.id);
+      const found = await findThreadByPhone(to);
+      if (found) handleSelect(found);
     } catch (err) { setError(err.message); }
   };
 
   const onComposerKey = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } };
 
+  // The 24h window is opened by an INBOUND WhatsApp message. No inbound WhatsApp ever
+  // (e.g. an SMS-only thread) means it was never open — so it's closed, and only an
+  // approved template will deliver. Previously this returned false in that case,
+  // reporting the window as open and letting a guaranteed-to-fail free-form send through.
   const waWindowClosed = useMemo(() => {
     const msgs = detail?.messages || [];
     const lastIn = [...msgs].reverse().find((m) => m.direction === "inbound" && m.channel === "whatsapp");
-    if (!lastIn) return msgs.some((m) => m.channel === "whatsapp");
+    if (!lastIn) return true;
     return Date.now() - new Date(lastIn.sent_at).getTime() > 24 * 3600 * 1000;
   }, [detail]);
 
   const pickTemplate = (t) => {
-    const ct = detail?.thread?.contact;
+    const name = detail?.thread?.contact?.name || tplModal?.contact?.name;
     const vars = {};
-    (t.variables || []).forEach((v) => { vars[v.index] = v.index === "1" && ct?.name ? String(ct.name).split(/\s+/)[0] : ""; });
-    setTplModal({ stage: "fill", template: t, vars });
+    (t.variables || []).forEach((v) => { vars[v.index] = v.index === "1" && name ? String(name).split(/\s+/)[0] : ""; });
+    // Functional update: preserves `to`/`contact` on a cold-start template send.
+    setTplModal((m) => ({ ...m, stage: "fill", template: t, vars }));
   };
+
+  /**
+   * Send an approved template. Two modes: against an open thread, or "cold" — to a
+   * number with no conversation yet (tplModal.to), which is the ONLY way WhatsApp
+   * permits opening a conversation. The backend already supports both.
+   */
   const sendTemplate = async () => {
-    if (!tplModal?.template || !detail?.thread?.id) return;
+    // An explicit `to` ALWAYS wins. Falling back to the selected thread here would
+    // send the template to whoever is open in the inbox instead of the number the
+    // composer is addressing — i.e. to the wrong customer.
+    const coldTo = tplModal?.to || null;
+    const threadId = coldTo ? null : detail?.thread?.id;
+    if (!tplModal?.template || (!threadId && !coldTo)) return;
     setSending(true); setError(null);
     try {
-      await dashboardFetch("/api/comms/send", {
-        method: "POST",
-        body: JSON.stringify({ threadId: detail.thread.id, channel: "whatsapp", template: { sid: tplModal.template.sid, variables: tplModal.vars } }),
-      });
+      const payload = { channel: "whatsapp", template: { sid: tplModal.template.sid, variables: tplModal.vars } };
+      if (threadId) payload.threadId = threadId;
+      else { payload.to = coldTo; payload.contact = tplModal.contact || null; }
+      await dashboardFetch("/api/comms/send", { method: "POST", body: JSON.stringify(payload) });
       setTplModal(null);
-      await loadThread(detail.thread.id); loadThreads();
+      if (threadId) {
+        await loadThread(threadId); loadThreads();
+      } else {
+        setNewMsg(null);
+        await loadThreads(); loadStats();
+        const found = await findThreadByPhone(coldTo);
+        if (found) handleSelect(found);
+      }
     } catch (err) { setError(err.message); } finally { setSending(false); }
   };
 
@@ -490,7 +551,14 @@ export default function InboxPage({ initialThreadId } = {}) {
                     {SENDABLE.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
                   <textarea className="pa-input" placeholder={`Reply as a human via ${CHANNELS[channel]?.label}…`} value={composer} onChange={(e) => setComposer(e.target.value)} onKeyDown={onComposerKey} rows={1} />
-                  <button className="pa-btn pa-btn-primary" disabled={sending || !composer.trim()} onClick={handleSend}>{sending ? "Sending…" : "Send"}</button>
+                  <button
+                    className="pa-btn pa-btn-primary"
+                    // Free-form WhatsApp outside the 24h window fails (error 63016) —
+                    // the banner above offers the template, which is the only way through.
+                    disabled={sending || !composer.trim() || (channel === "whatsapp" && waWindowClosed)}
+                    title={channel === "whatsapp" && waWindowClosed ? "The 24-hour WhatsApp window is closed — use an approved template" : undefined}
+                    onClick={handleSend}
+                  >{sending ? "Sending…" : "Send"}</button>
                 </div>
                 <div className="pa-composer-hint">
                   {isHuman
@@ -615,11 +683,26 @@ export default function InboxPage({ initialThreadId } = {}) {
             <input value={newMsg.to} onChange={(e) => setNewMsg({ ...newMsg, to: e.target.value })} placeholder="+61400000000" />
             <label>Channel</label>
             <select value={newMsg.channel} onChange={(e) => setNewMsg({ ...newMsg, channel: e.target.value })}>{SENDABLE.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
+            {newMsg.channel === "whatsapp" && (
+              <div className="pa-wa-banner" style={{ marginTop: 10 }}>
+                {newMsg.cold
+                  ? "⏳ No WhatsApp conversation with this number yet. WhatsApp only allows an approved template to open one — a free-form message will not deliver."
+                  : "⏳ If this number hasn't messaged you in the last 24 hours, only an approved template will deliver."}
+                <button onClick={() => setTplModal({ stage: "pick", to: newMsg.to.trim(), contact: newMsg.contact || null })}>Use a template</button>
+              </div>
+            )}
             <label>Message</label>
             <textarea rows={3} value={newMsg.body} onChange={(e) => setNewMsg({ ...newMsg, body: e.target.value })} placeholder="Type a message…" />
             <div className="pa-modal-actions">
               <button className="pa-btn" onClick={() => setNewMsg(null)}>Cancel</button>
-              <button className="pa-btn pa-btn-primary" disabled={!newMsg.to.trim() || !newMsg.body.trim()} onClick={sendNewMessage}>Send</button>
+              <button
+                className="pa-btn pa-btn-primary"
+                // A cold free-form WhatsApp send is guaranteed to fail (error 63016) —
+                // don't offer it; the template button above is the only way through.
+                disabled={!newMsg.to.trim() || !newMsg.body.trim() || (newMsg.cold && newMsg.channel === "whatsapp")}
+                title={newMsg.cold && newMsg.channel === "whatsapp" ? "Use an approved template to open a WhatsApp conversation" : undefined}
+                onClick={sendNewMessage}
+              >Send</button>
             </div>
           </div>
         </div>
@@ -667,7 +750,9 @@ export default function InboxPage({ initialThreadId } = {}) {
                   {fillTemplate(tplModal.template.body, tplModal.vars)}
                 </div>
                 <div className="pa-modal-actions">
-                  <button className="pa-btn" onClick={() => setTplModal({ stage: "pick" })}>Back</button>
+                  {/* Functional update: dropping `to`/`contact` here would silently
+                      re-target a cold send at the selected thread. */}
+                  <button className="pa-btn" onClick={() => setTplModal((m) => ({ ...m, stage: "pick", template: null, vars: {} }))}>Back</button>
                   <button className="pa-btn pa-btn-primary" disabled={sending} onClick={sendTemplate}>{sending ? "Sending…" : "Send template"}</button>
                 </div>
               </>
