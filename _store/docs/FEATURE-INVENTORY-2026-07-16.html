@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="color-scheme" content="light">
+<title>Paint Access — Communications System Feature Inventory</title>
+<style>
+  html { color-scheme: light; background: #fff; }
+  body { font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; max-width: 960px; margin: 40px auto; padding: 0 24px; color: #222; background: #fff; }
+  h1 { font-size: 23px; border-bottom: 2px solid #333; padding-bottom: 8px; color: #1a1a1a; }
+  h2 { font-size: 18px; margin-top: 40px; border-left: 4px solid #25D366; padding-left: 10px; }
+  h3 { font-size: 14px; margin-top: 22px; color: #444; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  th { background: #f0f0f0; text-align: left; padding: 8px 10px; border: 1px solid #ccc; font-size: 13px; }
+  td { padding: 7px 10px; border: 1px solid #ccc; font-size: 13px; vertical-align: top; }
+  tr:nth-child(even) td { background: #fafafa; }
+  td.id { white-space: nowrap; color: #888; font-size: 12px; }
+  td.status { white-space: nowrap; text-align: center; }
+  code, pre { background: #f4f4f4; border-radius: 4px; font-family: "Courier New", monospace; font-size: 12px; }
+  pre { padding: 14px 16px; overflow-x: auto; border: 1px solid #ddd; line-height: 1.5; }
+  code { padding: 1px 4px; }
+  ul, ol { margin: 6px 0 6px 20px; }
+  li { margin-bottom: 4px; }
+  a { color: #1d6fb8; }
+  .meta { color: #666; font-size: 12px; margin-bottom: 24px; }
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: bold; white-space: nowrap; }
+  .b-ok      { background: #dcfce7; color: #1a7f37; }
+  .b-partial { background: #fef3c7; color: #92400e; }
+  .b-no      { background: #fee2e2; color: #b91c1c; }
+  .b-parked  { background: #e5e7eb; color: #4b5563; }
+  .b-unclear { background: #fef9c3; color: #854d0e; }
+  .warn { background: #fff8c5; border-left: 4px solid #d4a017; padding: 10px 14px; margin: 12px 0; }
+  .info { background: #dbeafe; border-left: 4px solid #2563eb; padding: 10px 14px; margin: 12px 0; }
+  .phase { background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 10px 16px; margin: 10px 0; }
+  .phase strong { color: #15803d; }
+  .recommend { background: #ecfdf5; border: 1px solid #6ee7b7; border-radius: 4px; padding: 10px 14px; margin: 10px 0; }
+  .bad { background: #fef2f2; border: 1px solid #fecaca; border-radius: 4px; padding: 10px 14px; margin: 10px 0; }
+  .statbar { display: flex; flex-wrap: wrap; gap: 12px; margin: 20px 0; }
+  .stat { flex: 1; min-width: 120px; border-radius: 8px; padding: 14px 16px; text-align: center; border: 1px solid #e5e7eb; }
+  .stat .num { font-size: 26px; font-weight: bold; display: block; }
+  .stat .lbl { font-size: 12px; color: #555; }
+  .stat-ok { background: #f0fdf4; } .stat-ok .num { color: #1a7f37; }
+  .stat-partial { background: #fffbeb; } .stat-partial .num { color: #b45309; }
+  .stat-no { background: #fef2f2; } .stat-no .num { color: #b91c1c; }
+  .stat-other { background: #f9fafb; } .stat-other .num { color: #4b5563; }
+  .toc { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px 20px; }
+  .toc ul { columns: 2; margin: 8px 0 0 18px; }
+  .toc li { margin-bottom: 3px; font-size: 13px; }
+  .req { font-style: italic; color: #6b21a8; }
+  .src { color: #666; font-size: 11px; }
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #ddd; font-size: 11px; color: #888; }
+</style>
+</head>
+<body>
+
+<h1>Communications System — Full Feature Inventory</h1>
+<p class="meta">Paint Access AI Agent &amp; Communications Platform — prepared 16 July 2026 for discussion.
+Consolidates everything specified across every planning document since 18 May 2026, against what is
+actually built and live today.</p>
+
+<div class="info">
+<strong>Why this document exists.</strong> Over the last two months the plan for this system has been
+written up in stages — lead capture, WhatsApp/Meta, operations &amp; pricing, the communications hub —
+and each one only shows a slice. This document puts every feature ever specified, from every stage,
+on one page, marked against what is actually built and running in production right now. It's meant as
+a shared reference for our next planning conversation, not a finished proposal.
+</div>
+
+<div class="statbar">
+  <div class="stat stat-ok"><span class="num">49</span><span class="lbl">Built &amp; live</span></div>
+  <div class="stat stat-partial"><span class="num">11</span><span class="lbl">Partially built</span></div>
+  <div class="stat stat-no"><span class="num">39</span><span class="lbl">Not built yet</span></div>
+  <div class="stat stat-other"><span class="num">8</span><span class="lbl">Parked by decision</span></div>
+  <div class="stat stat-other"><span class="num">6</span><span class="lbl">Needs an answer</span></div>
+  <div class="stat stat-other"><span class="num">2</span><span class="lbl">Dropped / replaced</span></div>
+</div>
+
+<p><strong>Headline:</strong> the WhatsApp funnel you described on 16 July — bot embedded in our own
+system, live visibility into every conversation, an operator who can take over without losing context —
+is roughly <strong>60% already built</strong>. It was largely specified back in May/June, before the
+underlying platform existed to support it. The genuinely new work is four items, listed at the end of
+this document.</p>
+
+<div class="toc">
+<strong>Contents</strong>
+<ul>
+  <li><a href="#a">A. Channels (WhatsApp, SMS, voice, chat, email…)</a></li>
+  <li><a href="#abis">A-bis. New channels: Instagram, Messenger, Shopify Inbox, TikTok</a></li>
+  <li><a href="#b">B. Conversation platform (the shared data layer)</a></li>
+  <li><a href="#c">C. Operator inbox &amp; human handoff</a></li>
+  <li><a href="#d">D. AI agent capability</a></li>
+  <li><a href="#e">E. WhatsApp / Meta ad funnel</a></li>
+  <li><a href="#f">F. Media library (video / PDF / images)</a></li>
+  <li><a href="#g">G. Lead capture &amp; CRM sync</a></li>
+  <li><a href="#h">H. Consent &amp; compliance</a></li>
+  <li><a href="#i">I. Marketing &amp; analytics</a></li>
+  <li><a href="#j">J. Back-office automation</a></li>
+  <li><a href="#summary">Summary — what's actually new work</a></li>
+</ul>
+</div>
+
+<p class="meta" style="margin-top:20px;"><strong>Legend:</strong>
+<span class="badge b-ok">Built</span>
+<span class="badge b-partial">Partial</span>
+<span class="badge b-no">Missing</span>
+<span class="badge b-parked">Parked</span>
+<span class="badge b-unclear">Needs answer</span> —
+items in <span class="req">italic purple</span> trace directly to the WhatsApp-funnel scenario
+described on 16 July.</p>
+
+<h2 id="a">A. Channels (transport)</h2>
+<table>
+<tr><th>#</th><th>Feature</th><th>Status</th><th>Notes</th></tr>
+<tr><td class="id">A1</td><td>Website widget — voice</td><td class="status"><span class="badge b-ok">Built</span></td><td>ElevenLabs voice agent ("Jessica")</td></tr>
+<tr><td class="id">A2</td><td>Website widget — text chat</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">A3</td><td>Phone voice inbound (Twilio → AI agent)</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">A4</td><td>Phone voice outbound, recorded + transcribed</td><td class="status"><span class="badge b-ok">Built</span></td><td>Outbound AI callback flow</td></tr>
+<tr><td class="id">A5</td><td>SMS inbound + outbound + AI reply</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">A6</td><td>WhatsApp inbound + outbound + AI reply</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">A7</td><td>Delivery / read status (ticks)</td><td class="status"><span class="badge b-ok">Built</span></td><td>Full Twilio delivery ladder (sent → delivered → read → failed) is sufficient — this is the same Meta data, relayed one hop through Twilio. No separate Meta integration needed for this.</td></tr>
+<tr><td class="id">A8</td><td>Provider flexibility — Twilio and Meta Cloud API both supported</td><td class="status"><span class="badge b-ok">Built</span></td><td>Currently running on Twilio; the option to move to Meta directly exists if ever needed</td></tr>
+<tr><td class="id">A9</td><td>Email as a conversational channel</td><td class="status"><span class="badge b-no">Missing</span></td><td>Blocked on Google account authorization on our side — a short setup step, not a build</td></tr>
+<tr><td class="id">A10</td><td>Web push notifications</td><td class="status"><span class="badge b-no">Missing</span></td><td>Comes included with the email marketing tool (Omnisend) if wanted</td></tr>
+<tr><td class="id">A11</td><td class="req">Instagram DM</td><td class="status"><span class="badge b-no">Missing</span></td><td>Requested 16 July — see A-bis below</td></tr>
+<tr><td class="id">A12</td><td class="req">Facebook Messenger</td><td class="status"><span class="badge b-no">Missing</span></td><td>Requested 16 July — see A-bis below</td></tr>
+<tr><td class="id">A13</td><td class="req">Shopify Inbox</td><td class="status"><span class="badge b-unclear">Needs answer</span></td><td>Requested 16 July — see A-bis below</td></tr>
+<tr><td class="id">A14</td><td class="req">TikTok Messages</td><td class="status"><span class="badge b-unclear">Needs answer</span></td><td>Requested 16 July — see A-bis below</td></tr>
+</table>
+
+<h2 id="abis">A-bis. New channel requests — feasibility (added 16 July)</h2>
+
+<div class="info">
+The good news: adding a channel is now a relatively small piece of work. The shared platform already
+handles threading, matching a conversation to the right customer, AI replies, operator takeover,
+hand-back, consent, and the inbox screen — all channel-agnostic. A new channel mainly means teaching
+the system to receive and send on that platform. What varies enormously is <strong>what each
+platform's own rules allow</strong> — that's the real driver of cost and timeline below.
+</div>
+
+<h3>Instagram DM — the strongest candidate</h3>
+<p>Meta's own messaging API for Instagram. Requires an Instagram Business account linked to a Facebook
+Page, plus Meta's review of the integration before it can go live for real customers. Once live: the
+customer has to message first (no cold outreach), and there's a 24-hour free-reply window per
+conversation, same shape as WhatsApp's rule.</p>
+<div class="recommend"><strong>Why this matters most:</strong> a "Click to Instagram Direct" ad works
+exactly like the WhatsApp ad you described — click, land in a DM, our bot picks it up. If we build the
+funnel logic once for WhatsApp, Instagram is mostly a second connector on the same engine, not a
+second project. Strong candidate for a second phase right after WhatsApp.</div>
+
+<h3>Facebook Messenger — the easiest add</h3>
+<p>Two ways to do this: through the same Twilio account we already use for WhatsApp/SMS, or directly
+through Meta. Same 24-hour reply-window rule applies. If we end up integrating directly with Meta for
+Instagram anyway, it makes sense to do Messenger the same way at the same time — one review process,
+one integration, covering two channels.</p>
+
+<h3>Shopify Inbox — recommend against integrating; needs one answer from you</h3>
+<div class="warn">
+There is no public way for outside systems (including ours) to read or send Shopify Inbox
+conversations — Shopify doesn't offer that access. More importantly, Shopify Inbox does the same job
+our own inbox already does (it pulls together store chat, Messenger and email into one screen), so
+integrating it would mean running two overlapping inboxes rather than gaining a channel.<br><br>
+<strong>The one thing we do need from you:</strong> is Shopify Inbox chat currently switched on for
+the storefront? If it is, any conversations happening there are invisible to us and to the AI right
+now — worth knowing either way. If it's on and not actively needed, turning it off is simpler than
+building a bridge to it.
+</div>
+
+<h3>TikTok Messages — possible, but not yet confirmed</h3>
+<p>TikTok does have a business messaging API, but access is granted case-by-case to approved partners
+rather than being open for anyone to use — so we can't commit to a timeline until we know whether
+approval is realistic. Availability is by region; Australia is one of the eligible ones. We'd treat
+this as a short research step to find out what's actually possible, rather than a committed build,
+until that's answered. Worth also confirming whether TikTok ads are even part of the plan — if not,
+this can wait.</p>
+
+<div class="phase">
+<strong>Suggested order, if all four move forward:</strong>
+<ol>
+<li>WhatsApp / Click-to-WhatsApp — already in progress</li>
+<li>Instagram DM — shares the funnel logic built for WhatsApp; needs Meta's review process, which has
+its own lead time, so worth starting early</li>
+<li>Facebook Messenger — a cheap add-on once the Meta review for Instagram is underway</li>
+<li>Shopify Inbox — confirm whether it's on, decide whether to keep it, not something to integrate</li>
+<li>TikTok — a short feasibility check, not a committed build, until partner access is confirmed</li>
+</ol>
+</div>
+
+<h2 id="b">B. Conversation platform (shared data layer)</h2>
+<table>
+<tr><th>#</th><th>Feature</th><th>Status</th><th>Notes</th></tr>
+<tr><td class="id">B1</td><td>One persistent record of every conversation, across all channels</td><td class="status"><span class="badge b-ok">Built</span></td><td>This is the foundation everything else sits on</td></tr>
+<tr><td class="id">B2</td><td>One thread per customer, regardless of channel</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">B3</td><td>Cross-channel customer matching</td><td class="status"><span class="badge b-ok">Built</span></td><td>By phone/email → linked to the Shopify customer</td></tr>
+<tr><td class="id">B4</td><td>Conversation history available to the AI</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">B5</td><td>Past orders &amp; support history available to the AI</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">B6</td><td>Duplicate-message protection</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">B7</td><td>Historical conversations backfilled into the system</td><td class="status"><span class="badge b-ok">Built</span></td><td>66 past voice calls + messages recovered and threaded</td></tr>
+<tr><td class="id">B8</td><td>Unified event log for funnel analytics</td><td class="status"><span class="badge b-partial">Partial</span></td><td>Every message event is already logged automatically (received, sent, delivered, read, failed) — so reporting on volumes, delivery rates and response times is <strong>already possible from data we hold today</strong>. What's missing is the business-level events: which ad a lead came from, when a lead qualified, when a checkout started, when an order landed.</td></tr>
+<tr><td class="id">B9</td><td>Message-handling speed</td><td class="status"><span class="badge b-partial">Partial</span></td><td>Adds roughly half a second per inbound message today; safe, but worth optimising later</td></tr>
+</table>
+
+<h2 id="c">C. Operator inbox &amp; human handoff</h2>
+<table>
+<tr><th>#</th><th>Feature</th><th>Status</th><th>Notes</th></tr>
+<tr><td class="id">C1</td><td>Unified inbox screen (channels, conversation list, message view, customer panel)</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">C2</td><td class="req">Real-time view of every customer and AI message</td><td class="status"><span class="badge b-ok">Built</span></td><td>Directly matches what you described on 16 July</td></tr>
+<tr><td class="id">C3</td><td class="req">Operator can take over any conversation without losing context</td><td class="status"><span class="badge b-ok">Built</span></td><td>Also matches 16 July — replying by hand automatically pauses the AI on that thread</td></tr>
+<tr><td class="id">C4</td><td>Automatic hand-back to AI after a quiet period</td><td class="status"><span class="badge b-ok">Built</span></td><td>30-minute rolling window</td></tr>
+<tr><td class="id">C5</td><td>Free-text reply from the inbox (SMS/WhatsApp)</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">C6</td><td>Folders, status tracking, star/pin, labels</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">C7</td><td>Assign a conversation to a staff member</td><td class="status"><span class="badge b-partial">Partial</span></td><td>Works for one staff user today; a full staff picker needs a higher Shopify plan tier</td></tr>
+<tr><td class="id">C8</td><td>Saved / quick reply templates</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">C9</td><td>Unread counts per channel</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">C10</td><td>Search across contacts and message history</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">C11</td><td>Contacts directory, editable and synced back to Shopify</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">C12</td><td>Product links rendered as clickable cards in chat</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">C13</td><td>Voice call cards with playback duration + transcript</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">C14</td><td>"Connect me to a human" escalation</td><td class="status"><span class="badge b-ok">Built</span></td><td>Deep-links the customer straight to a WhatsApp chat with your team</td></tr>
+<tr><td class="id">C15</td><td>Escalation via an auto-created WhatsApp group (customer + you + manager)</td><td class="status"><span class="badge b-parked">Parked</span></td><td>Designed, not built — an alternative to C14 if useful later</td></tr>
+<tr><td class="id">C16</td><td>On-screen order card in the website widget</td><td class="status"><span class="badge b-no">Missing</span></td><td>The AI currently tells voice/chat customers it's shown this — it isn't. Worth fixing regardless of the funnel work</td></tr>
+<tr><td class="id">C17</td><td>On-screen "Chat on WhatsApp" button in the widget</td><td class="status"><span class="badge b-no">Missing</span></td><td>Same issue as C16 — the agent says it's there, it isn't yet</td></tr>
+<tr><td class="id">C18</td><td>Send-rate protection on the inbox API</td><td class="status"><span class="badge b-no">Missing</span></td><td>Low risk today — only staff can trigger it</td></tr>
+<tr><td class="id">C19</td><td>Unread-count accuracy under heavy simultaneous use</td><td class="status"><span class="badge b-partial">Partial</span></td><td>Minor, known edge case</td></tr>
+</table>
+
+<h2 id="d">D. AI agent capability</h2>
+<table>
+<tr><th>#</th><th>Feature</th><th>Status</th><th>Notes</th></tr>
+<tr><td class="id">D1</td><td>Order lookup, product search, stock check, email notifications</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">D2</td><td>SMS notifications</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">D3</td><td>Escalate-to-human tool</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">D4</td><td>Knowledge base fully searchable by the AI</td><td class="status"><span class="badge b-ok">Built</span></td><td>Fixed 15 July — previously large parts of the product/troubleshooting knowledge were silently invisible to the AI</td></tr>
+<tr><td class="id">D5</td><td>Writing style tuned for chat, not voice</td><td class="status"><span class="badge b-unclear">Needs check</span></td><td>Voice replies are deliberately short (1–3 sentences); text conversations should read differently — worth confirming this is tuned correctly</td></tr>
+<tr><td class="id">D6</td><td class="req">Structured funnel stages (greet → qualify → recommend → quote → checkout)</td><td class="status"><span class="badge b-no">Missing</span></td><td>Central to the 16 July scenario — see summary below</td></tr>
+<tr><td class="id">D7</td><td class="req">Tracking which stage each customer is at</td><td class="status"><span class="badge b-no">Missing</span></td><td></td></tr>
+<tr><td class="id">D8</td><td class="req">Lead qualification &amp; scoring</td><td class="status"><span class="badge b-no">Missing</span></td><td></td></tr>
+<tr><td class="id">D9</td><td>AI can proactively re-engage a customer outside the normal reply window</td><td class="status"><span class="badge b-partial">Partial</span></td><td>Available as a manual tool for staff today; not yet something the AI can trigger itself</td></tr>
+<tr><td class="id">D10</td><td>AI can generate a draft order + payment link in chat</td><td class="status"><span class="badge b-partial">Partial</span></td><td>Built but switched off pending a decision on consent/compliance requirements</td></tr>
+<tr><td class="id">D11</td><td>AI sends a product catalogue card in WhatsApp</td><td class="status"><span class="badge b-no">Missing</span></td><td></td></tr>
+<tr><td class="id">D12</td><td>Interactive reply buttons / option lists</td><td class="status"><span class="badge b-no">Missing</span></td><td>Useful for the qualification flow once it exists</td></tr>
+<tr><td class="id">D13</td><td>24-hour reply-window awareness driving what the AI can send</td><td class="status"><span class="badge b-partial">Partial</span></td><td>Visible to staff in the inbox; not yet automated logic</td></tr>
+<tr><td class="id">D14</td><td>Customer-sent photos/voice notes understood by the AI</td><td class="status"><span class="badge b-no">Missing</span></td><td></td></tr>
+<tr><td class="id">D15</td><td>"Find a painter near me" voice lookup</td><td class="status"><span class="badge b-parked">Parked</span></td><td>Separate idea, on hold</td></tr>
+</table>
+
+<h2 id="e">E. WhatsApp / Meta ad funnel</h2>
+<table>
+<tr><th>#</th><th>Feature</th><th>Status</th><th>Notes</th></tr>
+<tr><td class="id">E1</td><td>Production WhatsApp number (not a test/sandbox number)</td><td class="status"><span class="badge b-ok">Built</span></td><td>Verified business account confirmed 15 July</td></tr>
+<tr><td class="id">E2</td><td>Meta-approved message templates</td><td class="status"><span class="badge b-ok">Built</span></td><td>4 live templates covering support follow-up, order updates, quotes, and re-engagement</td></tr>
+<tr><td class="id">E3</td><td class="req">Bot runs inside our own system, not a separate tool</td><td class="status"><span class="badge b-ok">Built</span></td><td>Matches the 16 July requirement directly</td></tr>
+<tr><td class="id">E4</td><td class="req">Meta ad → Click-to-WhatsApp → our bot</td><td class="status"><span class="badge b-no">Missing</span></td><td>The ad + WhatsApp Business setup side is a Meta/Business Manager step on your end; we wire up what happens after the click</td></tr>
+<tr><td class="id">E5</td><td class="req">Recognise which ad a WhatsApp conversation came from</td><td class="status"><span class="badge b-ok">Built 16 Jul</span></td><td>Built and tested this session. Meta sends this ad-click identifier only once, on the very first message after someone clicks the ad, and never re-sends it — so any ad running before this was in place produced conversations that can never be traced back. Now captured on arrival.</td></tr>
+<tr><td class="id">E6</td><td>Store that ad attribution against the conversation</td><td class="status"><span class="badge b-ok">Built 16 Jul</span></td><td>Recorded in three ways: the first ad a customer ever arrived from (kept permanently), every subsequent ad touch, and the raw detail against the message itself. Awaiting one small database update before it goes live.</td></tr>
+<tr><td class="id">E7</td><td>Report leads/purchases back to Meta for ad optimisation</td><td class="status"><span class="badge b-no">Missing</span></td><td>This is what lets Meta's ad algorithm learn from real leads and sales, not just "conversation started"</td></tr>
+<tr><td class="id">E8</td><td>Meta Pixel installed on the storefront</td><td class="status"><span class="badge b-unclear">Needs answer</span></td><td>Flagged as unconfirmed back in May — still open</td></tr>
+<tr><td class="id">E9</td><td>Click-to-WhatsApp buttons on product pages</td><td class="status"><span class="badge b-no">Missing</span></td><td></td></tr>
+<tr><td class="id">E10</td><td>Reliable link between a WhatsApp number and the Shopify customer record</td><td class="status"><span class="badge b-no">Missing</span></td><td></td></tr>
+<tr><td class="id">E11</td><td>Consistent tagging (WhatsApp Lead / WhatsApp Customer, etc.)</td><td class="status"><span class="badge b-partial">Partial</span></td><td>Leads are tagged; the full tag structure isn't finalised</td></tr>
+<tr><td class="id">E12</td><td>Checkout link sent over WhatsApp</td><td class="status"><span class="badge b-partial">Partial</span></td><td>See D10</td></tr>
+<tr><td class="id">E13</td><td>Dedicated ads number vs. shared support number</td><td class="status"><span class="badge b-unclear">Needs answer</span></td><td>Worth deciding — mixing ad traffic with existing support traffic affects both number reputation and reporting clarity</td></tr>
+<tr><td class="id">E14</td><td>Meta messaging-volume verification tier</td><td class="status"><span class="badge b-unclear">Needs answer</span></td><td>Business verification is done; the exact tier/limits for ad-driven volume aren't confirmed yet</td></tr>
+</table>
+
+<h2 id="f">F. Media library (video / PDF / images)</h2>
+<div class="warn">
+This has a full architecture already designed for it — worked out and shared with you back in June —
+but building it was put on hold in favour of a text-and-links-only inbox. Your 16 July request to have
+the AI send video, PDF and product material effectively brings this back onto the table.
+</div>
+<table>
+<tr><th>#</th><th>Feature</th><th>Status</th><th>Notes</th></tr>
+<tr><td class="id">F1</td><td class="req">AI can send video / PDF / images to a customer</td><td class="status"><span class="badge b-parked">On hold</span></td><td>Requested again 16 July</td></tr>
+<tr><td class="id">F2</td><td>Central video/media library (cloud storage + CDN)</td><td class="status"><span class="badge b-no">Missing</span></td><td>Designed already — one library reused across WhatsApp, the website, and email, rather than separate copies per channel</td></tr>
+<tr><td class="id">F3</td><td>Media catalogue (what each clip is, which funnel step it belongs to)</td><td class="status"><span class="badge b-no">Missing</span></td><td></td></tr>
+<tr><td class="id">F4</td><td>WhatsApp-side delivery caching</td><td class="status"><span class="badge b-no">Missing</span></td><td>WhatsApp's own copy of an uploaded video expires after about 30 days — the system needs to refresh it automatically</td></tr>
+<tr><td class="id">F5</td><td>Video sent as a native WhatsApp video, not a link</td><td class="status"><span class="badge b-no">Missing</span></td><td>Plays inline in the chat with a preview</td></tr>
+<tr><td class="id">F6</td><td>Send-video capability wired into the backend</td><td class="status"><span class="badge b-no">Missing</span></td><td></td></tr>
+<tr><td class="id">F7</td><td>Automatic format/size checks before publishing a clip</td><td class="status"><span class="badge b-no">Missing</span></td><td></td></tr>
+<tr><td class="id">F8</td><td>20–50 short reusable clips (demo, testimonials, objections, checkout nudges)</td><td class="status"><span class="badge b-no">Missing</span></td><td><strong>This is content production on your side</strong>, not a build item — worth planning who creates these and on what timeline</td></tr>
+<tr><td class="id">F9</td><td>Same library reused across web funnel, email, landing pages</td><td class="status"><span class="badge b-no">Missing</span></td><td></td></tr>
+</table>
+
+<h2 id="g">G. Lead capture &amp; CRM sync</h2>
+<table>
+<tr><th>#</th><th>Feature</th><th>Status</th><th>Notes</th></tr>
+<tr><td class="id">G1</td><td>Capture name/email/phone during a conversation</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">G2</td><td>Create/update the Shopify customer record, tagged</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">G3</td><td>Required Shopify permissions</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">G4</td><td>Conversation summary logged automatically after each call</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">G5</td><td>Structured record of what a customer was interested in / outcome</td><td class="status"><span class="badge b-partial">Partial</span></td><td>Full transcripts are stored; not yet broken into structured interest/outcome fields</td></tr>
+<tr><td class="id">G6</td><td>Voice agent correctly confirms spoken email addresses</td><td class="status"><span class="badge b-unclear">Needs check</span></td><td>Known speech-recognition risk (e.g. "five" vs "nine", "gmail" vs similar-sounding domains) — worth verifying the confirmation step is solid</td></tr>
+<tr><td class="id">G7</td><td>Duplicate-customer handling</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">G8</td><td>Tracking which campaign/ad a lead came from</td><td class="status"><span class="badge b-no">Missing</span></td><td>Same underlying gap as E5 — the fix covers both</td></tr>
+<tr><td class="id">G9</td><td>Linking a purchase back to the conversation that led to it</td><td class="status"><span class="badge b-no">Missing</span></td><td></td></tr>
+</table>
+
+<h2 id="h">H. Consent &amp; compliance</h2>
+<table>
+<tr><th>#</th><th>Feature</th><th>Status</th><th>Notes</th></tr>
+<tr><td class="id">H1</td><td>Per-channel marketing consent tracking (email/SMS/WhatsApp/calls)</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">H2</td><td>STOP/START keyword handling</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">H3</td><td>Shopify as the master record for email/SMS consent</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">H4</td><td>Australian Spam Act / privacy-compliant opt-in record</td><td class="status"><span class="badge b-ok">Built</span></td><td></td></tr>
+<tr><td class="id">H5</td><td>System actively blocks marketing sends to non-consented contacts</td><td class="status"><span class="badge b-no">Missing</span></td><td>Currently just a visual warning to staff, not an enforced rule — needs to be locked down before any broadcast sending starts</td></tr>
+<tr><td class="id">H6</td><td>Public preference/opt-in page for customers</td><td class="status"><span class="badge b-parked">Unblocked</span></td><td>Was on hold pending the marketing-tool decision — that's now settled (Omnisend), so this can proceed</td></tr>
+<tr><td class="id">H7</td><td>WhatsApp opt-in via customer's own reply (Meta requirement)</td><td class="status"><span class="badge b-no">Missing</span></td><td></td></tr>
+<tr><td class="id">H8</td><td>Do Not Call Register check before outbound calls</td><td class="status"><span class="badge b-no">Missing</span></td><td></td></tr>
+</table>
+
+<h2 id="i">I. Marketing &amp; analytics</h2>
+<table>
+<tr><th>#</th><th>Feature</th><th>Status</th><th>Notes</th></tr>
+<tr><td class="id">I1</td><td>Email marketing engine</td><td class="status"><span class="badge b-ok">In place</span></td><td><strong>Omnisend</strong> — decided 16 July; already an active subscription, natively synced with Shopify</td></tr>
+<tr><td class="id">I2</td><td>Klaviyo</td><td class="status"><span class="badge b-parked">Being removed</span></td><td>Worth reviewing what it's currently doing before switching it off, since it appears to have live automations running</td></tr>
+<tr><td class="id">I3</td><td>Other marketing platforms considered (Brevo, Listmonk, Mailchimp)</td><td class="status"><span class="badge b-parked">Ruled out</span></td><td>Not needed — Omnisend already covers the job</td></tr>
+<tr><td class="id">I4</td><td>Bulk SMS marketing</td><td class="status"><span class="badge b-unclear">Needs answer</span></td><td>Depends on which Omnisend plan is active — worth confirming so we know whether SMS marketing routes through Omnisend or through our own system</td></tr>
+<tr><td class="id">I5</td><td>WhatsApp broadcast to a customer segment</td><td class="status"><span class="badge b-no">Missing</span></td><td>Has to be built on our side — Omnisend doesn't offer WhatsApp natively</td></tr>
+<tr><td class="id">I6</td><td>Campaign / audience segment structures</td><td class="status"><span class="badge b-no">Missing</span></td><td></td></tr>
+<tr><td class="id">I7</td><td>Full funnel reporting (sent → delivered → opened → clicked → lead → order)</td><td class="status"><span class="badge b-no">Missing</span></td><td>Depends on B8 being populated, plus pulling Omnisend's own engagement data into the same view</td></tr>
+<tr><td class="id">I8</td><td>Revenue attribution</td><td class="status"><span class="badge b-no">Missing</span></td><td></td></tr>
+<tr><td class="id">I9</td><td>Automatic retargeting audiences for Meta/Google ads</td><td class="status"><span class="badge b-no">Missing</span></td><td>Omnisend's own audience-sync depth for this hasn't been confirmed yet — may end up being built directly against Meta instead</td></tr>
+<tr><td class="id">I10</td><td>AI-driven marketing controls (build a segment, send a campaign, pull analytics)</td><td class="status"><span class="badge b-no">Missing</span></td><td></td></tr>
+<tr><td class="id">I11</td><td>Analytics dashboard tab</td><td class="status"><span class="badge b-parked">Parked</span></td><td>Deliberately deferred earlier</td></tr>
+<tr><td class="id">I12</td><td>Automation rule builder (auto-tag, auto-assign, keyword routing)</td><td class="status"><span class="badge b-parked">Parked</span></td><td></td></tr>
+<tr><td class="id">I13</td><td>Template manager screen</td><td class="status"><span class="badge b-parked">Parked</span></td><td></td></tr>
+<tr><td class="id">I14</td><td>Broadcast-sending screen</td><td class="status"><span class="badge b-parked">Parked</span></td><td></td></tr>
+<tr><td class="id">I15</td><td>Abandoned cart / post-purchase email flows</td><td class="status"><span class="badge b-ok">In place</span></td><td>Comes built-in with Omnisend</td></tr>
+</table>
+
+<h2 id="j">J. Back-office automation (separate track)</h2>
+<table>
+<tr><th>#</th><th>Feature</th><th>Status</th></tr>
+<tr><td class="id">J1</td><td>Supplier PO / confirmation / payment / tracking workflows</td><td class="status"><span class="badge b-partial">Partial</span></td></tr>
+<tr><td class="id">J2</td><td>Pricing intelligence (guard-railed automatic pricing)</td><td class="status"><span class="badge b-parked">Parked</span></td></tr>
+<tr><td class="id">J3</td><td>Operations assistant (Shopify/Gmail/Drive, via ChatGPT)</td><td class="status"><span class="badge b-ok">Built</span></td></tr>
+</table>
+
+<h2 id="summary">Summary — what's actually new work</h2>
+<p>Everything above this line is either already built, already covered by an external tool, or
+deliberately on hold. Stripping that away, the WhatsApp-ad funnel you described on 16 July needs four
+genuinely new pieces of work:</p>
+
+<div class="phase"><strong>1. Ad attribution.</strong> Recognise which Meta ad a WhatsApp conversation
+came from, store it against the conversation, and report leads/purchases back to Meta so the ad
+campaign can optimise on real outcomes rather than just "conversation started." Twilio already gives
+us the information we need for this — we're just not capturing it yet. Small, contained, high
+leverage.</div>
+
+<div class="phase"><strong>2. The funnel/scenario itself.</strong> Structured stages — greeting,
+qualifying questions, recommendation, quote, checkout — with the AI tracking where each customer is in
+that journey. <strong>This is blocked on getting the actual scenario content from you:</strong> the
+questions to ask, how to qualify a lead, which product path follows which answer, and which asset
+(link, video, PDF) belongs at which step.</div>
+
+<div class="phase"><strong>3. Media delivery.</strong> Reversing the earlier decision to keep the
+inbox text-only, and building the video/PDF pipeline that was already designed in June. <strong>Blocked
+on your side producing the 20–50 short clips</strong> the original plan called for — the technical
+pipeline to deliver them is the smaller half of this item.</div>
+
+<div class="phase"><strong>4. Enforcement + measurement.</strong> Making the consent rule actually
+block non-consented marketing sends (not just warn), and populating the event log so the funnel can
+be measured end to end. Needed before any broadcast-style sending goes live, and before we can report
+back on how well the funnel is performing.</div>
+
+<div class="bad"><strong>Also worth fixing regardless of the above:</strong> the AI currently tells
+website visitors "I've shown that on your screen" for both order details and a WhatsApp handoff button
+— on the website widget, neither actually appears. Independent of the funnel work, but worth closing
+since it's a live, if minor, broken promise to customers today.</div>
+
+<footer>
+Paint Access — Communications &amp; Marketing System. Prepared for discussion, 16 July 2026. Source:
+consolidated from LEAD_CAPTURE_PLAN, WHATSAPP_META_PLAN, OPS_PRICING_PLAN,
+GOOGLE_PLACES_VOICE_AGENT_PLAN, PLAN-FullSystem, PLAN-CommsControlCenter, PLAN-InboxFeatures,
+PLAN-Templates-Consent, PLAN-HumanHandoff, PLAN-OnScreenOrders-Handoff, PLAN-EmailTab, and the 16 July
+WhatsApp-funnel discussion.
+</footer>
+
+</body>
+</html>

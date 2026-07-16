@@ -191,6 +191,8 @@ module.exports = async function handler(req, res) {
       name: customerContext?.customer_name || inbound.profileName || "",
       email: customerContext?.customer_email || "",
       shopifyCustomerId: customerContext?.customer_id || "",
+      // Click-to-WhatsApp ad attribution — arrives once, on the ad-click message only.
+      referral: inbound.referral || null,
     });
 
     // Both Twilio and Meta retry a webhook that doesn't ack fast enough, re-delivering
