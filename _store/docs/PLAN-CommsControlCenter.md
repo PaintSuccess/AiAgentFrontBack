@@ -124,15 +124,14 @@ service → logged in the same thread the human sees.
 
 ## 4. Marketing & analytics — platform decision
 
-**Client decision (2026-07-10): Omnisend** — not Klaviyo, not Shopify Email/Mailchimp. Plan is built
+**Client decision (2026-07-10): Omnisend** — not Shopify Email/Mailchimp. Plan is built
 around Omnisend as the email/SMS marketing + analytics engine. Comparison kept for record:
 
 | Option | Fit | Verdict |
 |---|---|---|
 | **Shopify Email** | 10k emails/mo free then $1/1k; native segments; basic open/click. Weak automation, **no SMS/WhatsApp**, thin analytics, poor API for AI-driven campaigns. | Not enough. |
 | **Mailchimp** | Full ESP + decent API, but second-class Shopify integration, data silo, weaker ecommerce attribution. | Not the best fit. |
-| **Klaviyo** | Deepest Shopify sync + richest API + strong attribution. | Strong, but **rejected by client** on cost. |
-| **Omnisend** *(chosen)* | Native Shopify integration on all plans; REST **API** for campaigns, segments, contacts, custom events, and reporting — enough for AI-agent-driven sends + analytics. Email + SMS + web push, prebuilt ecommerce automations (abandoned cart, order/shipping). Notably cheaper than Klaviyo at every tier. **No WhatsApp channel.** | **Chosen engine.** |
+| **Omnisend** *(chosen)* | Native Shopify integration on all plans; REST **API** for campaigns, segments, contacts, custom events, and reporting — enough for AI-agent-driven sends + analytics. Email + SMS + web push, prebuilt ecommerce automations (abandoned cart, order/shipping). **No WhatsApp channel.** | **Chosen engine.** |
 | **Build in-house** on Supabase spine + Twilio + email ESP (Resend/SendGrid) + pixel/CAPI | Full control, no per-contact fee. | Fallback only. |
 
 **How Omnisend fits the architecture:**
@@ -153,7 +152,7 @@ around Omnisend as the email/SMS marketing + analytics engine. Comparison kept f
 - **Retargeting audiences** ("clicked-not-bought", "visited-not-ordered"): build the segment logic from
   Omnisend engagement data + our Supabase `events`, then push to Meta/Google Custom Audiences (Omnisend
   ads-audience sync where available, or our own Meta CAPI feed). Verify Omnisend's current ad-audience
-  sync depth during Phase 5 spike — this is thinner than Klaviyo's and is the main capability to confirm.
+  sync depth during Phase 5 spike — this is the main capability to confirm.
 
 ### Omnisend cost (2026)
 
@@ -170,7 +169,7 @@ minus the bounce/unsubscribe lists).
 | 10,000 | — | ~$132/mo | Pro tier |
 
 Notes: from **May 4 2026, SMS is Pro-plan only** (from $59/mo). **UPDATE 2026-07-11: client rejected
-Omnisend too — still too expensive at scale.** Any per-contact marketing suite (Klaviyo/Omnisend/
+Omnisend too — still too expensive at scale.** Any per-contact marketing suite
 Mailchimp) blows up at tens of thousands of contacts. See **§8** for the cost-optimized direction:
 build analytics on the Supabase spine and send via volume-billed/self-hosted tools. Marketing engine is
 now being re-selected among Listmonk+SES vs Brevo (Mailchimp ruled out).
@@ -178,7 +177,7 @@ now being re-selected among Listmonk+SES vs Brevo (Mailchimp ruled out).
 ## 7. Decisions captured
 
 - **Datastore: Supabase (Postgres)** — confirmed (2026-07-10).
-- **Marketing engine: OPEN** (2026-07-11). Klaviyo and Omnisend both rejected on cost; Mailchimp ruled
+- **Marketing engine: OPEN** (2026-07-11). Omnisend rejected on cost; Mailchimp ruled
   out (per-contact billing incl. unsubscribed/duplicates, no WhatsApp, weak AU SMS). Choosing between
   **Brevo** (volume-billed SaaS, low ops — recommended default) and **Listmonk + Amazon SES**
   (self-hosted, absolute cheapest). SMS/WhatsApp sending stays on **Twilio** regardless; analytics live
@@ -237,7 +236,7 @@ marketing SaaS. Direct answers to the client's questions:
 - **How ChatGPT reads + sends without third-party UIs:** extend the existing MCP (`api/mcp/shopify.js`)
   with `comms_get_thread` / `comms_search_threads` (read Supabase) + `comms_send_message` (send via
   Twilio, then log). ChatGPT calls these directly.
-- **Ready-made building blocks (don't rebuild Zendesk/Klaviyo):** **Chatwoot** (MIT, self-hosted
+- **Ready-made building blocks (don't rebuild Zendesk/marketing suites):** **Chatwoot** (MIT, self-hosted
   omnichannel inbox incl. Twilio SMS/WhatsApp + email, REST API + webhooks) for the human console;
   **Twilio Conversations API** for the threading backbone; **Listmonk** (self-hosted) or **Brevo**
   (volume-billed SaaS) for marketing; **Amazon SES** for cheap email.
@@ -253,7 +252,7 @@ marketing SaaS. Direct answers to the client's questions:
 | Human inbox *(optional)* | Chatwoot (self-host) **or** lean Shopify InboxPage | ~$10–20/mo VPS **or** ~$0 |
 | Marketing *(optional)* | Brevo (volume-billed) **or** Listmonk + Amazon SES | ~$8–65/mo, **no per-contact fee** |
 
-New recurring cost ≈ **$0–65/mo**, flat with list size — vs Klaviyo/Omnisend/Mailchimp at hundreds/mo.
+New recurring cost ≈ **$0–65/mo**, flat with list size — vs Omnisend/Mailchimp at hundreds/mo.
 Scale limit for "tens of thousands" is **sending throughput + messaging policy** (Twilio rate limits,
 WhatsApp templates/opt-in, SES warm-up), not Postgres — the DB handles that volume trivially.
 

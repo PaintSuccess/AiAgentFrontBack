@@ -72,7 +72,7 @@ Also note: **Instagram, Messenger and WhatsApp all share the same 24-hour-window
   Shopify Inbox chat alongside it = **two chat widgets on the same store**.
 - **The real question is not "can we integrate it" but "is the client using it right now?"** If yes,
   those conversations are **invisible to us and to the AI** — a live blind spot, and the same
-  split-brain problem we found with Klaviyo/Omnisend. **Ask Daniel whether Shopify Inbox chat is
+  split-brain problem we found with the marketing engines. **Ask Daniel whether Shopify Inbox chat is
   enabled on the storefront.** If it is, the answer is probably to turn it off, not to integrate it.
 - If Messenger is wired via A12, we'd cover the useful half of what Shopify Inbox aggregates anyway.
 
@@ -227,14 +227,13 @@ Russian. It then got skipped on 07-13. Client now asks for video/PDF again → *
 | # | Feature | Status | Notes |
 | --- | --- | --- | --- |
 | I1 | Email marketing engine | ✅ *(external)* | **Omnisend** — decided 07-16; already paid, natively Shopify-synced |
-| I2 | Klaviyo | 🗑 | being removed — ⚠ audit live flows first |
 | I3 | Brevo / Listmonk+SES / Mailchimp | 🗑 | all off the table |
 | I4 | Bulk SMS marketing lane | ❓ | Omnisend SMS is **Pro-only since 2026-05-04** → if Standard, all SMS on Twilio |
 | I5 | WhatsApp broadcast to a segment | ❌ | must be ours (Omnisend has no native WhatsApp) |
 | I6 | Campaigns / segments / `campaign_recipients` tables | ❌ | specified in CommsControlCenter §3 |
 | I7 | **Funnel analytics** sent→delivered→opened→clicked→returned→lead/order | ❌ | needs `events` populated (B8) + Omnisend events pulled in |
 | I8 | Revenue attribution | ❌ | |
-| I9 | Auto retargeting audiences → Meta/Google Custom Audiences | ❌ | Omnisend's ad-audience sync **unverified + thinner than Klaviyo's** → likely push via our own CAPI |
+| I9 | Auto retargeting audiences → Meta/Google Custom Audiences | ❌ | Omnisend's ad-audience sync depth is **unverified** → likely push via our own CAPI feed (which the funnel needs anyway) |
 | I10 | MCP `marketing_*` tools (create_segment, send_campaign, get_analytics, build_audience) | ❌ | |
 | I11 | Analytics tab (volumes, response times, AI-vs-human, delivery rates) | ⏸ | P3 skipped |
 | I12 | Automations tab (rule builder: auto-tag, auto-assign, keyword routing) | ⏸ | P3 skipped |

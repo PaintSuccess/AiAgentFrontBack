@@ -13,7 +13,7 @@ Companion docs: `PLAN-Marketing-Consolidated-2026-07-16.md` (how the plan drifte
 
 | Fact | Consequence |
 | --- | --- |
-| **Klaviyo out, Omnisend stays** (client decision) | Engine question closed. Brevo / Listmonk+SES / Mailchimp all off the table. No new tool. |
+| **Omnisend is the marketing engine** (client decision) | Engine question closed. Brevo / Listmonk+SES / Mailchimp all off the table. No new tool. |
 | **Omnisend has no native WhatsApp** (only via 3rd-party Chatarmin) | WhatsApp — the priority channel — can *only* live in our system. Not a gap in our build; a permanent property of Omnisend. |
 | **Omnisend SMS is Pro-plan only** (since 2026-05-04) | If the account is on Standard, **all** SMS runs through Twilio. Decides the bulk-SMS lane. **Need: which plan?** |
 | **Omnisend bills per contact** (~$16/500, ~$132/10k) | Already sunk if subscribed, but caps list growth. Not worth expanding the email list aggressively. |
@@ -83,7 +83,6 @@ blanket-allowlist. Needs a human to confirm which domains are genuinely ours.
 | **Google** | GA4 `G-1V61SH5WFD` + Google Tag `GT-5D9QV8NS` (app 1780363) | ✅ live |
 | **TikTok** | pixelCode `CLI8693C77U8PKBK1BG0` (app 4383523) | ✅ **live — TikTok is already tracked** |
 | **Omnisend** | brandID `69394d3da929c7e42620aa30` (app 186001) | ✅ live |
-| **Klaviyo** | — | ⚠ **broken**: storefront renders `Failed to render app block … klaviyo-onsite-embed … doe[s not exist]` |
 | **US (this app)** | — | ❌ **nothing. We have no storefront visibility at all.** |
 
 **Every one of those apps holds full Protected Customer Data scopes** (`read_customer_email`,
@@ -105,8 +104,6 @@ what they browsed" — and it's a Shopify web pixel of our own, not a GA integra
   §1b's conclusion stands: GA is the wrong tool for the *profile*.
 - **TikTok** — not hypothetical. They already run the TikTok pixel, which strengthens the case for
   TikTok as a channel later (and the messaging API is still partner-gated).
-- **Klaviyo** — the broken app block is independent evidence it's mid-removal / half-installed. Still
-  audit its flows before uninstalling.
 - **CAPI** — downgrade from "not built" to "connected but low coverage; messaging events missing".
 
 ---
@@ -264,8 +261,8 @@ banner + a documented basis is a prerequisite for the behavioural layer, not a l
   natively Shopify-synced. **Don't rebuild.**
 - **WhatsApp re-engagement 🟡:** 2 approved MARKETING templates (`reengage_offer`, `quote_ready`).
   Sending exists; **broadcast to a segment doesn't**.
-- **Retargeting audiences ❌:** Omnisend's ad-audience sync is unverified and thinner than Klaviyo's
-  (which we're removing) — likely we push audiences ourselves via the same CAPI feed.
+- **Retargeting audiences ❌:** Omnisend's ad-audience sync depth is unverified — likely we push
+  audiences ourselves via the same CAPI feed.
 
 ---
 
@@ -329,7 +326,6 @@ only the second unblocks engineering.
 | **Scenario content** — questions, qualification criteria, product paths, asset per step | **Client** | Stage 3, Path B · **still the #1 blocker** |
 | **20–50 video clips + PDFs** | **Client** | Stage 4, Path B |
 | **Which Omnisend plan + contact count** | **Client/Daniel** | Forks C + G, cost picture |
-| **Klaviyo flow audit before uninstall** | **Client/Daniel** | Safe removal (it has live flows — a consent write triggered a real klaviyomail.com email on 07-14) |
 | **Is Shopify Inbox switched on?** | **Client/Daniel** | Whether there's a live AI blind spot |
 | ~~Meta Pixel on storefront?~~ | — | ✅ **RESOLVED 07-16 — it's live** (`334352823575129`). See §1a. |
 | **Confirm the pixel's domain allowlist** (62 domains pending, incl. `247games.com` which isn't ours) | **Client/Daniel** | Data hygiene — needs a human to say which are genuinely ours |
@@ -384,7 +380,7 @@ only the second unblocks engineering.
    them.
 6. **Start the lead-time approvals**: Meta App Review (IG/Messenger) and Shopify Protected Customer
    Data. Both are waiting, not building — start them before they're the critical path.
-7. **Answer the cheap audits**: Omnisend plan, Klaviyo flows, Shopify Inbox, Meta Pixel.
+7. **Answer the cheap audits**: Omnisend plan, Shopify Inbox.
 8. **Get a decision on the postman** (fork G) and put the cookie-consent basis in writing before any
    behavioural tracking ships.
 

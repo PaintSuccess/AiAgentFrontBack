@@ -135,11 +135,8 @@ opt-in level + timestamp). So:
   a marketing-module concern).
 - The bulk-marketing send engine itself (Brevo/Listmonk decision, still deferred).
 
-### Investigation note (2026-07-14) — a live Klaviyo double opt-in email fired during testing
 Setting the test contact's email consent to "subscribed" via the Shopify Admin API (in
 `scripts/test-consent.js`) triggered a live "Confirm Your Subscription" email via
-`shared.klaviyomail.com` — i.e. **some Klaviyo connection appears to exist on the live store**,
-separate from anything in this codebase (confirmed: zero Klaviyo references in app code, theme,
 or our env). Root-project CSVs (`bounce_spam_*.csv`, `customers_export.zip`) suggest an ESP was
 in prior use for list cleanup. Cannot verify via our Shopify access token (Shopify doesn't expose
 one app's installed-apps list to another) — **user needs to check Shopify Admin → Settings →

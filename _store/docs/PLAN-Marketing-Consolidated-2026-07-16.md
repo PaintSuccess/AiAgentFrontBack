@@ -17,7 +17,7 @@ docs below once the open decisions in §6 are made.
 | 2026-05-20 | `PLAN-FullSystem.md` §Phase 5 | "Centralized Logging & Continuity" only — no marketing at all. | **Superseded** by PLAN-CommsControlCenter (its own note says so). |
 | 2026-05-22 | `DASHBOARD_PLAN.md` | Read-only dashboard. | **Superseded.** |
 | 2026-05-18 → 06-27 | `WHATSAPP_META_PLAN.html` | **The original WhatsApp funnel.** AI sales funnel over WhatsApp (greeting → qualify → recommend → cart → checkout), lead capture, Shopify push, source analytics, downstream Omnisend + Meta retargeting, 20–50 short product videos. Provider fork: Twilio (Path A) vs Meta Cloud API (Path B, "full access to Click-to-WhatsApp ads"). | **Mostly still valid as intent — stale on facts.** Its provider fork is now resolved (see §5). Its Omnisend dependency is dead. |
-| 2026-07-10 → 07-13 | `PLAN-CommsControlCenter.md` §4, §8 | Omnisend **chosen** → then **rejected on cost** (per-contact billing). Engine reopened: **Brevo** (volume-billed, recommended default) vs **Listmonk + Amazon SES** (self-hosted ~$8–20/mo). Mailchimp/Klaviyo ruled out. Marketing = Phase 5, deferred. | **Current engine position — and the thing being re-opened now.** |
+| 2026-07-10 → 07-13 | `PLAN-CommsControlCenter.md` §4, §8 | Omnisend **chosen** → then **rejected on cost** (per-contact billing). Engine reopened: **Brevo** (volume-billed, recommended default) vs **Listmonk + Amazon SES** (self-hosted ~$8–20/mo). Mailchimp ruled out. Marketing = Phase 5, deferred. | **Current engine position — and the thing being re-opened now.** |
 | 2026-07-14 | `PLAN-Templates-Consent.md` | WhatsApp templates + per-channel marketing consent. Public opt-in page deferred until engine chosen. | **BUILT** (templates + consent live). Opt-in page still deferred. |
 
 > **Important:** the client's "new" WhatsApp-funnel requirement is not new — it is
@@ -33,10 +33,10 @@ docs below once the open decisions in §6 are made.
    is the engine and the analytics layer.
 2. **June:** WhatsApp added as a first-class funnel channel (client's 9 June update). Omnisend has no
    WhatsApp, so WhatsApp marketing is carved out to Twilio → **split-brain begins**.
-3. **10–11 July:** client rejects per-contact pricing. Omnisend AND Klaviyo out. The analytics layer
+3. **10–11 July:** client rejects per-contact pricing. The analytics layer
    moves **into our own Supabase spine** so the sending tool becomes swappable. Engine = open question.
-4. **14 July:** discovery that **Klaviyo *and* Omnisend are both actually installed** on the Shopify
-   store — so the "we have no engine" premise may be wrong. Marked as a blocker; unresolved.
+4. **14 July:** discovery that **Omnisend is actually installed and in use** on the Shopify store — so
+   the "we have no engine" premise was wrong.
 5. **16 July (now):** client re-prioritises the **Meta → WhatsApp funnel** as "a very important part
    of our system" — which pulls marketing back to WhatsApp-first, where Brevo was weakest anyway.
 
@@ -100,7 +100,7 @@ Three findings materially change decisions made earlier:
    `source_id`/`source_type`/`source_url`/`headline`/`body`), explicitly so it can be fed to Meta's
    Conversions API. **No migration needed.** We keep the Twilio sender, templates, and approvals.
 
-2. **Brevo is dead — superseded by the 2026-07-16 decision (§6.1): Klaviyo removed, Omnisend kept.**
+2. **Brevo is dead — superseded by the 2026-07-16 decision (§6.1): Omnisend is the engine.**
    Recorded for the record: Brevo's WhatsApp campaigns are Professional-plan only (~$499/mo), so
    buying Brevo would never have gotten us WhatsApp anyway — that stays on Twilio regardless. Brevo
    was recommended *as a volume-billed email/SMS engine* before WhatsApp became the priority channel.
@@ -117,18 +117,12 @@ Three findings materially change decisions made earlier:
 
 ## 6. Open decisions for tomorrow's session
 
-### 6.1 — RESOLVED (2026-07-16): Klaviyo removed, Omnisend stays
-Client decision: **Klaviyo will be removed. Omnisend has a live subscription and is in use** — so it
+### 6.1 — RESOLVED (2026-07-16): Omnisend is the marketing engine
+Client decision: **Omnisend has a live subscription and is in use** — so it
 should be used where it fits. This kills the engine debate: **Brevo and Listmonk+SES are both off the
 table.** We do not buy a new tool for a channel the client didn't ask for. Omnisend is already paid
 for and already natively synced to Shopify.
 
-⚠ **Before pulling Klaviyo, check what it is actually doing.** The 2026-07-14 discovery was that a
-Shopify consent write triggered a real double opt-in email from `shared.klaviyomail.com` — meaning
-Klaviyo has **live flows**, not just an idle install. Removing it will silently kill whatever
-automations are running there. Do this first: list Klaviyo's active flows/campaigns, confirm Omnisend
-covers each one (or that it's dead weight), then uninstall. Two ESPs syncing the same Shopify
-customers also means customers may be receiving duplicates *right now* — worth checking as part of
 the audit.
 
 ### 6.2 — Omnisend's limitations for this plan (what it can't cover)
@@ -142,7 +136,7 @@ the audit.
 | **Email marketing** (bulk campaigns, abandoned cart, order/shipping flows, web push) | ✅ **This is what it's good at, and it's already paid for. Use it here.** |
 | **Cost model** | ⚠️ **Per-contact billing** — this was the original rejection reason. Scales on contacts *stored*, not sent (~$16 at 500, ~$132 at 10k contacts on Standard; Pro from $59 at 2.5k). Already sunk if the subscription is live, but it caps how big the list can get before it hurts. |
 | **Funnel analytics** | ⚠️ **Siloed.** Engagement data lives in Omnisend, not our spine. For one unified ad→order funnel view we must pull its events into Supabase `events` via API/webhook. |
-| **Meta ad-audience sync** (retargeting) | ⚠️ **Unverified and thinner than Klaviyo's** — flagged for a spike in July, never done. **Removing Klaviyo removes the deeper option**, so if retargeting audiences matter, either confirm Omnisend's depth or plan to push audiences ourselves via our own Meta CAPI feed (which we need for the funnel anyway — see §6.5). |
+| **Meta ad-audience sync** (retargeting) | ⚠️ **Unverified** — flagged for a spike in July, never done. If retargeting audiences matter, either confirm Omnisend's depth or plan to push audiences ourselves via our own Meta CAPI feed (which we need for the funnel anyway — see §6.5). |
 
 **Resulting split (recommended):**
 - **Omnisend** = email marketing engine + web push. Bulk campaigns, abandoned cart, post-purchase.
@@ -182,8 +176,8 @@ lead-qualified + purchase, so Meta optimises on real orders, not just "conversat
 
 ## 7. Suggested agenda for tomorrow
 
-1. ~~Daniel's answer on Klaviyo/Omnisend~~ — **done 2026-07-16**: Klaviyo out, Omnisend stays (§6.1).
-   Remaining: audit Klaviyo's live flows before uninstalling, and get the Omnisend plan + contact count.
+1. ~~Engine decision~~ — **done 2026-07-16**: Omnisend is the engine (§6.1).
+   Remaining: get the Omnisend plan + contact count.
 2. Confirm the channel split (§6.2): Omnisend = email/push only; WhatsApp + SMS + voice = Twilio/spine.
 3. Walk the funnel end-to-end: ad → CTWA click → referral capture → scenario → qualification →
    asset delivery → checkout link → order → CAPI event back to Meta.
