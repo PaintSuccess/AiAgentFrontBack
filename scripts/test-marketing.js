@@ -11,7 +11,7 @@ const marketing = require("../lib/comms/marketing");
   console.log("\nATTRIBUTION  ads:", o.attribution.ads.length, "touches:", o.attribution.totalTouches, "ad-sourced contacts:", o.attribution.adSourcedContacts);
   for (const a of o.attribution.ads.slice(0, 5)) console.log(`  ${a.sourceId || "?"} — ${a.headline || "(no headline)"} · ${a.contacts} contacts / ${a.touches} touches`);
   console.log("\nREACH (last", o.reach.windowDays, "days)");
-  for (const c of o.reach.channels) console.log(`  ${c.key.padEnd(9)} in=${c.inbound} out=${c.outbound} delivered=${c.delivered} failed=${c.failed} pending=${c.pending} | delivered ${c.deliveredRate ?? "—"}% of ${c.settled} settled`);
+  for (const c of o.reach.channels) console.log(`  ${c.key.padEnd(9)} in=${c.inbound} out=${c.outbound} delivered=${c.delivered} failed=${c.failed} | ${c.deliveredRate ?? "—"}% of ${c.settled} settled | people=${c.people} failedPeople=${c.failedPeople}`);
   console.log("\nTEMPLATES  marketing:", o.templates.items.length, "utility:", o.templates.utilityCount, "available:", o.templates.available);
   for (const t of o.templates.items) console.log(`  ${t.name} (${t.category})`);
   console.log("\nOK");

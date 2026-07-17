@@ -75,7 +75,10 @@ function ReachRow({ c }) {
   const label = CHANNEL_LABELS[c.key] || c.key;
   // No settled sends = nothing to rate. Say so rather than implying 0%.
   const rated = c.settled > 0;
-  const tone = !rated ? "" : c.deliveredRate < 75 ? "is-bad" : c.deliveredRate < 90 ? "is-warn" : "";
+  // A low rate driven by a single contact is a bad conversation, not a bad channel — don't
+  // colour it like an outage.
+  const concentrated = c.failedPeople === 1 && c.people > 1;
+  const tone = !rated || concentrated ? "" : c.deliveredRate < 75 ? "is-bad" : c.deliveredRate < 90 ? "is-warn" : "";
   return (
     <div className="pa-reach-row">
       <div className="pa-reach-ch">
@@ -103,6 +106,11 @@ function ReachRow({ c }) {
               {c.delivered} delivered · {c.failed} failed
               {c.pending ? ` · ${c.pending} no receipt` : ""}
             </div>
+            {c.failed > 0 && (
+              <div style={{ fontSize: 11.5, color: "var(--pa-ink-3)" }}>
+                across {c.failedPeople} {c.failedPeople === 1 ? "person" : "people"} · {c.people} messaged
+              </div>
+            )}
           </>
         ) : (
           <span className="pa-reach-rate">—</span>
@@ -139,7 +147,12 @@ export default function MarketingPage() {
   const attribution = data?.attribution;
   const reach = data?.reach;
   const templates = data?.templates;
-  const worstChannel = reach?.channels?.find((c) => c.settled > 0 && c.deliveredRate < 75);
+  // Only flag a channel when failures span multiple people. One contact failing repeatedly is a
+  // conversation problem; calling it a channel problem is how we mistook our own testing for a
+  // 41% outage on 16 Jul.
+  const worstChannel = reach?.channels?.find(
+    (c) => c.settled > 0 && c.deliveredRate < 75 && c.failedPeople > 1
+  );
 
   return (
     <div className="pa-mkt">
@@ -174,12 +187,21 @@ export default function MarketingPage() {
           <section className="pa-mkt-sec">
             <div className="pa-mkt-sec-head">
               <h2>Who you can reach</h2>
-              <span className="pa-mkt-sec-note">{audience.totalContacts} contacts</span>
+              <span className="pa-mkt-sec-note">
+                {audience.totalContacts} contacts
+                {audience.excludedInternal > 0 && ` · ${audience.excludedInternal} internal excluded`}
+              </span>
             </div>
             <p className="pa-mkt-sec-desc">
               Marketing consent per channel. Email and SMS mirror Shopify; WhatsApp and calls are held
               only here, so this is the only place they can be seen. “No address” means we hold no way to
               reach that person on that channel at all — they can never be marketed to there, opted in or not.
+              {audience.excludedInternal > 0 && (
+                <>
+                  {" "}Staff and test contacts (tagged <code>internal_test</code>) are excluded from every
+                  number on this page.
+                </>
+              )}
             </p>
             <div className="pa-mkt-grid">
               {Object.entries(audience.channels).map(([key, c]) => (
@@ -263,7 +285,9 @@ export default function MarketingPage() {
             </div>
             <p className="pa-mkt-sec-desc">
               Delivery outcomes per channel. Rates count only messages with a confirmed outcome — a send
-              still awaiting a receipt is shown separately, never counted as a failure.
+              still awaiting a receipt is shown separately, never counted as a failure. Failures show how
+              many <em>people</em> they affect: a low rate driven by one contact is a bad conversation, not
+              a bad channel.
             </p>
             <div className="pa-mkt-card pa-reach">
               {reach.channels.map((c) => (
