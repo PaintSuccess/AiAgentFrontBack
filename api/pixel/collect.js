@@ -42,15 +42,29 @@ const num = (v) => {
   return Number.isFinite(n) ? n : null;
 };
 
+/**
+ * CORS.
+ *
+ * `null` MUST be allowed. Shopify runs custom pixels in an iframe sandboxed with
+ * `allow-scripts allow-forms` and deliberately WITHOUT `allow-same-origin`, so the pixel has
+ * an opaque origin and every request it makes carries `Origin: null`. Rejecting that rejects
+ * the only caller we actually want — verified live 2026-07-16: beacons were dropped silently
+ * with no error anywhere.
+ *
+ * This costs nothing in security, because an origin allowlist was never a security boundary
+ * here: CORS governs what a *browser* may read from a response, not whether the request runs.
+ * A plain curl sends no Origin at all and is processed regardless. The real protections are
+ * the event allowlist, the length/batch caps, the rate limit, and storing no PII.
+ */
 function corsFor(res, req) {
-  // The storefront is the only legitimate caller. Echo it back rather than "*" so this
-  // can't be trivially embedded elsewhere; a mismatched origin still fails the check below.
   const allowed = (cleanEnv("PIXEL_ALLOWED_ORIGINS") || "https://www.paintaccess.com.au,https://paintaccess.com.au")
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
   const origin = String(req.headers.origin || "");
-  if (allowed.includes(origin)) res.setHeader("Access-Control-Allow-Origin", origin);
+  if (origin === "null" || allowed.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin === "null" ? "null" : origin);
+  }
   res.setHeader("Vary", "Origin");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");

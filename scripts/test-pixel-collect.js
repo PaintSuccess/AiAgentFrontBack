@@ -24,6 +24,14 @@ const call = (method, body, origin) => {
   r = await call("OPTIONS", {}, "https://evil.example.com");
   ok("unknown origin NOT echoed", r.headers["Access-Control-Allow-Origin"] === undefined, String(r.headers["Access-Control-Allow-Origin"]));
 
+  // Shopify sandboxes custom pixels WITHOUT allow-same-origin => opaque origin => Origin: null.
+  // Rejecting null silently drops every real pixel beacon (found live 2026-07-16).
+  r = await call("OPTIONS", {}, "null");
+  ok("sandbox Origin:null IS allowed (the real pixel)", r.headers["Access-Control-Allow-Origin"] === "null", String(r.headers["Access-Control-Allow-Origin"]));
+
+  r = await call("POST", { clientId: "c1", events: [{ name: "page_viewed", url: "https://x" }] }, "null");
+  ok("sandbox POST accepted", r.code === 204);
+
   r = await call("GET", {});
   ok("GET rejected → 405", r.code === 405);
 
