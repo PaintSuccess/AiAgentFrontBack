@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="color-scheme" content="light">
+<title>Paint Access — Marketing Pipeline: Current Picture &amp; Paths</title>
+<style>
+  html { color-scheme: light; background: #fff; }
+  body { font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; max-width: 980px; margin: 40px auto; padding: 0 24px; color: #222; background: #fff; }
+  h1 { font-size: 23px; border-bottom: 2px solid #333; padding-bottom: 8px; color: #1a1a1a; }
+  h2 { font-size: 18px; margin-top: 40px; border-left: 4px solid #25D366; padding-left: 10px; }
+  h3 { font-size: 14.5px; margin-top: 22px; color: #333; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  th { background: #f0f0f0; text-align: left; padding: 8px 10px; border: 1px solid #ccc; font-size: 13px; }
+  td { padding: 8px 10px; border: 1px solid #ccc; font-size: 13px; vertical-align: top; }
+  tr:nth-child(even) td { background: #fafafa; }
+  code { background: #f4f4f4; border-radius: 4px; font-family: "Courier New", monospace; font-size: 12px; padding: 1px 4px; }
+  ul, ol { margin: 6px 0 6px 20px; }
+  li { margin-bottom: 5px; }
+  a { color: #1d6fb8; }
+  .meta { color: #666; font-size: 12px; margin-bottom: 24px; }
+  .warn { background: #fff8c5; border-left: 4px solid #d4a017; padding: 10px 14px; margin: 12px 0; }
+  .info { background: #dbeafe; border-left: 4px solid #2563eb; padding: 10px 14px; margin: 12px 0; }
+  .bad { background: #fef2f2; border-left: 4px solid #cf222e; padding: 10px 14px; margin: 12px 0; }
+  .recommend { background: #ecfdf5; border-left: 4px solid #10b981; padding: 10px 14px; margin: 12px 0; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: bold; white-space: nowrap; }
+  .b-ok { background: #dcfce7; color: #1a7f37; }
+  .b-partial { background: #fef3c7; color: #92400e; }
+  .b-no { background: #fee2e2; color: #b91c1c; }
+  .b-ext { background: #ede9fe; color: #5b21b6; }
+  .b-q { background: #fef9c3; color: #854d0e; }
+
+  /* Pipeline diagram */
+  .pipe { display: flex; gap: 6px; margin: 18px 0 6px; flex-wrap: wrap; }
+  .pipe-stage { flex: 1; min-width: 128px; border: 1px solid #d5d7db; border-radius: 8px; padding: 11px 10px; text-align: center; background: #fbfbfc; position: relative; }
+  .pipe-stage.done { background: #f0fdf4; border-color: #86efac; }
+  .pipe-stage.part { background: #fffbeb; border-color: #fde68a; }
+  .pipe-stage.miss { background: #fef2f2; border-color: #fecaca; }
+  .pipe-n { font-size: 10px; color: #999; font-weight: bold; letter-spacing: .04em; }
+  .pipe-t { font-weight: bold; font-size: 13px; margin: 3px 0 4px; }
+  .pipe-d { font-size: 11px; color: #666; line-height: 1.45; }
+  .pipe-s { margin-top: 7px; font-size: 10.5px; font-weight: bold; }
+  .pipe-stage.done .pipe-s { color: #1a7f37; }
+  .pipe-stage.part .pipe-s { color: #92400e; }
+  .pipe-stage.miss .pipe-s { color: #b91c1c; }
+  .pipe-legend { font-size: 11.5px; color: #777; text-align: center; margin-bottom: 4px; }
+
+  .path { border: 1px solid #ddd; border-radius: 8px; padding: 14px 18px; margin: 12px 0; }
+  .path h3 { margin-top: 0; font-size: 15px; }
+  .path.a { background: #f0f9ff; border-color: #bae6fd; }
+  .path.b { background: #ecfdf5; border-color: #6ee7b7; }
+  .path.c { background: #faf5ff; border-color: #e9d5ff; }
+  .path-tag { float: right; font-size: 11px; font-weight: bold; color: #555; background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 2px 9px; }
+  .owner-client { color: #b91c1c; font-weight: bold; }
+  .owner-us { color: #1a7f37; font-weight: bold; }
+  .stat-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0; }
+  .stat { flex: 1; min-width: 130px; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; text-align: center; background: #fafafa; }
+  .stat .n { font-size: 22px; font-weight: bold; display: block; }
+  .stat .l { font-size: 11.5px; color: #666; line-height: 1.4; }
+  .stat.alarm { background: #fef2f2; border-color: #fecaca; } .stat.alarm .n { color: #b91c1c; }
+  .stat.good { background: #f0fdf4; border-color: #86efac; } .stat.good .n { color: #1a7f37; }
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #ddd; font-size: 11px; color: #888; }
+</style>
+</head>
+<body>
+
+<h1>Marketing Pipeline — current picture &amp; available paths</h1>
+<p class="meta">Paint Access — 16 July 2026. Companion to the Feature Inventory and the Consolidated
+Marketing Review.</p>
+
+<div class="info">
+<strong>This is deliberately not a finished plan.</strong> It's the full picture of what we currently
+know, what's actually built, what's still missing, and the realistic routes forward with their
+trade-offs. Several decisions are genuinely open — they're marked as such rather than guessed at.
+The point is to see the whole board before committing.
+</div>
+
+<h2>1. The pipeline at a glance</h2>
+
+<div class="pipe">
+  <div class="pipe-stage miss">
+    <div class="pipe-n">STAGE 1</div><div class="pipe-t">Acquire</div>
+    <div class="pipe-d">Meta ad → “Send WhatsApp” click</div><div class="pipe-s">Needs the ad</div>
+  </div>
+  <div class="pipe-stage done">
+    <div class="pipe-n">STAGE 2</div><div class="pipe-t">Capture</div>
+    <div class="pipe-d">Which ad they came from, contact, consent</div><div class="pipe-s">✔ Live today</div>
+  </div>
+  <div class="pipe-stage miss">
+    <div class="pipe-n">STAGE 3</div><div class="pipe-t">Qualify</div>
+    <div class="pipe-d">Scenario, questions, lead scoring</div><div class="pipe-s">Needs scenario</div>
+  </div>
+  <div class="pipe-stage miss">
+    <div class="pipe-n">STAGE 4</div><div class="pipe-t">Convince</div>
+    <div class="pipe-d">Video, PDF, product material</div><div class="pipe-s">Needs clips</div>
+  </div>
+  <div class="pipe-stage part">
+    <div class="pipe-n">STAGE 5</div><div class="pipe-t">Convert</div>
+    <div class="pipe-d">Checkout / payment link</div><div class="pipe-s">Half built</div>
+  </div>
+  <div class="pipe-stage miss">
+    <div class="pipe-n">STAGE 6</div><div class="pipe-t">Measure</div>
+    <div class="pipe-d">Report sales back to Meta</div><div class="pipe-s">Not built</div>
+  </div>
+</div>
+<div class="pipe-legend">Running alongside all of it — <strong>Retain:</strong> email flows in Omnisend
+<span class="badge b-ext">External</span> · WhatsApp re-engagement <span class="badge b-partial">Half built</span></div>
+
+<div class="recommend">
+<strong>The shape of the problem:</strong> the middle of the funnel (stages 3 and 4) is blocked on
+<em>content from your side</em>, not on engineering. The two ends — capturing where leads come from,
+and reporting sales back to Meta — are ours, and one of them is already done. That's why the
+recommended first move doesn't need the scenario or the videos at all.
+</div>
+
+<h2>2. What we now know</h2>
+
+<table>
+<tr><th>What we established</th><th>What it means for the plan</th></tr>
+<tr><td><strong>Klaviyo out, Omnisend stays</strong></td><td>Engine decision closed. No new marketing tool is needed or wanted — Brevo and the others are off the table.</td></tr>
+<tr><td><strong>Omnisend has no WhatsApp</strong> (only through a paid third party)</td><td>WhatsApp — the channel you actually care about — can only ever live in our system. That's a permanent property of Omnisend, not a gap we can close.</td></tr>
+<tr><td><strong>Omnisend SMS is Pro-plan only</strong> (since 4 May 2026)</td><td>If the account is on Standard, all SMS runs through Twilio and the decision is made for us. <strong>We need to know the plan.</strong></td></tr>
+<tr><td><strong>Twilio already passes Meta's ad-click id</strong></td><td>Big one: <strong>no migration to Meta's own API is needed.</strong> We keep Twilio, the number, the approved templates. This removes what the old plan treated as a major fork.</td></tr>
+<tr><td><strong>Meta charges per message since Jul 2025</strong>; replies inside 24h are free</td><td>Conversations are cheap once the customer writes first. Cost sits in <em>us initiating</em>.</td></tr>
+<tr><td><strong>Reported: an ad-click opens ~72h where even templates are free</strong></td><td>⚠ <strong>Not yet verified — please don't quote this anywhere yet.</strong> If true, it's the strongest financial argument for this whole funnel.</td></tr>
+<tr><td><strong>Instagram can't go through Twilio</strong>; Shopify Inbox has no public API; TikTok DM access is partner-gated</td><td>Shapes the channel roadmap — see the Feature Inventory for detail.</td></tr>
+</table>
+
+<h3>What the live data says (from the new Marketing page — 61 contacts)</h3>
+
+<div class="stat-row">
+  <div class="stat alarm"><span class="n">48 / 61</span><span class="l">contacts have <strong>no email at all</strong></span></div>
+  <div class="stat alarm"><span class="n">56 / 61</span><span class="l">never asked for SMS consent</span></div>
+  <div class="stat alarm"><span class="n">59%</span><span class="l">WhatsApp delivery — <strong>30 sends failing</strong></span></div>
+  <div class="stat good"><span class="n">92%</span><span class="l">SMS delivery — healthy</span></div>
+</div>
+
+<div class="bad">
+<strong>Two findings that change the strategy:</strong><br>
+<strong>1. This audience is phone-first, not email.</strong> Only 4 of 61 conversational contacts can be
+emailed at all. An email-led plan doesn't fit these people. (Omnisend's Shopify-sourced list is separate
+and larger — but it's a different audience from the one talking to us.)<br>
+<strong>2. WhatsApp is currently failing 41% of its settled sends.</strong> This needs fixing before any
+money goes into the channel. Likely causes: messaging outside the 24-hour window without an approved
+template, or Twilio geographic permissions. This is ours to investigate and needs nobody else.
+</div>
+
+<div class="warn">
+<strong>The real bottleneck isn't sending — it's permission.</strong> 56 of 61 contacts have simply never
+been asked for consent. Broadcasting isn't blocked by missing software; it's blocked by having almost
+nobody who has opted in. Consent grows through conversations — which is exactly what this funnel does.
+</div>
+
+<h2>3. Stage by stage</h2>
+
+<table>
+<tr><th style="width:110px">Stage</th><th>Have</th><th>Missing</th><th style="width:130px">Blocked on</th></tr>
+<tr>
+  <td><strong>1. Acquire</strong><br><span class="badge b-no">Needs ad</span></td>
+  <td>Production WhatsApp number, verified business account, 4 approved templates.</td>
+  <td>The Click-to-WhatsApp ad itself + the WhatsApp Business link in Meta. Optional: WhatsApp buttons on product pages.</td>
+  <td><span class="owner-client">You / Meta setup</span></td>
+</tr>
+<tr>
+  <td><strong>2. Capture</strong><br><span class="badge b-ok">Live</span></td>
+  <td>Which ad a conversation came from, stored permanently against the customer. Lead pushed to Shopify. Per-channel consent, STOP/START.</td>
+  <td>Nothing — this shipped today.</td>
+  <td>—</td>
+</tr>
+<tr>
+  <td><strong>3. Qualify</strong><br><span class="badge b-no">Long pole</span></td>
+  <td>An AI that answers well, with the knowledge base and full order history.</td>
+  <td>Funnel stages, tracking where each customer is, qualification rules, lead scoring. The AI currently <em>answers</em>; it doesn't <em>drive</em>.</td>
+  <td><span class="owner-client">Your scenario</span></td>
+</tr>
+<tr>
+  <td><strong>4. Convince</strong><br><span class="badge b-no">Long pole</span></td>
+  <td>Product links render as tappable cards.</td>
+  <td>Sending video / PDF / images. The architecture for this was already designed in June — the build wasn't done.</td>
+  <td><span class="owner-client">Your 20–50 clips</span></td>
+</tr>
+<tr>
+  <td><strong>5. Convert</strong><br><span class="badge b-partial">Half</span></td>
+  <td>Draft-order + payment-link capability exists in the backend.</td>
+  <td>It's switched off pending a compliance decision, and the AI can't trigger it yet. Also: catalogue cards, reply buttons.</td>
+  <td><span class="owner-us">Us + a decision</span></td>
+</tr>
+<tr>
+  <td><strong>6. Measure</strong><br><span class="badge b-no">Not built</span></td>
+  <td>Every message event already logged — volumes, delivery and response times are reportable today.</td>
+  <td>Reporting leads and sales <em>back to Meta</em>, so ad targeting learns from real orders instead of just "conversation started". Plus revenue attribution.</td>
+  <td><span class="owner-us">Us</span></td>
+</tr>
+<tr>
+  <td><strong>Retain</strong><br><span class="badge b-ext">Omnisend</span></td>
+  <td>Email campaigns, abandoned cart, post-purchase, web push — all already running in Omnisend.</td>
+  <td>WhatsApp broadcast to a segment. Retargeting audiences for Meta/Google.</td>
+  <td>—</td>
+</tr>
+</table>
+
+<h2>4. Three paths</h2>
+<p>These aren't competing options to pick between — they're a sequence. The real question is how far
+down it to commit today.</p>
+
+<div class="path a">
+  <span class="path-tag">~days · unblocked</span>
+  <h3>Path A — “Prove the loop”</h3>
+  <p>What's already captured, plus <strong>reporting sales back to Meta</strong>, plus funnel guidance
+  written into the AI's instructions — no rigid scenario engine, no video, no broadcast.</p>
+  <ul>
+    <li><strong>Gets you:</strong> a working ad → WhatsApp → AI → order path, with Meta's algorithm
+    optimising against <em>real sales</em>.</li>
+    <li><strong>Needs from you:</strong> nothing. No scenario document, not one video clip.</li>
+    <li><strong>Why it's attractive:</strong> it tests whether this funnel actually converts for Paint
+    Access <em>before</em> anyone invests in producing content. If it doesn't work, you find out in weeks
+    for almost no cost.</li>
+    <li><strong>Trade-off:</strong> the AI's funnel behaviour stays loose, and you can't measure
+    stage-by-stage.</li>
+  </ul>
+</div>
+
+<div class="path b">
+  <span class="path-tag">weeks · blocked on content</span>
+  <h3>Path B — “Real funnel” <em>(the thing you described on 16 July)</em></h3>
+  <p>Path A, plus a proper <strong>scenario engine</strong> (tracked stages, qualification, lead score)
+  and the <strong>media pipeline</strong> for video and PDF.</p>
+  <ul>
+    <li><strong>Gets you:</strong> exactly the scenario from the brief.</li>
+    <li><strong>Needs from you:</strong> the scenario content <em>and</em> the clips. Both are content,
+    not engineering — and no amount of building substitutes for them.</li>
+    <li><strong>Sequencing:</strong> start A now regardless; B's engineering can't meaningfully begin
+    until the scenario arrives.</li>
+  </ul>
+</div>
+
+<div class="path c">
+  <span class="path-tag">later · start the paperwork now</span>
+  <h3>Path C — “Multi-channel”</h3>
+  <p>Path B, extended to <strong>Instagram DM</strong> and <strong>Facebook Messenger</strong> on the
+  same system and the same scenario.</p>
+  <ul>
+    <li><strong>Why it's cheap after B:</strong> the inbox, takeover, consent and scenario are all
+    channel-agnostic. Instagram is largely a second connector, not a second project — and a
+    “Click to Instagram Direct” ad is the same funnel as WhatsApp.</li>
+    <li><strong>Act now on one thing:</strong> Meta's review process gates both channels. It costs
+    nothing to start and becomes the bottleneck if left until it's needed.</li>
+  </ul>
+</div>
+
+<h2>5. Decisions still open</h2>
+
+<table>
+<tr><th style="width:150px">Decision</th><th>Options</th><th>Where we lean</th></tr>
+<tr><td><strong>Scenario style</strong></td><td>Guidance in the AI's instructions, vs a strict tracked funnel</td><td>Your brief implies the strict version — but the loose one is the right <em>first</em> step, since it needs no scenario document.</td></tr>
+<tr><td><strong>Where videos live</strong></td><td>Cloudflare / AWS / Shopify Files</td><td>June plan said Cloudflare, and explicitly <em>not</em> Shopify Files. Decide when clips exist.</td></tr>
+<tr><td><strong>Bulk SMS</strong></td><td>Omnisend vs Twilio</td><td>Decided for us by the Omnisend plan — Standard has no SMS at all. <strong>Need the plan.</strong></td></tr>
+<tr><td><strong>Ads phone number</strong></td><td>Dedicated vs the existing support number</td><td>Mixing ad traffic with support muddies both reporting and number reputation. Lean dedicated if volume is expected.</td></tr>
+<tr><td><strong>Consent enforcement</strong></td><td>Block at every send, vs only on bulk sends</td><td><strong>Only on bulk.</strong> Blocking at every send would stop your team sending a customer the quote they just asked for.</td></tr>
+</table>
+
+<h2>6. Who's blocking what</h2>
+
+<table>
+<tr><th>Blocker</th><th style="width:110px">Owner</th><th>Holds up</th></tr>
+<tr><td><strong>The scenario</strong> — questions, qualification rules, product paths, which asset at which step</td><td><span class="owner-client">You</span></td><td>Stage 3 · Path B</td></tr>
+<tr><td><strong>20–50 video clips + PDFs</strong></td><td><span class="owner-client">You</span></td><td>Stage 4 · Path B</td></tr>
+<tr><td>Which Omnisend plan + how many contacts</td><td><span class="owner-client">You / Daniel</span></td><td>SMS lane, cost picture</td></tr>
+<tr><td>Check what Klaviyo is actually running before switching it off</td><td><span class="owner-client">You / Daniel</span></td><td>Safe removal — it has live automations</td></tr>
+<tr><td>Is Shopify Inbox switched on? Is the Meta Pixel installed?</td><td><span class="owner-client">You / Daniel</span></td><td>Blind spots + ad measurement</td></tr>
+<tr><td>The Click-to-WhatsApp ad itself</td><td><span class="owner-client">You</span></td><td>Everything — nothing flows until an ad runs</td></tr>
+<tr><td><strong>WhatsApp 41% failure rate</strong></td><td><span class="owner-us">Us</span></td><td>Any WhatsApp spend</td></tr>
+<tr><td>Meta review for Instagram / Messenger</td><td><span class="owner-us">Us (lead time)</span></td><td>Path C</td></tr>
+<tr><td>Verify Meta's free-window claim</td><td><span class="owner-us">Us</span></td><td>The cost case</td></tr>
+</table>
+
+<h2>7. Money — as currently understood</h2>
+<ul>
+  <li><strong>Customer messages us first:</strong> free. Replies within 24 hours cost nothing.</li>
+  <li><strong>Straight after an ad click:</strong> reportedly free for ~72 hours, even for templates — <strong>unverified</strong>.</li>
+  <li><strong>Us starting a conversation later:</strong> paid, and marketing messages cost more than
+  service ones, with no volume discount.</li>
+  <li><strong>Omnisend:</strong> billed on contacts <em>stored</em>, not sent — so email is near-free at
+  the margin, but a growing list costs more whether you email it or not.</li>
+</ul>
+<div class="recommend">
+<strong>The economics point the same way as the brief.</strong> This funnel is cheapest exactly when the
+customer starts the conversation — which is what an ad click <em>is</em> — and most expensive when we
+chase people with templates. So the thing you want (ads → WhatsApp) is also the cheap thing, and
+broadcast — the expensive thing — is the thing that isn't built. That's a fortunate alignment.
+</div>
+
+<h2>8. What we'd suggest next</h2>
+<ol>
+  <li><strong>Fix the WhatsApp failure rate.</strong> Everything downstream runs on this channel, and
+  it's the only item needing nobody's input but ours.</li>
+  <li><strong>Start Path A</strong> — reporting sales back to Meta. Small, unblocked, makes the ads
+  self-improving from the first click.</li>
+  <li><strong>Send us the scenario and the clips</strong> — in parallel. They're the long poles, and
+  Path B genuinely cannot start without them.</li>
+  <li><strong>Kick off the Meta review</strong> for Instagram/Messenger — free to start, pure waiting.</li>
+  <li><strong>Answer the quick ones:</strong> Omnisend plan, Klaviyo flows, Shopify Inbox, Meta Pixel.</li>
+</ol>
+<p><strong>What we'd avoid for now:</strong> building broadcast, segments or a campaign screen. Omnisend
+already covers email, and WhatsApp broadcast would be an expensive way to message people who mostly
+haven't opted in yet. Grow consent through conversations first — then broadcasting is worth building.</p>
+
+<footer>
+Paint Access — Marketing Pipeline, current picture and available paths. Prepared for discussion,
+16 July 2026. Deliberately incomplete: open decisions are marked rather than assumed. Companions:
+Feature Inventory (16 Jul), Consolidated Marketing Review (16 Jul).
+</footer>
+
+</body>
+</html>
