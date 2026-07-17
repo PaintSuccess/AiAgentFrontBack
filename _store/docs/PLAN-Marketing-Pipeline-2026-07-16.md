@@ -37,6 +37,21 @@ Companion docs: `PLAN-Marketing-Consolidated-2026-07-16.md` (how the plan drifte
 
 ---
 
+## 0. ⏳ AWAITING DANIEL — re-check when he answers (raised 2026-07-16)
+
+| # | Item | Why it's parked | What to do when he answers |
+| --- | --- | --- | --- |
+| D1 | **Pixel "62 new domains" diagnostic** | ⚠ **DO NOT create an allow list.** Meta: *"Domains not in the allow list will be blocked from sending events."* None exists today (button reads **"Create Allow List"**), so everything currently flows. Creating one from the 62 would **block `paintaccess.com.au` itself** — it isn't in that list, because it's the *known* domain, not a *new* one. Blast radius: kills live pixel data + ad optimisation. | Recommended: mark the diagnostic **Ignored** (zero risk). It's noise — a browser extension firing the public pixel id across netflix/chatgpt/reddit. If hygiene is ever wanted, use a **block list** (default-allow), never an allow list. |
+| D2 | **Two outside businesses can read the pixel data** | Dataset `334352823575129` is shared with business portfolios **Akohub** (`778302942313074`) and **Bold SEO** (`176064029770588`), plus ad account `11731673`. If these are ex-agencies they still have access to customer data. | Ask Daniel if they're current. If not → remove access in Business Settings. |
+| D3 | **Automatic Advanced Matching is ON** | Sending Meta hashed **email, phone, name, gender, town/postcode, DOB, External ID**. Probably deliberate (it lifts match rates) but it's a lot of PII and nobody on our side chose it. | Confirm it's intended. |
+| D4 | **CAPI low event coverage** | Meta flags bad dedup keys; fixing is worth **~15.2% lower cost per result**. Not fixable in Meta's UI — it's the Shopify Meta app's data-sharing mode (currently **"Optimized"**). Changing it touches **live, working** ad tracking. | Decide whether to move Facebook & Instagram data sharing to "Maximum". Test, don't assume. |
+
+**Facts for whoever picks this up:** PaintAccess business portfolio = `1953771224878899`. Pixel =
+`334352823575129`. Pixel creator = Jan Neunzig, 28 Sep 2016. No allow list exists. First-party cookies
+on. Core setup off.
+
+---
+
 ## 1a. LIVE ACCOUNT RECON (16 Jul) — what's actually already wired
 
 Inspected the live storefront's Shopify web-pixel config + Meta Events Manager (read-only, nothing
@@ -212,14 +227,19 @@ banner + a documented basis is a prerequisite for the behavioural layer, not a l
 - **Also possible:** Click-to-WhatsApp buttons on product pages (❌), Click-to-Instagram-Direct,
   Click-to-Messenger.
 
-### Stage 2 — CAPTURE ✅ (done 2026-07-16, live in prod)
+### Stage 2 — CAPTURE ✅ **DONE 2026-07-16, live in prod**
 - **Have:** `ReferralCtwaClid` + full referral captured on the ad-click message → stored as first-touch
   on the contact, as an `ad_referral` event (every touch), and on the message. Lead → Shopify customer.
   Per-channel consent + STOP/START.
-- **Note:** this data is **perishable** — Meta sends it once and never re-sends. Now that it's live,
-  every future ad click is attributable; anything before today is permanently lost.
+- **Plus (new, 2026-07-16): our own storefront web pixel is LIVE.** Shopify custom pixel
+  "PaintAccess AI" (`134021223`) → `api/pixel/collect` → `web_events`. Verified receiving real shopper
+  browsing (page/collection/product views) from paintaccess.com.au. We are no longer the only party in
+  the stack blind to the storefront.
+- **Note:** referral data is **perishable** — Meta sends it once and never re-sends. Every future ad
+  click is attributable; anything before today is permanently lost.
 - **Gap:** consent is *recorded* but the marketing-consent gate is **not enforced** on sends
-  (deliberately — see §4 fork E).
+  (deliberately — see §4 fork E). And `web_events.contact_id` is still null for everyone — browsing is
+  captured but **not yet joined to a person** (that's the token work in §7.3).
 
 ### Stage 3 — QUALIFY ❌ — **the long pole**
 - **Have:** one stateless AI agent + knowledge base + Shopify context. It answers well; it does not
@@ -230,7 +250,22 @@ banner + a documented basis is a prerequisite for the behavioural layer, not a l
   for this content.**
 - **Fork:** prompt-only vs explicit state machine — see §4 fork A.
 
-### Stage 4 — CONVINCE ❌ (media)
+### Stage 4 — CONVINCE ❌ (media) — **partly unblocked; needs 2 decisions, not the clips**
+
+> **Clarification (2026-07-16):** Stage 4 is **not fully blocked**. It splits in two:
+> - **The pipeline** (storage + registry + a send-media adapter) can be built **now** — it needs a
+>   storage decision, not the clips. We can prove it end-to-end with one sample PDF/clip.
+> - **The library** (20–50 clips) is client content and is genuinely blocked.
+>
+> **Decision B (storage) has a new option the June plan didn't have: Supabase Storage.** We already
+> run Supabase for the whole spine. It gives public URLs, so it satisfies WhatsApp's need for a
+> reachable `MediaUrl`, with **no new vendor, no new bill, no new credentials**. Cloudflare R2 is
+> cheaper at high egress and is the better answer *if* this becomes a real video library used across
+> web/email/ads. **Lean: Supabase Storage to prove the funnel; revisit R2 when volume justifies it.**
+> Shopify Files remains a no as source of truth (June plan) — weak versioning/API control.
+>
+> **Second decision: which assets at which step** — that one *is* downstream of the scenario (Stage 3),
+> so it can't be settled before Daniel answers.
 - **Have:** product links render as CTA cards. Text + links only.
 - **Need:** send video / PDF / images. **Reverses the 2026-07-13 "attachments skipped" decision.**
 - **Already designed (June, Plan #2):** canonical library in Cloudflare R2 + CDN, media registry
