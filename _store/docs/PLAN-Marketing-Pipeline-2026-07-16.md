@@ -37,6 +37,80 @@ Companion docs: `PLAN-Marketing-Consolidated-2026-07-16.md` (how the plan drifte
 
 ---
 
+## 1a. LIVE ACCOUNT RECON (16 Jul) — what's actually already wired
+
+Inspected the live storefront's Shopify web-pixel config + Meta Events Manager (read-only, nothing
+changed). **This overturns several assumptions we'd been planning around.**
+
+### ✅ RESOLVED: the Meta Pixel question, open since May
+
+**The pixel is live and busy.** `334352823575129` — "PaintAccess's Pixel", in business portfolio
+`1953771224878899`, doing **~4–6k events/day**, attached to `www.paintaccess.com.au` +9 more domains,
+with **4 connected catalogues**.
+
+⚠ **Beware the decoy:** the ad account we first landed in (`257491584421899` — Anton's, which also
+holds `na-biathlon.ru`, `Rarita`, `Moblermarket`) contains a dataset *named* "PaintAccess"
+(`1230318080842197`) that is an **App** dataset reading **"Inactive — never received event"**. That is
+NOT the storefront pixel. Anyone checking the wrong account would conclude there's no tracking.
+
+### ✅ Conversions API is ALREADY connected — but underperforming
+
+Events Manager lists **Integrations: "Conversions API • Meta pixel"**. So CAPI is not a greenfield
+build. **But Meta's own diagnostics flag it** (detected 4 Jun 2026):
+
+> `s2s_low_event_coverage_actions` — "Improve your rate of Meta Pixel events covered by Conversions
+> API… Advertisers with a 75% coverage rate saw **15.2% lower cost per result** vs Meta pixel alone.
+> Improve deduplication keys for your pixel and Conversions API events."
+
+**This changes Path A.** Reporting web purchases back to Meta already happens (via the Shopify Meta
+app) — it's just poorly deduplicated. What's still genuinely missing is **`business_messaging` CAPI for
+the WhatsApp funnel** (`action_source: business_messaging` + `ctwa_clid`), which is a different event
+source entirely and nothing else can supply. So Path A remains necessary, but it's *additive to an
+existing integration on the same pixel* — cheaper than assumed, and there's a documented cost win
+sitting in the dedup fix.
+
+### ⚠ 62 unconfirmed domains are sending data to the pixel
+
+`pixel_new_domains_detected_actions` (detected 5 Jun 2026). Mostly `*.shopifypreview.com` (harmless
+theme previews) — **but the list includes `247games.com`, which is not PaintAccess.** Do **not**
+blanket-allowlist. Needs a human to confirm which domains are genuinely ours.
+
+### 📊 The full storefront tracking stack (from the live web-pixel config)
+
+| Pixel | ID / config | State |
+| --- | --- | --- |
+| **Meta** | `334352823575129` (`facebook_pixel`, app 2329312) | ✅ live |
+| **Google** | GA4 `G-1V61SH5WFD` + Google Tag `GT-5D9QV8NS` (app 1780363) | ✅ live |
+| **TikTok** | pixelCode `CLI8693C77U8PKBK1BG0` (app 4383523) | ✅ **live — TikTok is already tracked** |
+| **Omnisend** | brandID `69394d3da929c7e42620aa30` (app 186001) | ✅ live |
+| **Klaviyo** | — | ⚠ **broken**: storefront renders `Failed to render app block … klaviyo-onsite-embed … doe[s not exist]` |
+| **US (this app)** | — | ❌ **nothing. We have no storefront visibility at all.** |
+
+**Every one of those apps holds full Protected Customer Data scopes** (`read_customer_email`,
+`read_customer_name`, `read_customer_phone`, `read_customer_address`, `read_customer_personal_data`)
+with `share_all_events`. Shopify is already sharing customer identity with Meta, Google, TikTok and
+Omnisend — **just not with us.**
+
+### 🔑 The finding that matters most
+
+**We are the only party in this stack with no eyes on the storefront.** Meta, Google, TikTok and
+Omnisend each get the browse/cart/checkout stream. The system we're building to own the *single
+customer profile* gets none of it. That is the concrete, buildable gap behind the client's "AI sees
+what they browsed" — and it's a Shopify web pixel of our own, not a GA integration.
+
+### What this resolves / changes
+
+- **E8 (Meta Pixel)** — ✅ resolved: live. Remove from blockers.
+- **GA4** — the client's "deep GA integration" has a real property to point at (`G-1V61SH5WFD`), though
+  §1b's conclusion stands: GA is the wrong tool for the *profile*.
+- **TikTok** — not hypothetical. They already run the TikTok pixel, which strengthens the case for
+  TikTok as a channel later (and the messaging API is still partner-gated).
+- **Klaviyo** — the broken app block is independent evidence it's mid-removal / half-installed. Still
+  audit its flows before uninstalling.
+- **CAPI** — downgrade from "not built" to "connected but low coverage; messaging events missing".
+
+---
+
 ## 1b. Client vision (16 Jul, later same day) — "a marketing system, not a WhatsApp bot"
 
 The client reframed the ask: a **separate marketing AI** holding a **single profile per person**,
@@ -257,7 +331,8 @@ only the second unblocks engineering.
 | **Which Omnisend plan + contact count** | **Client/Daniel** | Forks C + G, cost picture |
 | **Klaviyo flow audit before uninstall** | **Client/Daniel** | Safe removal (it has live flows — a consent write triggered a real klaviyomail.com email on 07-14) |
 | **Is Shopify Inbox switched on?** | **Client/Daniel** | Whether there's a live AI blind spot |
-| **Meta Pixel on storefront?** | **Client/Daniel** | Any ad measurement |
+| ~~Meta Pixel on storefront?~~ | — | ✅ **RESOLVED 07-16 — it's live** (`334352823575129`). See §1a. |
+| **Confirm the pixel's domain allowlist** (62 domains pending, incl. `247games.com` which isn't ours) | **Client/Daniel** | Data hygiene — needs a human to say which are genuinely ours |
 | **CTWA ad + WABA link** | **Client** | Stage 1 — nothing flows until an ad runs |
 | **Meta App Review** | **Us, but lead-time** | Path C (IG/Messenger) |
 | **WhatsApp 41% failure rate** | **Us** | Any WhatsApp spend — investigate first |
