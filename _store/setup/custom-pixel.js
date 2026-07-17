@@ -15,8 +15,15 @@
  * reach this endpoint. Only what was looked at — never who. Identity is joined later, on our
  * side, from a token in the links we send.
  *
- * Events are batched and sent with sendBeacon so a shopper never waits on us, and a failure
- * here can never affect the storefront.
+ * Events are batched and sent with fetch(keepalive) so a shopper never waits on us, and a
+ * failure here can never affect the storefront.
+ *
+ * ⚠ DO NOT reach for `navigator.sendBeacon` here. Shopify's pixel sandbox guarantees only
+ * `console` and the timer functions — other globals "will be explicitly overwritten to be
+ * undefined", and `navigator` is one of them. An earlier version used sendBeacon inside a
+ * try/catch: the ReferenceError was swallowed and the pixel sent absolutely nothing, with no
+ * error in the page, no network entry, and no server log. Shopify's own docs point at
+ * fetch + keepalive, which survives page navigation the same way.
  */
 const ENDPOINT = "https://ai-agent-front-back.vercel.app/api/pixel/collect";
 
@@ -34,17 +41,16 @@ function flush() {
     events: queue.map(({ clientId, ...e }) => e),
   });
   queue = [];
-  try {
-    // sendBeacon survives page navigation — a product_viewed fired as the shopper clicks
-    // away would otherwise be lost, which is exactly the event we most want.
-    if (navigator.sendBeacon) {
-      navigator.sendBeacon(ENDPOINT, new Blob([payload], { type: "application/json" }));
-    } else {
-      fetch(ENDPOINT, { method: "POST", body: payload, headers: { "Content-Type": "application/json" }, keepalive: true });
-    }
-  } catch (e) {
-    // Never throw inside a pixel.
-  }
+  // keepalive lets the request outlive the page — a product_viewed fired as the shopper
+  // clicks away is exactly the event we most want, and would otherwise be lost.
+  // Failures are logged, never thrown: `console` is one of the two guaranteed globals, and a
+  // silent catch here is what hid the original bug.
+  fetch(ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: payload,
+    keepalive: true,
+  }).catch((err) => console.error("[PaintAccess AI pixel] send failed:", err));
 }
 
 function push(clientId, name, data) {
