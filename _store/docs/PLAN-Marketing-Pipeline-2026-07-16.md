@@ -37,6 +37,87 @@ Companion docs: `PLAN-Marketing-Consolidated-2026-07-16.md` (how the plan drifte
 
 ---
 
+## 1b. Client vision (16 Jul, later same day) — "a marketing system, not a WhatsApp bot"
+
+The client reframed the ask: a **separate marketing AI** holding a **single profile per person**,
+unifying WhatsApp + Email + Instagram + Shopify + Google Analytics + ads (Meta, Google), tracking the
+whole journey (new vs returning, which ad, what they browsed, cart, purchase, all prior comms),
+using cookies/behaviour to auto-segment and pick offers. The ESP should be a dumb **"postman"** —
+intelligence stays in our AI, delivery via **Shopify Email** and branded channels. Deep GA from day
+one, Meta's own analytics, TikTok later. Explicitly: **"don't do everything at once — break into
+small stages, build the architecture, implement block by block."**
+
+### What this is, named plainly
+
+This is a **CDP (Customer Data Platform)** — Segment / RudderStack territory. That's worth saying out
+loud, because it sets the true scope.
+
+**The good news: our Supabase spine is already the seed of one.** `contacts` + `events` +
+`first_referral` is exactly the right shape — a profile with an event log and a first-touch source.
+The architecture we've been building is *correct* for this vision. The scope is ~5–10× larger.
+
+⚠ **The Temu/Alibaba comparison needs a gentle reality check.** Those are first-party apps with
+logged-in users and hundreds of engineers. The *principle* (observe behaviour → personalise) transfers.
+The *mechanism* does not: a Shopify store cannot see what an anonymous browser did, **by design** —
+see the identity limit below.
+
+### ✅ What this genuinely unblocks
+
+1. **"Break into small stages" explicitly endorses incremental delivery.** This validates the
+   Path A → B → C sequencing in §3. The tension of "they want it all now" is gone — they said the
+   opposite. **Biggest unblock in the message.**
+2. **"Postman vs brain" is a genuinely good architectural instinct — and it settles the engine debate
+   on principle.** If we are *not* using Omnisend's automations, segments and flows, then Omnisend's
+   **per-contact** billing is paying for a brain we've just decided not to use. A postman should bill
+   **per message sent**, not per contact stored. ⚠ **This quietly contradicts this morning's "Omnisend
+   stays" decision** — Omnisend is now paying for capabilities the client has explicitly said should
+   live in our AI instead. Worth re-opening (see fork G).
+3. **It explains *why* the `ctwa_clid` work matters.** It isn't just ad reporting — it's the first edge
+   of the identity graph. What shipped today is literally stage 1 of what they described.
+4. **"Separate powerful AI agent"** confirms the scenario engine is a real component with its own
+   state, not prompt tweaks. Settles fork A toward (ii) — eventually.
+
+### ❌ Three assumptions that don't survive contact with the APIs (researched 16 Jul)
+
+| Client's assumption | Reality | Consequence |
+| --- | --- | --- |
+| **"Send via Shopify Email; Shopify is the delivery mechanism"** | **No general send API.** Shopify Email is now **Shopify Messaging** (automations move there 24 Mar 2026). Apps can only *trigger* narrow marketing automations (e.g. the "Customer subscribed to email marketing" trigger). Flow's *Send marketing email* **cannot customise the recipient via variables**; *Send internal email* is for staff. Ironically, **Shopify itself sends via SendGrid**. | **"Our AI composes a personalised message → Shopify delivers it" is not supported.** The *principle* is right, the *product* isn't available. A real postman = transactional ESP with an API: **SES / Postmark / Resend / SendGrid**. |
+| **"Deep GA integration from the start to get per-user behaviour"** | GA4's **Data API is aggregate-only**. Per-person requires the **BigQuery export** + a `user_id` we set ourselves. Laggy, heavy, and GA is a *reporting* tool, not a profile store. | GA is largely **the wrong tool** for this job. **Shopify Web Pixels** are the better source: first-party, same platform as the orders. Keep GA for marketing reporting, not for the profile. |
+| **"AI sees what they browsed, which products they opened"** | **Shopify's 7 browse/cart events carry no customer identity at all** (`page_viewed`, `product_viewed`, `collection_viewed`, `search_submitted`, `product_added_to_cart`, `product_removed_from_cart`, `cart_viewed`). Identity appears **only** in the 6 checkout events — and **since 10 Dec 2025 Shopify redacts even those** (name/email/phone/address → `null`) unless the app holds **approved Protected Customer Data access**. | **Browse behaviour is anonymous by design.** Linking it to a person is *our* problem (identity stitching), and getting checkout PII at all needs **a Shopify approval we don't have**. This is the single hardest piece of the vision. |
+
+### 🔑 The core problem this vision reduces to: identity resolution
+
+Everything the client wants ("new lead or existing customer", "which ad", "what they browsed", "did
+they buy") is one problem wearing six hats: **joining an anonymous browser to a known person.**
+
+We already solve one edge of it — `ctwa_clid` links *an ad click* to *a WhatsApp identity*. The
+remaining edges:
+
+| Edge | Mechanism | Status |
+| --- | --- | --- |
+| ad click → WhatsApp identity | `ctwa_clid` on the first message | ✅ **shipped today** |
+| WhatsApp/phone → Shopify customer | phone match | ✅ built |
+| anonymous browser → Shopify customer | checkout, or login | 🟡 Shopify-side, PII **redacted without approval** |
+| **anonymous browser → known contact** | **first-party id (Web Pixel `clientId` / our own cookie) stitched at an identifying moment** | ❌ **the hard core — needs verification + design** |
+| WhatsApp click-through → browser session | signed token in the link we send | ❌ not built — **but cheap, and it's the cleanest stitch we control** |
+
+> **Note the last row.** Because *we* send the WhatsApp links, we can put our own token in them. That
+> makes "this browsing session is this WhatsApp contact" trivially knowable — no cookie matching, no
+> Shopify approval. **It's the highest-leverage identity edge available to us, and it's small.**
+
+⚠ **Verify before designing:** whether the Web Pixel event payload exposes a stable `clientId` we can
+correlate across browse → checkout. Two sources implied yes, neither confirmed. **This single fact
+determines whether anonymous-behaviour stitching is cheap or near-impossible.**
+
+### ⚖️ Privacy — not a footnote
+
+"Use cookies and all available data" has legal limits. Building behavioural profiles of identifiable
+people needs a lawful basis and a consent mechanism (Australian Privacy Act; GDPR if EU traffic).
+Shopify's redaction change (Dec 2025) is the platform enforcing exactly this. **A cookie-consent
+banner + a documented basis is a prerequisite for the behavioural layer, not a later polish item.**
+
+---
+
 ## 2. The pipeline, stage by stage
 
 ```
@@ -155,16 +236,25 @@ Path B + **Instagram DM** + **Facebook Messenger** on the same spine and the sam
 | **D** | **Ads number** | Dedicated ads number · shared support number | Mixing ad traffic with support affects number reputation + muddies reporting. Lean **dedicated** if volume is expected. |
 | **E** | **Consent enforcement** | Enforce in send path · enforce only on broadcast | **Audit rejected enforcing in the send path** — `quote_ready` is a MARKETING-category template an operator legitimately sends when a customer *asked* for a quote; gating on category would block it. **Enforce on the future broadcast path only.** |
 | **F** | **Attribution depth** | Capture only (done) · + full CAPI loop | Capture alone answers "which ad". CAPI is what makes the **ad algorithm** improve. Lean **full** — it's Path A's whole point. |
+| **G** | **The "postman"** *(new, 16 Jul)* | Shopify Email · Omnisend · SES/Postmark/Resend/SendGrid | **Shopify Email is out — no send API** (see §1b). If the client's "brain in our AI" principle holds, **Omnisend's per-contact billing buys a brain we won't use** → a per-message API sender is the rational choice. ⚠ Re-opens this morning's "Omnisend stays". Note Omnisend is already paid, so the honest options are *keep it as an overpriced postman* or *move to a cheap API sender*. **Client decision.** |
+| **H** | **Behaviour source** *(new)* | Google Analytics · Shopify Web Pixels · both | GA4 per-person needs BigQuery export; it's a reporting tool, not a profile store. **Web Pixels are first-party and live on the same platform as the orders.** Lean **Web Pixels for the profile, GA for reporting**. |
+| **I** | **Identity stitching** *(new — the hard core)* | Signed token in our own WhatsApp links · Web Pixel `clientId` correlation · Shopify PCD approval | **Start with the token** — we control the links, so it needs no approval and no cookie matching. `clientId` correlation needs verification first. PCD approval is a Shopify review process, so treat as lead time. |
 
 ---
 
 ## 5. Blockers & who owns them
 
+**The 16 Jul vision message did NOT move either long pole.** The client described what the system
+should *know*; the scenario blocker is what the bot should *say*. Those are different documents, and
+only the second unblocks engineering.
+
+### Unchanged blockers
+
 | Blocker | Owner | Blocks |
 | --- | --- | --- |
-| **Scenario content** — questions, qualification criteria, product paths, asset per step | **Client** | Stage 3, Path B |
+| **Scenario content** — questions, qualification criteria, product paths, asset per step | **Client** | Stage 3, Path B · **still the #1 blocker** |
 | **20–50 video clips + PDFs** | **Client** | Stage 4, Path B |
-| **Which Omnisend plan + contact count** | **Client/Daniel** | Fork C, cost picture |
+| **Which Omnisend plan + contact count** | **Client/Daniel** | Forks C + G, cost picture |
 | **Klaviyo flow audit before uninstall** | **Client/Daniel** | Safe removal (it has live flows — a consent write triggered a real klaviyomail.com email on 07-14) |
 | **Is Shopify Inbox switched on?** | **Client/Daniel** | Whether there's a live AI blind spot |
 | **Meta Pixel on storefront?** | **Client/Daniel** | Any ad measurement |
@@ -172,6 +262,20 @@ Path B + **Instagram DM** + **Facebook Messenger** on the same spine and the sam
 | **Meta App Review** | **Us, but lead-time** | Path C (IG/Messenger) |
 | **WhatsApp 41% failure rate** | **Us** | Any WhatsApp spend — investigate first |
 | **Verify Meta free-entry-point (72h)** | **Us** | The ROI case |
+
+### New blockers the vision introduces
+
+| Blocker | Owner | Blocks |
+| --- | --- | --- |
+| **Postman decision** — Shopify Email can't do it; keep Omnisend or move to an API sender? | **Client** | Any AI-composed email |
+| **Identity resolution design** — how an anonymous browser becomes a known person | **Us** | The entire behavioural half of the vision |
+| **Verify Web Pixel `clientId`** is stable + exposed | **Us** | Whether browse-stitching is cheap or near-impossible |
+| **Shopify Protected Customer Data approval** — checkout PII is redacted without it (since 10 Dec 2025) | **Us, but lead-time** | Reading customer identity from checkout events |
+| **Cookie consent + lawful basis** (AU Privacy Act / GDPR) | **Client + us** | The behavioural layer — **prerequisite, not polish** |
+| **GA4 property access** + BigQuery export decision | **Client/Daniel** | GA-sourced behaviour (if pursued at all) |
+| **Google Ads account access** | **Client** | Google as an ad source (newly in scope) |
+| **Web Pixel deployment** to the theme (separate repo) | **Us** | Any first-party behaviour capture |
+| **Meta internal analytics access** | **Client** | Meta-side reporting |
 
 ---
 
@@ -189,17 +293,30 @@ Path B + **Instagram DM** + **Facebook Messenger** on the same spine and the sam
 
 ---
 
-## 7. What I'd do next (opinion)
+## 7. What I'd do next (opinion — revised after the 16 Jul vision message)
 
-1. **Investigate the 41% WhatsApp failure rate.** Everything downstream sits on this channel. It is
-   also the only item here that is purely ours and needs nobody's input.
-2. **Start Path A** — the CAPI loop. Small, unblocked, and it makes the ads self-improving.
-3. **Chase the client for the scenario doc and the clips**, in parallel — they're the long poles and
-   nothing in Path B starts without them.
-4. **Start Meta App Review** for IG/Messenger — free to begin, pure lead time.
-5. **Answer the cheap audits**: Omnisend plan, Klaviyo flows, Shopify Inbox, Meta Pixel.
-6. **Verify the Meta free-entry-point** before any ROI conversation.
+1. **Investigate the 41% WhatsApp failure rate.** Everything downstream sits on this channel. Purely
+   ours, needs nobody's input.
+2. **Start Path A** — the CAPI loop. Small, unblocked, makes the ads self-improving.
+3. **Add the signed token to our own WhatsApp links** *(new — promoted by the vision message)*. Because
+   we send those links, we can identify the browsing session with no cookie matching and no Shopify
+   approval. It is **the cheapest identity edge available**, and it turns "AI sees what they browsed"
+   from a platform fight into something we control. Small, unblocked, and it's the first real brick of
+   the CDP the client described.
+4. **Verify the Web Pixel `clientId`** — one afternoon, and it decides whether the whole
+   anonymous-behaviour half is cheap or near-impossible. Do it before promising anything behavioural.
+5. **Chase the scenario doc and the clips** — still the long poles; the vision message did not supply
+   them.
+6. **Start the lead-time approvals**: Meta App Review (IG/Messenger) and Shopify Protected Customer
+   Data. Both are waiting, not building — start them before they're the critical path.
+7. **Answer the cheap audits**: Omnisend plan, Klaviyo flows, Shopify Inbox, Meta Pixel.
+8. **Get a decision on the postman** (fork G) and put the cookie-consent basis in writing before any
+   behavioural tracking ships.
 
-**Don't** build broadcast, segments, or a campaign UI. Omnisend covers email; WhatsApp broadcast is
-the expensive way to message people who mostly haven't opted in yet (56 of 61 "not asked"). Grow
-consent through conversations first.
+**Still don't** build broadcast, segments, or a campaign UI. Omnisend covers email; WhatsApp broadcast
+is the expensive way to message people who mostly haven't opted in (56 of 61 "not asked"). Grow consent
+through conversations first.
+
+**And don't start with Google Analytics**, despite "deep GA from day one" — it's aggregate-only, it's a
+reporting tool rather than a profile store, and the first-party alternatives (our own link tokens,
+Shopify Web Pixels) are both cheaper and more accurate. GA earns its place later, for reporting.

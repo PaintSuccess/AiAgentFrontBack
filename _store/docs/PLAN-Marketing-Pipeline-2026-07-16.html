@@ -113,6 +113,109 @@ and reporting sales back to Meta — are ours, and one of them is already done. 
 recommended first move doesn't need the scenario or the videos at all.
 </div>
 
+<h2>1b. Your 16 July note — “a marketing system, not a WhatsApp bot”</h2>
+
+<div class="recommend">
+<strong>Short answer: it clarifies a lot, and one of your instincts is exactly right — but it doesn't
+unblock the two things actually holding up the build, and three of its assumptions don't survive
+contact with the platforms. Details below, because the differences matter.</strong>
+</div>
+
+<h3>What you're describing has a name</h3>
+<p>This is a <strong>Customer Data Platform</strong> — the category Segment and RudderStack occupy.
+Worth naming, because it sets the true size of the thing.</p>
+<p><strong>The encouraging part:</strong> what we've already built is the seed of exactly that. A profile
+per person, an event log, and a first-touch source — that's the right shape, and it's already running.
+The architecture doesn't need rethinking. The scope is roughly 5–10× bigger than the WhatsApp funnel.</p>
+
+<div class="warn">
+<strong>One honest note on the Temu / Alibaba comparison.</strong> The principle — watch behaviour,
+personalise — absolutely transfers. The mechanism doesn't: those are their own apps, with logged-in
+users, built by hundreds of engineers. A Shopify store <em>cannot see who an anonymous browser is</em>,
+by design — that's a platform rule, not a budget problem. What we can do is real, but it's built
+differently, and mostly out of data we generate ourselves rather than data we observe.
+</div>
+
+<h3 style="color:#1a7f37">✅ What your note genuinely unblocks</h3>
+<ul>
+  <li><strong>“Don't do everything at once — break it into stages.”</strong> This is the most useful
+  sentence in the note. It's exactly the approach the three paths below describe, and it removes the
+  main tension we were carrying — that everything had to land at once. <strong>Biggest unblock.</strong></li>
+  <li><strong>“The intelligence lives in our AI; the sender is just a postman.”</strong> This is a
+  genuinely good architectural instinct, and it settles an argument we'd been going round in circles
+  on. If we're <em>not</em> using a marketing tool's automations and segmentation, then paying it
+  <em>per contact stored</em> is paying for a brain we've decided not to use. A postman should charge
+  per message sent. <strong>This does reopen the Omnisend decision</strong> — see below.</li>
+  <li><strong>It explains why the ad-tracking work matters.</strong> What shipped today isn't just ad
+  reporting — it's the first link in the single-profile system you're describing. Stage one is done.</li>
+  <li><strong>“A separate powerful AI agent”</strong> confirms the funnel brain is a real component with
+  its own memory, not a tweak to the support bot's instructions.</li>
+</ul>
+
+<h3 style="color:#b91c1c">❌ Three assumptions that don't hold (we checked the platforms today)</h3>
+
+<table>
+<tr><th style="width:30%">Your assumption</th><th>What we found</th><th style="width:28%">What it means</th></tr>
+<tr>
+  <td><strong>“Send through Shopify Email — use Shopify as the delivery mechanism”</strong></td>
+  <td><strong>Shopify has no API for sending an email you compose.</strong> Shopify Email is becoming
+  “Shopify Messaging”, and outside apps can only <em>trigger</em> a few fixed automations (like
+  “customer subscribed to marketing”). Its Flow email action can't even choose the recipient.
+  Amusingly, <strong>Shopify itself sends its mail through SendGrid.</strong></td>
+  <td><strong>Your principle is right; the product just can't do it.</strong> “Our AI writes a personal
+  message → Shopify delivers it” isn't possible. A real postman is a sending service with a proper API
+  (SendGrid, Amazon SES, Postmark, Resend).</td>
+</tr>
+<tr>
+  <td><strong>“Integrate Google Analytics deeply from the start to get user behaviour”</strong></td>
+  <td>GA's API only returns <strong>aggregated</strong> numbers — “480 people viewed this product”, not
+  <em>which</em> people. Per-person data needs a heavyweight BigQuery export plus an ID we'd have to
+  attach ourselves.</td>
+  <td><strong>GA is largely the wrong tool for this job.</strong> It's a reporting tool, not a customer
+  profile. Shopify's own tracking is first-party and sits on the same platform as the orders. Keep GA
+  for reporting; don't build the profile on it.</td>
+</tr>
+<tr>
+  <td><strong>“AI sees what they browsed, which products they opened”</strong></td>
+  <td><strong>Shopify's browse and cart events carry no customer identity at all</strong> — by design.
+  Identity only appears at checkout, and <strong>since 10 December 2025 Shopify blanks out even that</strong>
+  (name, email, phone, address) unless the app holds a special approved access status we don't have yet.</td>
+  <td><strong>This is the hardest part of the whole vision.</strong> Browsing is anonymous by default.
+  Connecting it to a real person is our problem to solve — and getting the checkout details at all needs
+  a Shopify approval we'd have to apply for.</td>
+</tr>
+</table>
+
+<h3>🔑 What it all reduces to: knowing who the anonymous visitor is</h3>
+<p>Everything in your note — new lead or returning, which ad, what they browsed, did they buy — is
+really <strong>one problem wearing six hats</strong>: connecting an anonymous browser to a known person.
+Here's where we stand on each link:</p>
+
+<table>
+<tr><th>Link in the chain</th><th style="width:32%">How it's done</th><th style="width:22%">Status</th></tr>
+<tr><td>Ad click → WhatsApp identity</td><td>The ad click id, captured on first message</td><td><span class="badge b-ok">Shipped today</span></td></tr>
+<tr><td>WhatsApp / phone → Shopify customer</td><td>Phone match</td><td><span class="badge b-ok">Already built</span></td></tr>
+<tr><td>Anonymous browser → Shopify customer</td><td>They check out, or log in</td><td><span class="badge b-partial">Shopify-side · details blanked without approval</span></td></tr>
+<tr><td><strong>Anonymous browser → known contact</strong></td><td>Stitching a first-party id at the moment they identify themselves</td><td><span class="badge b-no">The hard core</span></td></tr>
+<tr><td><strong>WhatsApp link click → browsing session</strong></td><td><strong>A token in the links we send them</strong></td><td><span class="badge b-no">Not built — but cheap</span></td></tr>
+</table>
+
+<div class="recommend">
+<strong>That last row is the unlock, and it's small.</strong> Because <em>we</em> send the WhatsApp
+messages, we can put our own marker in the links inside them. The moment someone taps a product link we
+sent, we know exactly who is browsing — no cookie matching, no Shopify approval, no guessing. It turns
+“the AI sees what they looked at” from a platform fight into something we simply control. It's the
+cheapest, highest-value brick in the whole system, and it's the first one we'd lay.
+</div>
+
+<div class="warn">
+<strong>Privacy isn't a footnote here.</strong> “Use cookies and all available data” has legal limits.
+Building behavioural profiles of identifiable people needs a lawful basis and a consent mechanism
+(Australian Privacy Act, and GDPR if there's any EU traffic). Shopify blanking out customer details in
+December was the platform enforcing precisely this. A cookie-consent banner and a written basis are a
+<strong>prerequisite for the behavioural layer, not a finishing touch.</strong>
+</div>
+
 <h2>2. What we now know</h2>
 
 <table>
@@ -274,6 +377,24 @@ down it to commit today.</p>
 <tr><td>Verify Meta's free-window claim</td><td><span class="owner-us">Us</span></td><td>The cost case</td></tr>
 </table>
 
+<h3>New blockers your 16 July note introduces</h3>
+<div class="warn">
+<strong>Worth being direct: your note didn't move either of the two things actually holding up the
+build.</strong> It described what the system should <em>know</em> — the scenario blocker is what the bot
+should <em>say</em>. Those are different documents, and only the second one lets engineering start.
+</div>
+<table>
+<tr><th>New blocker</th><th style="width:110px">Owner</th><th>Holds up</th></tr>
+<tr><td><strong>Which “postman”?</strong> Shopify Email can't do it — keep Omnisend, or move to a proper sending service?</td><td><span class="owner-client">You</span></td><td>Any AI-written email</td></tr>
+<tr><td><strong>How we identify an anonymous browser</strong> — design decision</td><td><span class="owner-us">Us</span></td><td>The entire behavioural half</td></tr>
+<tr><td>Confirm Shopify's tracking exposes a usable visitor id</td><td><span class="owner-us">Us</span></td><td>Whether browse-tracking is cheap or nearly impossible</td></tr>
+<tr><td>Shopify “protected customer data” approval (checkout details are blanked without it)</td><td><span class="owner-us">Us (lead time)</span></td><td>Reading customer identity at checkout</td></tr>
+<tr><td><strong>Cookie consent + a written legal basis</strong></td><td><span class="owner-client">You + us</span></td><td>Behavioural tracking — a prerequisite</td></tr>
+<tr><td>Google Analytics access + BigQuery decision</td><td><span class="owner-client">You / Daniel</span></td><td>GA-sourced behaviour, if pursued at all</td></tr>
+<tr><td>Google Ads account access</td><td><span class="owner-client">You</span></td><td>Google as an ad source (newly in scope)</td></tr>
+<tr><td>Meta internal analytics access</td><td><span class="owner-client">You</span></td><td>Meta-side reporting</td></tr>
+</table>
+
 <h2>7. Money — as currently understood</h2>
 <ul>
   <li><strong>Customer messages us first:</strong> free. Replies within 24 hours cost nothing.</li>
@@ -290,20 +411,32 @@ chase people with templates. So the thing you want (ads → WhatsApp) is also th
 broadcast — the expensive thing — is the thing that isn't built. That's a fortunate alignment.
 </div>
 
-<h2>8. What we'd suggest next</h2>
+<h2>8. What we'd suggest next <span style="font-size:12px;color:#666;font-weight:normal">(revised after your 16 July note)</span></h2>
 <ol>
   <li><strong>Fix the WhatsApp failure rate.</strong> Everything downstream runs on this channel, and
   it's the only item needing nobody's input but ours.</li>
   <li><strong>Start Path A</strong> — reporting sales back to Meta. Small, unblocked, makes the ads
   self-improving from the first click.</li>
-  <li><strong>Send us the scenario and the clips</strong> — in parallel. They're the long poles, and
-  Path B genuinely cannot start without them.</li>
-  <li><strong>Kick off the Meta review</strong> for Instagram/Messenger — free to start, pure waiting.</li>
-  <li><strong>Answer the quick ones:</strong> Omnisend plan, Klaviyo flows, Shopify Inbox, Meta Pixel.</li>
+  <li><strong>Put our own marker in the links we send</strong> <em>(new — promoted by your note)</em>.
+  The cheapest way to know who's browsing, because we control the links. No approvals, no cookie
+  matching. It's the first real brick of the single-profile system you described, and it's small.</li>
+  <li><strong>Confirm Shopify's visitor id is usable</strong> — an afternoon's work that decides whether
+  the whole anonymous-behaviour half is cheap or nearly impossible. Worth knowing before promising it.</li>
+  <li><strong>Send us the scenario and the clips</strong> — still the long poles. Your note didn't
+  supply them, and Path B genuinely cannot start without them.</li>
+  <li><strong>Start the slow approvals now:</strong> Meta review (Instagram/Messenger) and Shopify's
+  protected-customer-data access. Both are waiting, not building — start them before they become the
+  bottleneck.</li>
+  <li><strong>Answer the quick ones:</strong> Omnisend plan, Klaviyo flows, Shopify Inbox, Meta Pixel —
+  and decide the postman.</li>
 </ol>
 <p><strong>What we'd avoid for now:</strong> building broadcast, segments or a campaign screen. Omnisend
 already covers email, and WhatsApp broadcast would be an expensive way to message people who mostly
 haven't opted in yet. Grow consent through conversations first — then broadcasting is worth building.</p>
+<p><strong>And we'd not start with Google Analytics</strong>, despite “deep GA from day one”. It only
+returns aggregate numbers, it's a reporting tool rather than a customer profile, and the first-party
+alternatives — our own link markers and Shopify's own tracking — are both cheaper and more accurate.
+GA earns its place later, for reporting.</p>
 
 <footer>
 Paint Access — Marketing Pipeline, current picture and available paths. Prepared for discussion,
