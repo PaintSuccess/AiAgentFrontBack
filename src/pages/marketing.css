@@ -104,15 +104,18 @@
 .pa-note.is-info { background: var(--pa-accent-soft); border-color: #c7d7fe; color: #3538cd; }
 
 /* ── Empty state ──────────────────────────────────────────────────── */
-.pa-empty { padding: 30px 22px; text-align: center; }
-.pa-empty-t { font-weight: 600; margin-bottom: 5px; }
-.pa-empty-d { color: var(--pa-ink-2); font-size: 12.5px; max-width: 460px; margin: 0 auto; line-height: 1.6; }
-.pa-empty-live {
+/* Scoped under .pa-mkt: this stylesheet is imported globally (MarketingPage is a static
+   import in App), and inbox.css already defines a different `.pa-empty`. An unscoped rule
+   here silently overrode the inbox's empty-state padding across the whole dashboard. */
+.pa-mkt .pa-empty { padding: 30px 22px; text-align: center; }
+.pa-mkt .pa-empty-t { font-weight: 600; margin-bottom: 5px; }
+.pa-mkt .pa-empty-d { color: var(--pa-ink-2); font-size: 12.5px; max-width: 460px; margin: 0 auto; line-height: 1.6; }
+.pa-mkt .pa-empty-live {
   display: inline-flex; align-items: center; gap: 6px; margin-bottom: 12px;
   background: var(--pa-ok-soft); color: var(--pa-ok); border-radius: 20px;
   padding: 3px 10px; font-size: 11.5px; font-weight: 600;
 }
-.pa-empty-live i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.pa-mkt .pa-empty-live i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 
 /* ── Ads table ────────────────────────────────────────────────────── */
 .pa-ads { width: 100%; border-collapse: collapse; }

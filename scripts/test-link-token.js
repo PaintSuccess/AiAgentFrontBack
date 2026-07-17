@@ -44,6 +44,13 @@ ok("third-party domain NOT tagged", !/evil\.example\.com[^\s]*pa=/.test(taggedFo
 const already = lt.tagLinks("https://paintaccess.com.au/x?pa=existing", CID);
 ok("already-tagged link left alone", already.includes("pa=existing") && (already.match(/pa=/g)||[]).length === 1, already);
 
+// Trailing sentence punctuation must not be pulled into the path (would corrupt the link).
+const dot = lt.tagLinks("See https://www.paintaccess.com.au/products/sprayer.", CID);
+ok("trailing period not in path", /\/products\/sprayer\?pa=/.test(dot) && dot.trimEnd().endsWith("."), dot);
+ok("period-tagged link still resolves", lt.contactIdFromUrl(dot.match(/https:\S+?(?=\.?$)/)[0].replace(/\.$/, "")) === CID);
+const comma = lt.tagLinks("Options: https://paintaccess.com.au/cart, or reply.", CID);
+ok("trailing comma not in path", /\/cart\?pa=/.test(comma) && /,\s/.test(comma), comma);
+
 ok("body without links untouched", lt.tagLinks("no links here", CID) === "no links here");
 ok("empty body safe", lt.tagLinks("", CID) === "");
 ok("null contact = no tagging", lt.tagLinks(body, null) === body);
