@@ -18,3 +18,18 @@ _store/setup/find-pretty.out
 _store/setup/*.err
 _store/setup/*.log
 .env*.local
+
+# Codex-generated backups & conversation dumps: these contain live auth tokens and
+# customer conversation data (flagged by codex review 2026-07-16). This repo is PUBLIC —
+# a stray `git add .` would leak them. Ignore everything under .codex/ EXCEPT the tracked
+# workflow skill.
+/.codex/*
+!/.codex/skills/
+!/.codex/skills/**
+
+# Claude Code local config (launch.json etc.) — machine-local, not for the repo.
+/.claude/
+
+# Stray working-dir artefacts seen at repo root (mirrors the _store/setup ignores above).
+/find-pretty.log
+/test-output/
