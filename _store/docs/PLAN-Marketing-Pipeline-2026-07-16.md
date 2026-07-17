@@ -237,9 +237,14 @@ banner + a documented basis is a prerequisite for the behavioural layer, not a l
   the stack blind to the storefront.
 - **Note:** referral data is **perishable** — Meta sends it once and never re-sends. Every future ad
   click is attributable; anything before today is permanently lost.
+- **Identity stitching is LIVE (2026-07-16).** AI-reply storefront links carry a signed contact
+  token (`lib/comms/link-token.js`); when tapped, the pixel attributes that browser AND back-fills its
+  earlier anonymous events. So `web_events` is no longer anonymous-only — a customer who clicks a link
+  we sent becomes a known, full browsing profile. The self-controlled identity edge from §7.3, done.
 - **Gap:** consent is *recorded* but the marketing-consent gate is **not enforced** on sends
-  (deliberately — see §4 fork E). And `web_events.contact_id` is still null for everyone — browsing is
-  captured but **not yet joined to a person** (that's the token work in §7.3).
+  (deliberately — see §4 fork E). Stitching only fires once a customer clicks a tagged link — browsers
+  who never receive/click a WhatsApp link stay anonymous (expected; that edge needs cookie matching or
+  checkout, which are the harder, approval-gated options).
 
 ### Stage 3 — QUALIFY ❌ — **the long pole**
 - **Have:** one stateless AI agent + knowledge base + Shopify context. It answers well; it does not
