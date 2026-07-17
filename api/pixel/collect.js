@@ -16,6 +16,27 @@
  */
 const { cleanEnv, rateLimit } = require("../../lib/shopify");
 const { getSupabase } = require("../../lib/supabase");
+const linkToken = require("../../lib/comms/link-token");
+
+// A browser that follows a tagged link is identified from that moment on. Its EARLIER events
+// are already stored anonymously, so the same client_id gets back-filled — the browsing that
+// happened before they clicked is usually the interesting part, and it's already ours.
+// Bounded: a client_id is one browser, not a population.
+const BACKFILL_LIMIT = 500;
+
+/**
+ * Bind an anonymous browser to a contact, and adopt its history.
+ * Best-effort — identity is a bonus on top of the event, never a condition of storing it.
+ */
+async function stitchIdentity(sb, clientId, contactId) {
+  const { error } = await sb
+    .from("web_events")
+    .update({ contact_id: contactId })
+    .eq("client_id", clientId)
+    .is("contact_id", null)
+    .limit(BACKFILL_LIMIT);
+  if (error) throw error;
+}
 
 // Shopify's browse/cart standard events. Anything else is ignored rather than stored —
 // an open endpoint should not let callers invent event types in our schema.
@@ -110,8 +131,24 @@ module.exports = async function handler(req, res) {
 
     const sb = getSupabase();
     if (!sb) return res.status(204).end();
+
+    // Did they arrive via a link we sent? The token rides in the URL the pixel already
+    // reports, so this needs nothing from the storefront and nothing from Shopify.
+    let contactId = null;
+    for (const row of rows) {
+      contactId = linkToken.contactIdFromUrl(row.url);
+      if (contactId) break;
+    }
+    if (contactId) for (const row of rows) row.contact_id = contactId;
+
     const { error } = await sb.from("web_events").insert(rows);
     if (error) console.error("[pixel/collect] insert failed:", error.message);
+
+    if (contactId) {
+      await stitchIdentity(sb, clientId, contactId).catch((err) =>
+        console.error("[pixel/collect] identity stitch failed:", err.message)
+      );
+    }
   } catch (err) {
     console.error("[pixel/collect]", err.message);
   }

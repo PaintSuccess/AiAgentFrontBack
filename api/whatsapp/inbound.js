@@ -6,6 +6,7 @@ const { loadTwilioTextHistory } = require("../../lib/twilio-text-history");
 const commsStore = require("../../lib/comms/store");
 const commsQueries = require("../../lib/comms/queries");
 const commsConsent = require("../../lib/comms/consent");
+const linkToken = require("../../lib/comms/link-token");
 const { isStaffNumber } = require("../../lib/comms/handoff");
 const {
   parseWhatsAppInbound,
@@ -226,6 +227,16 @@ module.exports = async function handler(req, res) {
       replyText = await buildAgentReply(inbound, conversationHistory, customerContext);
     } catch (err) {
       console.error("[WhatsApp] ElevenLabs text agent error:", err.message);
+    }
+
+    // Tag storefront links with this contact's signed token, so that when they tap one we can
+    // tell WHO is browsing. Shopify's browse events carry no identity by design; because we
+    // send this message, this is the one identity edge we control outright.
+    // Best-effort: attribution must never cost a customer their reply.
+    try {
+      if (inboundRecord?.contact?.id) replyText = linkToken.tagLinks(replyText, inboundRecord.contact.id);
+    } catch (err) {
+      console.error("[WhatsApp] link tagging failed:", err.message);
     }
 
     if (inbound.provider === "twilio") {
