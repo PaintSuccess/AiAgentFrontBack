@@ -217,13 +217,25 @@ banner + a documented basis is a prerequisite for the behavioural layer, not a l
                                                                      └─ RETAIN: Omnisend email ✅ / WhatsApp re-engage 🟡
 ```
 
-### Stage 1 — ACQUIRE ❌ (client/Meta side)
-- **Have:** production WhatsApp sender, verified business account (07-15), 4 approved templates.
-- **Need:** the actual Click-to-WhatsApp ad + WABA link in Meta Business Manager. **This is client-side
-  setup, not code.**
-- **Open:** dedicated ads number vs shared support number (mixing ad traffic with support affects
-  number reputation + reporting clarity); Meta messaging volume tier; is the Meta Pixel on the
-  storefront (flagged unverified since May, still unanswered).
+### Stage 1 — ACQUIRE ⚠️ **ADS ALREADY BUILT — just switched OFF (found 2026-07-16)**
+- **Have:** production WhatsApp sender, verified business account (07-15), 4 approved templates. Meta
+  Pixel confirmed live (see §1a).
+- **⚠ The Click-to-WhatsApp campaign is already fully built by Daniel and simply disabled:**
+  - Ad account `11731673` → campaign **"Lead Campaign - May 2026 (Sales Whatsapp)"**, objective
+    *Messaging conversations*.
+  - 2 ad sets: **"Paint Business Owner"**, **"DIY Painters"** (both toggled on).
+  - 4 ads with creative: **Backpack Static ×2, Backpack Video ×2**.
+  - **Spent $0.00 — never turned on.** So Stage 1 is *flip it on + confirm the click destination is
+    WhatsApp*, **not build**.
+  - (Wider account: 92 campaigns, ~$1,584 lifetime; "Sales Campaign - Dan Backpack - May 2026" is the
+    only Active one — 139k impressions, 29 web purchases, ~$53/purchase, flagged "Low results".)
+- **For Daniel to launch:** (1) switch the WhatsApp campaign On + set a test daily budget; (2) confirm
+  each ad's button goes to **WhatsApp** (not Messenger/IG); (3) confirm the WhatsApp number is the one
+  wired to our system; (4) two pending Ads-Manager dialogs are **his to action** — a Non-discrimination
+  Policy acceptance (a legal agreement — not ours to click) and a financial-services-ads verification
+  notice (likely irrelevant to paint).
+- **Open:** dedicated ads number vs shared support number (mixing ad + support traffic affects number
+  reputation + reporting clarity); Meta messaging volume tier.
 - **Also possible:** Click-to-WhatsApp buttons on product pages (❌), Click-to-Instagram-Direct,
   Click-to-Messenger.
 
@@ -262,12 +274,21 @@ banner + a documented basis is a prerequisite for the behavioural layer, not a l
 >   storage decision, not the clips. We can prove it end-to-end with one sample PDF/clip.
 > - **The library** (20–50 clips) is client content and is genuinely blocked.
 >
-> **Decision B (storage) has a new option the June plan didn't have: Supabase Storage.** We already
-> run Supabase for the whole spine. It gives public URLs, so it satisfies WhatsApp's need for a
-> reachable `MediaUrl`, with **no new vendor, no new bill, no new credentials**. Cloudflare R2 is
-> cheaper at high egress and is the better answer *if* this becomes a real video library used across
-> web/email/ads. **Lean: Supabase Storage to prove the funnel; revisit R2 when volume justifies it.**
-> Shopify Files remains a no as source of truth (June plan) — weak versioning/API control.
+> **DECISION B — DECIDED 2026-07-16: Supabase Storage now, migrate to Cloudflare R2 at scale.**
+> We already run Supabase for the whole spine; it gives public URLs (satisfies WhatsApp's `MediaUrl`
+> need) with **no new vendor, no new bill, no new credentials**. Enough for the funnel: ~50 clips
+> ≤16MB ≈ 800MB, and because Meta caches each upload ~30 days, Supabase serves each file ~monthly (not
+> per customer) so egress ≈ 0. Shopify Files stays a no as source of truth (June plan — weak
+> versioning/API control).
+>
+> **⚠ MUST MIGRATE TO CLOUDFLARE R2 AT SCALE — do not skip this.** The moment the *same* media library
+> also serves the website / email / landing pages, every page view becomes a download billed at
+> **$0.09/GB egress** on Supabase. R2 has **zero egress fees** and is the right home for a real
+> cross-channel video library — this is exactly why the June plan chose it. **Trigger to migrate:** the
+> library starts serving the storefront/email at volume, or Supabase egress cost becomes noticeable.
+> **Cost of migrating is low by design:** the media-registry schema is identical either way — only the
+> stored URL changes, so it's a re-upload + a URL rewrite, not a redesign. Build the registry now with
+> that swap in mind (store the storage key, derive the URL).
 >
 > **Second decision: which assets at which step** — that one *is* downstream of the scenario (Stage 3),
 > so it can't be settled before Daniel answers.
