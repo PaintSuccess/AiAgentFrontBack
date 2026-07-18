@@ -62,6 +62,17 @@ const PDF = Buffer.from(
   const sendMedia = media.toSendMedia(asset, "Here's the guide");
   ok("send media maps pdf → document", sendMedia.type === "document" && sendMedia.url === asset.public_url);
 
+  // Caption must be delivered on Twilio (which only reads top-level Body), not just nested in
+  // media.caption (which only the Meta path reads). Intercept the send service to check.
+  const sendMod = require("../lib/comms/send");
+  const origSend = sendMod.sendMessage;
+  let sent = null;
+  sendMod.sendMessage = async (args) => { sent = args; return { id: "x" }; };
+  await media.sendAssetOnWhatsApp({ to: "+61400000000", assetKey: KEY, caption: "Grab the guide" });
+  sendMod.sendMessage = origSend;
+  ok("caption passed as body (Twilio delivers it)", sent?.body === "Grab the guide", JSON.stringify(sent?.body));
+  ok("caption also on media (Meta path)", sent?.media?.caption === "Grab the guide");
+
   const found = await media.getAsset(KEY);
   ok("getAsset resolves", found?.asset_key === KEY);
   const list = await media.listAssets({ kind: "pdf" });

@@ -47,6 +47,9 @@ const call = (method, body, origin) => {
   r = await call("POST", { clientId: "c1", events: [{ name: "page_viewed", url: "https://x/y" }] });
   ok("valid event accepted → 204", r.code === 204);
 
+  r = await call("POST", { clientId: "c1", events: [{ name: "page_viewed", url: "javascript:alert(1)" }] });
+  ok("javascript: url event still 204 (event kept, url dropped)", r.code === 204);
+
   ok("no throw on garbage", true);
   r = await call("POST", { clientId: "c1", events: "not-an-array" });
   ok("malformed events → 204", r.code === 204);

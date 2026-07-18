@@ -78,6 +78,17 @@ const post = (body) => Promise.resolve(handler({ method: "POST", body, headers: 
   const { data: other } = await sb.from("web_events").select("contact_id").eq("client_id", CLIENT_OTHER);
   ok("a different browser stays anonymous", other[0].contact_id === null);
 
+  // 6) A hostile javascript: URL from the open endpoint must be dropped to null, never stored
+  // as something the staff inbox could later render as a clickable link.
+  await post({ clientId: CLIENT_OTHER, events: [
+    { name: "page_viewed", url: "javascript:alert(document.cookie)" },
+    { name: "page_viewed", url: "https://www.paintaccess.com.au/ok" },
+  ]});
+  const { data: urls } = await sb.from("web_events").select("url").eq("client_id", CLIENT_OTHER).order("created_at", { ascending: false }).limit(2);
+  const stored = urls.map((r) => r.url);
+  ok("javascript: url stored as null", stored.includes(null), JSON.stringify(stored));
+  ok("legit url alongside it still stored", stored.includes("https://www.paintaccess.com.au/ok"), JSON.stringify(stored));
+
   await sb.from("web_events").delete().in("client_id", [CLIENT, CLIENT_FORGED, CLIENT_OTHER]);
   await sb.from("contacts").delete().eq("id", contact.id);
   const { data: gone } = await sb.from("contacts").select("id").eq("phone", PHONE);

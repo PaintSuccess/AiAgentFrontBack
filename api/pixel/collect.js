@@ -62,6 +62,13 @@ const num = (v) => {
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 };
+// This endpoint is public, so `url` is attacker-controllable. Only keep http(s) URLs — never
+// store a `javascript:`/`data:` scheme that would later become a clickable link in the staff
+// inbox. Defence at ingest; the inbox also re-checks before rendering an href.
+const safeUrl = (v) => {
+  const s = str(v, 1000);
+  return s && /^https?:\/\//i.test(s) ? s : null;
+};
 
 /**
  * CORS.
@@ -98,8 +105,8 @@ function normalize(clientId, raw) {
   return {
     client_id: clientId,
     name,
-    url: str(raw.url, 1000),
-    referrer: str(raw.referrer, 1000),
+    url: safeUrl(raw.url),
+    referrer: safeUrl(raw.referrer),
     product_id: str(p.id, 80),
     product_title: str(p.title, 300),
     variant_id: str(p.variantId, 80),

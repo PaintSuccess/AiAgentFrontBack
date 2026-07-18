@@ -31,6 +31,11 @@ const BROWSE_VERB = {
   search_submitted: "Searched",
   page_viewed: "Visited",
 };
+// Browsing URLs come from the public pixel endpoint, so treat them as untrusted: only allow
+// them as an href when the scheme is http(s). Returns undefined for anything else.
+function safeBrowseHref(url) {
+  return /^https?:\/\//i.test(String(url || "")) ? url : undefined;
+}
 // A readable label: prefer the product/collection title; otherwise a short path from the URL.
 function browseLabel(e) {
   const verb = BROWSE_VERB[e.name] || "Visited";
@@ -706,20 +711,26 @@ export default function InboxPage({ target } = {}) {
                     {contact.browsing.summary.products > 0 ? ` · ${contact.browsing.summary.products} product${contact.browsing.summary.products === 1 ? "" : "s"}` : ""}
                   </span>
                 </div>
-                {contact.browsing.events.slice(0, 8).map((e, i) => (
-                  <a
-                    key={i}
-                    className="pa-browse-row"
-                    href={e.url || undefined}
-                    target="_blank"
-                    rel="noreferrer"
-                    title={e.url || ""}
-                  >
-                    <span className="pa-browse-ic">{BROWSE_ICON[e.name] || "•"}</span>
-                    <span className="pa-browse-label">{browseLabel(e)}</span>
-                    <span className="pa-browse-time">{e.at ? timeAgo(e.at) : ""}</span>
-                  </a>
-                ))}
+                {contact.browsing.events.slice(0, 8).map((e, i) => {
+                  // The pixel endpoint is public, so `url` is untrusted. Only make it a live
+                  // link when it's genuinely http(s); anything else renders as plain text so a
+                  // hostile `javascript:`/`data:` URL can never become a staff-clickable link.
+                  const href = safeBrowseHref(e.url);
+                  return (
+                    <a
+                      key={i}
+                      className="pa-browse-row"
+                      href={href}
+                      target={href ? "_blank" : undefined}
+                      rel="noreferrer"
+                      title={href || ""}
+                    >
+                      <span className="pa-browse-ic">{BROWSE_ICON[e.name] || "•"}</span>
+                      <span className="pa-browse-label">{browseLabel(e)}</span>
+                      <span className="pa-browse-time">{e.at ? timeAgo(e.at) : ""}</span>
+                    </a>
+                  );
+                })}
               </div>
             )}
 
