@@ -114,10 +114,37 @@ async function main() {
   }
   if (!commit && !revert) { console.log("\n--- DRY RUN. --commit to apply, --revert to undo. ---"); return; }
 
+  // The API rejects a property that carries both a description and a dynamic_variable:
+  //   "Can only set one of: description, dynamic_variable, is_system_provided,
+  //    constant_value, or is_omitted"
+  // A bound parameter is filled by the runtime, so it has no prompt-facing description to
+  // give the model. Keep the originals on disk so --revert can restore them exactly.
+  const BACKUP = path.join(__dirname, "lookup-order-identity-backup.json");
+
   const nextProps = { ...props };
-  for (const [prop, dv] of Object.entries(BINDINGS)) {
-    if (!nextProps[prop]) continue;
-    nextProps[prop] = { ...nextProps[prop], dynamic_variable: revert ? "" : dv };
+  if (revert) {
+    if (!fs.existsSync(BACKUP)) throw new Error(`no backup at ${BACKUP} — cannot restore descriptions`);
+    const saved = JSON.parse(fs.readFileSync(BACKUP, "utf8"));
+    for (const prop of Object.keys(BINDINGS)) {
+      if (saved[prop]) nextProps[prop] = saved[prop];
+    }
+  } else {
+    const saved = {};
+    for (const [prop, dv] of Object.entries(BINDINGS)) {
+      if (!nextProps[prop]) continue;
+      saved[prop] = nextProps[prop];
+      nextProps[prop] = { type: nextProps[prop].type || "string", dynamic_variable: dv };
+    }
+    // Write the backup exactly ONCE. On a second --commit the live properties read back are
+    // ALREADY bound (no description), so overwriting here would replace the true originals
+    // with useless bound copies and permanently break --revert. The first backup is the
+    // authoritative one; binding is idempotent, so re-running is otherwise harmless.
+    if (fs.existsSync(BACKUP)) {
+      console.log(`\nbackup already exists (${path.basename(BACKUP)}) — keeping the original, not overwriting.`);
+    } else {
+      fs.writeFileSync(BACKUP, JSON.stringify(saved, null, 2));
+      console.log(`\noriginal properties saved -> ${path.basename(BACKUP)} (needed by --revert)`);
+    }
   }
 
   const body = {

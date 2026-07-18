@@ -33,3 +33,8 @@ _store/setup/*.log
 # Stray working-dir artefacts seen at repo root (mirrors the _store/setup ignores above).
 /find-pretty.log
 /test-output/
+
+# Generated local-only backup for bind-lookup-order-identity.js --revert (holds the tool's
+# original schema; regenerated on first --commit, not meant for the repo).
+_store/setup/lookup-order-identity-backup.json
+_store/setup/voice-stack-backups/
