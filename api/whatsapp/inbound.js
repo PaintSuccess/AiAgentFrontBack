@@ -7,6 +7,7 @@ const commsStore = require("../../lib/comms/store");
 const commsQueries = require("../../lib/comms/queries");
 const commsConsent = require("../../lib/comms/consent");
 const linkToken = require("../../lib/comms/link-token");
+const metaCapi = require("../../lib/comms/meta-capi");
 const { isStaffNumber } = require("../../lib/comms/handoff");
 const {
   parseWhatsAppInbound,
@@ -206,6 +207,16 @@ module.exports = async function handler(req, res) {
         return res.status(200).send(`<?xml version="1.0" encoding="UTF-8"?>\n<Response></Response>`);
       }
       return res.status(200).json({ ok: true, duplicate: true });
+    }
+
+    // Ad-sourced conversation → report a lead back to Meta so the ad optimises on real
+    // outcomes. Fires only when a ctwa_clid is present (inherently the first ad-click
+    // message). No-ops until META_CAPI_ACCESS_TOKEN is set. Fail-safe: never blocks the reply.
+    if (inbound.referral?.ctwa_clid) {
+      metaCapi
+        .sendConversion({ eventName: "LeadSubmitted", ctwaClid: inbound.referral.ctwa_clid })
+        .then((r) => { if (r?.skipped) console.log(`[WhatsApp] Meta CAPI lead ${r.skipped}`); })
+        .catch((err) => console.error("[WhatsApp] Meta CAPI lead failed:", err.message));
     }
 
     // Record STOP/START keyword opt-out/in (fail-safe).
