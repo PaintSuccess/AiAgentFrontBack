@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="color-scheme" content="light">
+<title>Paint Access — What Daniel needs to do</title>
+<style>
+  html { color-scheme: light; background: #fff; }
+  body { font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; max-width: 860px; margin: 40px auto; padding: 0 24px; color: #222; background: #fff; }
+  h1 { font-size: 23px; border-bottom: 2px solid #333; padding-bottom: 8px; color: #1a1a1a; }
+  h2 { font-size: 16px; margin-top: 34px; border-left: 4px solid #25D366; padding-left: 10px; }
+  .meta { color: #666; font-size: 12px; margin-bottom: 20px; }
+  .item { border: 1px solid #e2e2e6; border-radius: 8px; padding: 12px 16px; margin: 10px 0; background: #fbfbfc; }
+  .item h3 { margin: 0 0 4px; font-size: 14.5px; }
+  .item p { margin: 3px 0; }
+  .why { color: #555; font-size: 13px; }
+  .how { font-size: 13px; }
+  .how b { color: #15803d; }
+  .tag { display: inline-block; font-size: 11px; font-weight: bold; border-radius: 10px; padding: 1px 8px; margin-left: 6px; vertical-align: 1px; }
+  .t-min { background: #dcfce7; color: #1a7f37; }
+  .t-token { background: #dbeafe; color: #1e40af; }
+  .t-decide { background: #fef3c7; color: #92400e; }
+  .t-content { background: #ede9fe; color: #5b21b6; }
+  code { background: #f0f0f2; border-radius: 3px; padding: 1px 5px; font-family: "Courier New", monospace; font-size: 12px; }
+  .lead { background: #ecfdf5; border: 1px solid #6ee7b7; border-radius: 6px; padding: 12px 16px; margin: 14px 0; }
+  .note { background: #fff8c5; border-left: 4px solid #d4a017; padding: 10px 14px; margin: 12px 0; font-size: 13px; }
+  ol.path { margin: 6px 0 0 18px; font-size: 13px; }
+  ol.path li { margin-bottom: 3px; }
+  footer { margin-top: 40px; padding-top: 14px; border-top: 1px solid #ddd; font-size: 11px; color: #888; }
+</style>
+</head>
+<body>
+
+<h1>What we need from Daniel</h1>
+<p class="meta">Paint Access — 16 July 2026. Everything on our side is built and live. These are the
+switches only you can flip. Grouped by how long each takes.</p>
+
+<div class="lead">
+<strong>The big picture:</strong> the whole WhatsApp funnel is built and running on our side — it just
+isn't switched on. The single most important action is the first one: <strong>turn the ads on.</strong>
+Nothing flows until an ad runs.
+</div>
+
+<h2>⚡ Quick switches — about 15 minutes total</h2>
+
+<div class="item">
+  <h3>1. Turn the WhatsApp ads ON <span class="tag t-min">5 min</span></h3>
+  <p class="why">The campaign already exists — <em>“Lead Campaign – May 2026 (Sales Whatsapp)”</em>, 2 ad
+  sets (Paint Business Owner, DIY Painters), 4 ads including video. It has never been switched on ($0
+  spent). This is the one action everything else depends on.</p>
+  <p class="how"><b>Do:</b> In Ads Manager, switch the campaign On and set a small daily test budget.
+  Then open each ad and confirm its button goes to <b>WhatsApp</b> (not Messenger or Instagram), and
+  that the WhatsApp number is the one connected to our system.</p>
+</div>
+
+<div class="item">
+  <h3>2. Clear the two Ads Manager pop-ups <span class="tag t-min">2 min</span></h3>
+  <p class="why">Two dialogs are waiting in Ads Manager and only you can action them (they're legal
+  agreements — not something we click on your behalf).</p>
+  <p class="how"><b>Do:</b> Accept the <b>Non-discrimination Policy</b>. Review the
+  <b>financial-services ads</b> notice — almost certainly irrelevant to paint, but read it to be sure.</p>
+</div>
+
+<div class="item">
+  <h3>3. Dismiss the pixel “62 new domains” warning <span class="tag t-min">1 min</span></h3>
+  <p class="why">It's noise — a browser extension firing your public pixel id across random sites
+  (netflix, chatgpt, etc.). <strong>Do NOT create an “allow list”</strong>: that would block every
+  domain not on it, including your own store, and break your ad tracking.</p>
+  <p class="how"><b>Do:</b> In Events Manager → Diagnostics, mark that warning <b>Ignored</b>. Nothing
+  else.</p>
+</div>
+
+<h2>🔑 Get us access — unlocks features already built</h2>
+
+<div class="item">
+  <h3>4. Generate a Meta “Conversions API” token <span class="tag t-token">give to us</span></h3>
+  <p class="why">We've built the piece that reports leads &amp; sales back to Meta, so your ads learn
+  from real outcomes (Meta itself estimates ~15% lower cost per result). It's live but asleep — it needs
+  one token to wake up.</p>
+  <p class="how"><b>Do:</b> In Meta Business Settings, create a <b>System User token</b> with the
+  <code>whatsapp_business_manage_events</code> permission, and send it to us. We plug it in — nothing
+  changes on your screen.</p>
+</div>
+
+<div class="item">
+  <h3>5. Which Omnisend plan are you on, and roughly how many contacts? <span class="tag t-token">1 answer</span></h3>
+  <p class="why">This decides one thing: whether bulk SMS runs through Omnisend or through us. On the
+  Standard plan Omnisend has no SMS at all, so the choice makes itself.</p>
+  <p class="how"><b>Do:</b> Just tell us the plan name and rough contact count.</p>
+</div>
+
+<h2>🔎 Review &amp; decide — a few minutes each</h2>
+
+<div class="item">
+  <h3>6. Two outside businesses can read your pixel data <span class="tag t-decide">confirm</span></h3>
+  <p class="why">Your pixel dataset is shared with <b>Akohub</b> and <b>Bold SEO</b>. If they're current
+  agencies/apps, fine. If they're leftovers, they still have access to customer data.</p>
+  <p class="how"><b>Do:</b> Tell us if they're still needed. If not, we remove their access.</p>
+</div>
+
+<div class="item">
+  <h3>7. Confirm “Automatic Advanced Matching” is intended <span class="tag t-decide">confirm</span></h3>
+  <p class="why">Your pixel is sending Meta hashed customer <b>email, phone, name, gender, postcode,
+  date of birth</b>. It improves ad matching, so it's probably deliberate — but it's a lot of personal
+  data and nobody flagged it, so worth a conscious yes.</p>
+  <p class="how"><b>Do:</b> Confirm you're happy leaving it on.</p>
+</div>
+
+<div class="item">
+  <h3>8. Is Shopify Inbox chat switched on? <span class="tag t-decide">confirm</span></h3>
+  <p class="why">If the Shopify Inbox chat widget is live on the store, those conversations are invisible
+  to us and to the AI — a blind spot. Our own widget already covers storefront chat.</p>
+  <p class="how"><b>Do:</b> Tell us if it's on. If it is and isn't needed, best to turn it off.</p>
+</div>
+
+<div class="item">
+  <h3>9. Improve the existing Conversions API setup <span class="tag t-decide">later, with us</span></h3>
+  <p class="why">Meta flags your current web tracking as poorly de-duplicated — the same ~15% cost saving.
+  Fixing it means changing the Facebook app's data-sharing mode, which touches <em>live, working</em>
+  tracking, so we'll do it carefully together, not blind.</p>
+  <p class="how"><b>Do:</b> Nothing yet — just know it's on the list once the ads are running.</p>
+</div>
+
+<h2>🎬 Your content — the real long poles</h2>
+
+<div class="item">
+  <h3>10. The conversation scenario <span class="tag t-content">the #1 blocker</span></h3>
+  <p class="why">The AI can talk, but it can't <em>sell to a plan</em> until you tell us the plan. This is
+  the single thing most holding the funnel back — no amount of building substitutes for it.</p>
+  <p class="how"><b>Do:</b> Write down, roughly: the questions the bot should ask, how to tell a serious
+  buyer from a browser, which products to steer each type toward, and which video/PDF to send at which
+  step. Bullet points are fine — we shape it.</p>
+</div>
+
+<div class="item">
+  <h3>11. The videos &amp; PDFs <span class="tag t-content">content</span></h3>
+  <p class="why">The system to send video/PDF over WhatsApp is built and tested. It just needs the actual
+  material — the original plan assumed ~20–50 short clips (demos, testimonials, kit contents, objections).</p>
+  <p class="how"><b>Do:</b> Start gathering the clips and any product PDFs. Even a handful lets us prove
+  the full flow end-to-end.</p>
+</div>
+
+<div class="note">
+<strong>One security note:</strong> a developer backup file on the machine contained a live access
+token. It was never published anywhere, and we've locked it out of the code repository — but if that
+file was ever copied off the machine, the safe move is to rotate that token. Your call; flag it if you
+want us to walk through it.
+</div>
+
+<h2>If you only do three things</h2>
+<ol class="path">
+  <li><strong>Turn the ads on</strong> (#1) — nothing happens until this.</li>
+  <li><strong>Send us the Conversions API token</strong> (#4) — makes the ads self-improving.</li>
+  <li><strong>Start writing the scenario</strong> (#10) — it's the long pole; the sooner it starts, the sooner the funnel is real.</li>
+</ol>
+
+<footer>Paint Access — action list for Daniel, 16 July 2026. Everything not on this list is built and
+running on our side.</footer>
+
+</body>
+</html>
