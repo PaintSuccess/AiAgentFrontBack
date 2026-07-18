@@ -73,20 +73,32 @@ Nothing flows until an ad runs.
 <h2>🔑 Get us access — unlocks features already built</h2>
 
 <div class="item">
-  <h3>4. Generate a Meta “Conversions API” token <span class="tag t-token">give to us</span></h3>
+  <h3>4. Generate a Meta “Conversions API” token <span class="tag t-token">only you can</span></h3>
   <p class="why">We've built the piece that reports leads &amp; sales back to Meta, so your ads learn
   from real outcomes (Meta itself estimates ~15% lower cost per result). It's live but asleep — it needs
-  one token to wake up.</p>
-  <p class="how"><b>Do:</b> In Meta Business Settings, create a <b>System User token</b> with the
-  <code>whatsapp_business_manage_events</code> permission, and send it to us. We plug it in — nothing
-  changes on your screen.</p>
+  one token to wake up. <b>We tried to create it ourselves and couldn't:</b> our access to the
+  PaintAccess Business (portfolio <code>1953771224878899</code>) can use the pixel and ads, but isn't a
+  full <em>admin</em> of the business, and only an admin can create this token.</p>
+  <p class="how"><b>Do:</b> As the business admin, go to Business Settings → System Users → create a
+  System User token with the <code>whatsapp_business_manage_events</code> permission, and send it to us.
+  We plug it in — nothing changes on your screen. (Or add us as a business admin and we'll do it.)</p>
 </div>
 
+<h2>💸 The Omnisend problem — needs a real decision</h2>
+
 <div class="item">
-  <h3>5. Which Omnisend plan are you on, and roughly how many contacts? <span class="tag t-token">1 answer</span></h3>
-  <p class="why">This decides one thing: whether bulk SMS runs through Omnisend or through us. On the
-  Standard plan Omnisend has no SMS at all, so the choice makes itself.</p>
-  <p class="how"><b>Do:</b> Just tell us the plan name and rough contact count.</p>
+  <h3>5. Omnisend can't actually email your list right now <span class="tag t-decide">decide</span></h3>
+  <p class="why">We checked it directly. Omnisend is on the <b>Free plan</b>, which sends only
+  <b>500 emails a month</b> — but you have <b>~14,000 email subscribers</b> (38.6K contacts total,
+  <b>30,660 billable</b>, and 19% of the list needs cleaning). So the email tool is installed and
+  syncing, but effectively <em>can't run a real campaign</em>. And upgrading to send to that list would
+  cost roughly <b>$400/month</b> — which is exactly the per-contact pricing you didn't want in the
+  first place.</p>
+  <p class="how"><b>Decide (with us):</b> three honest options —
+  (a) clean the list hard first (that 19% + inactive subscribers) to shrink the billable count before
+  upgrading; (b) accept the ~$400/mo and upgrade Omnisend; or (c) move email to a
+  send-volume-billed tool where a big list is cheap. Also note: on Free, Omnisend has <b>no SMS at
+  all</b> — so bulk SMS runs through our system regardless (that part's decided).</p>
 </div>
 
 <h2>🔎 Review &amp; decide — a few minutes each</h2>
@@ -107,10 +119,13 @@ Nothing flows until an ad runs.
 </div>
 
 <div class="item">
-  <h3>8. Is Shopify Inbox chat switched on? <span class="tag t-decide">confirm</span></h3>
-  <p class="why">If the Shopify Inbox chat widget is live on the store, those conversations are invisible
-  to us and to the AI — a blind spot. Our own widget already covers storefront chat.</p>
-  <p class="how"><b>Do:</b> Tell us if it's on. If it is and isn't needed, best to turn it off.</p>
+  <h3>8. Shopify Inbox chat is ON — 40 conversations we can't see <span class="tag t-decide">decide</span></h3>
+  <p class="why">We checked: the Shopify Inbox chat widget is live on the store (there are now
+  <b>two</b> chat widgets — ours and Shopify's), and it holds <b>40 conversations</b> that never reach
+  our system or the AI. That's a real blind spot, and Shopify Inbox has no way for us to plug into it.</p>
+  <p class="how"><b>Decide:</b> if nobody's actively working those 40, turn Shopify Inbox chat off so
+  the storefront has one chat (ours) and nothing falls through the cracks. If someone <em>is</em>
+  answering them, we should talk about how not to run two inboxes.</p>
 </div>
 
 <div class="item">
