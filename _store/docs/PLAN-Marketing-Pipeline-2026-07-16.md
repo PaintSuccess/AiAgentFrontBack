@@ -307,7 +307,20 @@ banner + a documented basis is a prerequisite for the behavioural layer, not a l
 - **Need:** AI-callable `create_draft_order` tool; checkout link over WhatsApp; optionally WhatsApp
   Catalogue product cards; interactive reply buttons / list messages for branching.
 
-### Stage 6 — MEASURE ❌
+### Stage 6 — MEASURE 🟡 **(CAPI lead reporting built + wired 2026-07-16 — waiting on token)**
+
+> **Built 2026-07-16 (feature C):** `lib/comms/meta-capi.js` fires a **LeadSubmitted** to Meta's
+> Conversions API on every ad-sourced conversation (`action_source: business_messaging`,
+> `messaging_channel: whatsapp`, `ctwa_clid` from the captured referral), wired into
+> `api/whatsapp/inbound.js`. **`reportPurchase` is built but not wired** (needs an order→contact link,
+> which follows the scenario). **The one config blocker:** `META_CAPI_ACCESS_TOKEN` — a Meta System
+> User token with `whatsapp_business_manage_events`. Until set, the module NO-OPS (sends nothing), so
+> it's safe in prod and starts working the moment the token lands. Dataset defaults to the live pixel
+> `334352823575129`. **Getting that token is a Daniel/Meta setup step.**
+
+The rest of Stage 6 (below) still applies.
+
+### Stage 6 (original) — MEASURE ❌
 - **Have:** message lifecycle events (received/sent/delivered/read/failed) + the new `ad_referral`
   event. Volume, delivery and response-time reporting are **already possible today**.
 - **Need:** Meta **CAPI** events (`Lead`, `InitiateCheckout`, `Purchase` with `action_source:
