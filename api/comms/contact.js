@@ -87,7 +87,13 @@ module.exports = async function handler(req, res) {
       linkedToShopify: !!(shopify && shopify.customer_id),
     };
 
-    return res.status(200).json({ contact, stats, shopify, consent });
+    // Storefront browsing stitched to this contact (best-effort — never blocks the panel).
+    const browsing = await queries.getContactBrowsing(contact.id).catch((err) => {
+      console.error("[comms/contact] browsing:", err.message);
+      return { events: [], summary: { total: 0, products: 0, lastActive: null } };
+    });
+
+    return res.status(200).json({ contact, stats, shopify, consent, browsing });
   } catch (err) {
     console.error("[comms/contact]", err.message);
     return res.status(500).json({ error: "Failed to load contact" });

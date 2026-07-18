@@ -11,6 +11,39 @@ const CHANNELS = {
   email: { label: "Email", color: "#ec4899" },
 };
 const SENDABLE = [{ value: "sms", label: "SMS" }, { value: "whatsapp", label: "WhatsApp" }];
+
+// Storefront browsing events (from our own Shopify web pixel), for the contact panel.
+const BROWSE_ICON = {
+  product_viewed: "🔍",
+  product_added_to_cart: "🛒",
+  product_removed_from_cart: "✕",
+  cart_viewed: "🛒",
+  collection_viewed: "🗂",
+  search_submitted: "⌕",
+  page_viewed: "📄",
+};
+const BROWSE_VERB = {
+  product_viewed: "Viewed",
+  product_added_to_cart: "Added to cart",
+  product_removed_from_cart: "Removed from cart",
+  cart_viewed: "Viewed cart",
+  collection_viewed: "Browsed",
+  search_submitted: "Searched",
+  page_viewed: "Visited",
+};
+// A readable label: prefer the product/collection title; otherwise a short path from the URL.
+function browseLabel(e) {
+  const verb = BROWSE_VERB[e.name] || "Visited";
+  if (e.name === "search_submitted") return e.query ? `Searched “${e.query}”` : "Searched the store";
+  if (e.productTitle) return `${verb} ${e.productTitle}`;
+  if (e.name === "cart_viewed") return "Viewed cart";
+  let tail = "";
+  try {
+    const u = new URL(e.url);
+    tail = decodeURIComponent(u.pathname.replace(/\/$/, "").split("/").pop() || "").replace(/-/g, " ");
+  } catch { /* ignore */ }
+  return tail ? `${verb} ${tail}` : verb;
+}
 const FOLDERS = [
   { value: "all", label: "All conversations" },
   { value: "unread", label: "Unread" },
@@ -664,11 +697,40 @@ export default function InboxPage({ target } = {}) {
               }) : <div className="pa-muted">{contact?.shopify ? "No recent orders." : "Not linked to a Shopify customer."}</div>}
             </div>
 
+            {contact?.browsing?.events?.length > 0 && (
+              <div className="pa-section">
+                <div className="pa-section-head">
+                  <div className="pa-section-title" style={{ margin: 0 }}>Browsing activity</div>
+                  <span className="pa-muted" style={{ fontSize: 11 }}>
+                    {contact.browsing.summary.total} view{contact.browsing.summary.total === 1 ? "" : "s"}
+                    {contact.browsing.summary.products > 0 ? ` · ${contact.browsing.summary.products} product${contact.browsing.summary.products === 1 ? "" : "s"}` : ""}
+                  </span>
+                </div>
+                {contact.browsing.events.slice(0, 8).map((e, i) => (
+                  <a
+                    key={i}
+                    className="pa-browse-row"
+                    href={e.url || undefined}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={e.url || ""}
+                  >
+                    <span className="pa-browse-ic">{BROWSE_ICON[e.name] || "•"}</span>
+                    <span className="pa-browse-label">{browseLabel(e)}</span>
+                    <span className="pa-browse-time">{e.at ? timeAgo(e.at) : ""}</span>
+                  </a>
+                ))}
+              </div>
+            )}
+
             <div className="pa-section" style={{ borderBottom: "none" }}>
               <div className="pa-section-title">Conversation history</div>
               <div className="pa-hist-row"><span>First contact</span><span>{dateShort(contact?.stats?.first_contact) || "—"}</span></div>
               <div className="pa-hist-row"><span>Messages</span><span>{contact?.stats?.messages_count ?? "—"}</span></div>
               <div className="pa-hist-row"><span>Last seen</span><span>{contact?.stats?.last_seen ? timeAgo(contact.stats.last_seen) + " ago" : "—"}</span></div>
+              {contact?.browsing?.summary?.lastActive && (
+                <div className="pa-hist-row"><span>Last browsed</span><span>{timeAgo(contact.browsing.summary.lastActive)} ago</span></div>
+              )}
             </div>
           </div>
         )}

@@ -232,6 +232,14 @@
 .pa-hist-row span:first-child { color: var(--pa-ink-2); }
 .pa-hist-row span:last-child { color: var(--pa-ink); font-weight: 600; }
 
+/* Browsing activity (from our storefront web pixel) */
+.pa-browse-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; text-decoration: none; color: var(--pa-ink); font-size: 12.5px; border-bottom: 1px solid var(--pa-border-soft); }
+.pa-browse-row:last-child { border-bottom: none; }
+.pa-browse-row:hover .pa-browse-label { color: var(--pa-accent); }
+.pa-browse-ic { flex: 0 0 auto; width: 16px; text-align: center; font-size: 12px; }
+.pa-browse-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pa-browse-time { flex: 0 0 auto; color: var(--pa-ink-3); font-size: 11px; }
+
 /* Empty states */
 .pa-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--pa-ink-3); text-align: center; padding: 40px; }
 .pa-empty .pa-empty-title { font-weight: 600; color: var(--pa-ink-2); }
