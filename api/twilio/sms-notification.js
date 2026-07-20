@@ -17,6 +17,13 @@ const TWILIO_SMS_FROM = normalizePhoneEnv(
 const ALLOWED_LINK_HOSTS = new Set([
   "paintaccess.com.au",
   "www.paintaccess.com.au",
+  // Human-handoff deep links. The agent texts a wa.me link to a caller when it
+  // escalates to a person on a phone call (no screen to show the link on). Without
+  // these hosts the send was rejected as "unsupported_link" (HTTP 400) and the caller
+  // had no way to reach a human — the number they'd call just loops back to the AI.
+  // Both point only at the support WhatsApp number; they are not open redirectors.
+  "wa.me",
+  "api.whatsapp.com",
 ]);
 
 function normalizePhoneEnv(value) {
