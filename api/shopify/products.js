@@ -652,8 +652,14 @@ async function handler(req, res) {
       found: true,
       query: query || null,
       collection: collection || null,
+      // Channel-specific so the model is never told to think about a "screen" on a
+      // phone call. Previously this only named "website widget or browser voice mode"
+      // and "SMS or WhatsApp" — a real PHONE call matched neither, and the phrase
+      // "browser voice mode ... on the customer's screen" led the agent to say
+      // "I've put the details on your screen" on a voice call with no screen (audit
+      // conv_5201, 2026-07-18). Each channel now has an explicit instruction.
       next_action_required:
-        "If this conversation is in the website widget or browser voice mode, your immediate next tool call must be display_products_in_chat using display_products_in_chat_payload. Do this before speaking product details or saying anything is on the customer's screen. If the channel is SMS or WhatsApp, do not call display_products_in_chat; include concise product links in the text reply instead.",
+        "Pick your next step by channel. WEBSITE WIDGET (channel is website_widget, or display_products_available is 'true'): your immediate next tool call MUST be display_products_in_chat using display_products_in_chat_payload — do this before you speak any product details or say anything is on their screen. PHONE CALL (channel is phone): there is NO screen — never say anything is 'on your screen' or 'on the screen', and do NOT call display_products_in_chat; instead say the top two or three product names with their prices out loud, then offer to text the links. SMS or WhatsApp: do NOT call display_products_in_chat; include concise product links in the text reply instead.",
       display_products_in_chat_payload: displayPayload(shaped, query || collection),
       summary: {
         total: shaped.length,
