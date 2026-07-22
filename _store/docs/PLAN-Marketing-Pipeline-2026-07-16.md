@@ -51,6 +51,52 @@ on. Core setup off.
 
 ---
 
+## 0b. ✅ EMAIL DIRECTION DECIDED (22 Jul) — Shopify Messaging, no paid services
+
+**Client decision:** no Brevo, no Omnisend, no paid marketing SaaS. Build what the plugins do,
+slowly, on our side. Start with **email marketing on Shopify's built-in engine (Shopify Messaging)**,
+integrated into our app + AI pipelines.
+
+**Verified facts this stands on (2026-07-22):**
+- **No send API, by design.** Shopify staff: apps that want to send email "need to set up your own
+  email service". Campaigns are sent by a human in admin. Not a workaround target.
+- **Segments ARE fully API-drivable** — `segmentCreate` + ShopifyQL; we already hold
+  `read/write_customers`. Shopify Messaging campaigns target exactly these segments.
+- **Usage-billed:** ~10K free emails/mo then ~$1/1,000 → full 14K-list campaign ≈ $4.
+- **Native automations** (abandoned cart, welcome, win-back) are set up once in admin and then send
+  themselves — no send-API needed.
+- **The store has Shopify Email send history** (segments reference `shopify_email.bounced/clicked`),
+  so the sender identity isn't cold.
+
+**Decisions (user, 2026-07-22):** human-in-the-loop sending ✅ (AI = segments + copy + attribution;
+human clicks Send — also a safety gate) · enable all 3 native automations ✅ · **use the EXISTING
+cleaned lists** (do not re-clean) ✅ · uninstall Omnisend BEFORE automations go live ✅.
+
+**The cleaned lists — FOUND (Shopify segments, created 2026-07-07):**
+| Segment | Definition | Size |
+| --- | --- | --- |
+| **Super Safe** | subscribed AND (added <6m OR has orders OR clicked <6m) AND no bounce 12m AND no spam-mark 12m | async count (see admin) |
+| **Bounce/Spam Clean** | subscribed AND no bounce 12m AND no spam-mark 12m | async count |
+| Email subscribers | subscribed | **14,083** |
+
+**Build phases (email lane):**
+- **E0 — Omnisend retirement:** verify nothing active in Omnisend (Free plan can barely send), then
+  uninstall. Must precede automations (double-send risk).
+- **E1 — Native automations on:** abandoned cart + welcome + win-back in Shopify admin; AI drafts the
+  copy, human approves once. Fastest real value.
+- **E2 — Segments layer in our app:** MCP tool + Marketing-page section to list/create/preview
+  Shopify segments via ShopifyQL (verified working today). The AI's audience-building hands.
+- **E3 — Campaign assistant:** AI proposes campaign (target segment + subject + body + UTM-tagged
+  links per our convention), deep-links into Shopify Messaging campaign creation; human sends.
+- **E4 — Attribution loop:** campaign UTMs → our web pixel (`web_events` stores full URLs) → orders →
+  Marketing page shows campaign → visit → purchase. No new capture needed; it's a query + UI.
+
+**Supersedes:** fork G (postman) and the Omnisend-as-engine position in §1 — Omnisend is OUT
+(uninstall in E0). §1's "Omnisend is the marketing engine" row is void; the FREE-plan finding made it
+unusable anyway. WhatsApp/SMS/voice lanes unchanged (Twilio + spine).
+
+---
+
 ## 1a. LIVE ACCOUNT RECON (16 Jul) — what's actually already wired
 
 Inspected the live storefront's Shopify web-pixel config + Meta Events Manager (read-only, nothing
