@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="color-scheme" content="light">
+<title>Paint Access — Email marketing costs with Omnisend</title>
+<style>
+  html { color-scheme: light; background: #fff; }
+  body { font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; max-width: 820px; margin: 40px auto; padding: 0 24px; color: #222; background: #fff; }
+  h1 { font-size: 21px; border-bottom: 2px solid #333; padding-bottom: 8px; color: #1a1a1a; }
+  h2 { font-size: 15.5px; margin-top: 28px; border-left: 4px solid #25D366; padding-left: 10px; }
+  .meta { color: #666; font-size: 12px; margin-bottom: 20px; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  th { background: #f0f0f0; text-align: left; padding: 7px 10px; border: 1px solid #ccc; font-size: 13px; }
+  td { padding: 7px 10px; border: 1px solid #ccc; font-size: 13px; vertical-align: top; }
+  .big { font-size: 15px; font-weight: bold; }
+  .now { background: #ecfdf5; }
+  .warn { background: #fff8c5; border-left: 4px solid #d4a017; padding: 10px 14px; margin: 12px 0; font-size: 13px; }
+  .note { background: #eef6ff; border-left: 4px solid #2563eb; padding: 10px 14px; margin: 12px 0; font-size: 13px; }
+  ul { margin: 6px 0 6px 20px; }
+  li { margin-bottom: 4px; }
+  footer { margin-top: 34px; padding-top: 12px; border-top: 1px solid #ddd; font-size: 11px; color: #888; }
+</style>
+</head>
+<body>
+
+<h1>Email marketing with Omnisend — what each plan would cost us</h1>
+<p class="meta">Paint Access — 22 July 2026. All prices read directly from Omnisend's own upgrade page
+for <em>our</em> account (not brochure prices), quoted at our real contact count.</p>
+
+<h2>Our audience today</h2>
+<ul>
+  <li><b>38,600</b> contacts in Omnisend, of which <b>30,668 are billable</b> — paid plans are priced on this number</li>
+  <li>Only <b>~14,000</b> are actual email subscribers — the rest have no marketing consent and
+      <em>can't legally be emailed anyway</em>, but still count toward the bill</li>
+  <li>Omnisend flags <b>5.26%</b> of the list as invalid/spam-traps; our cleaned lists
+      ("Super Safe", "Bounce/Spam Clean") already exist from the July clean-up</li>
+  <li>Realistic sending volume: 1–4 campaigns/month to the 14K list ≈ <b>14K–56K emails/month</b>, plus
+      small automation volume (abandoned cart, welcome)</li>
+</ul>
+
+<h2>All plans, at our contact count</h2>
+<table>
+  <tr><th>Plan</th><th>Monthly</th><th>Per year</th><th>What you get / the catch</th></tr>
+  <tr class="now"><td><b>Free</b> ← we are here</td><td class="big">$0</td><td>$0</td>
+      <td><b>500 emails/month</b> — 89 already used this cycle by background automations. Unusable for
+      real campaigns (one send to the 14K list = 28× the monthly cap). No SMS.</td></tr>
+  <tr><td><b>Standard</b></td><td class="big">$240.80</td><td>≈ $2,890</td>
+      <td>~368K emails/mo (plenty), web push. <b>No SMS</b> (Pro-only since May 2026). Price is per
+      contact <em>stored</em> — same bill whether we send 1 campaign or 20.</td></tr>
+  <tr><td><b>Pro</b></td><td class="big">$379.40</td><td>≈ $4,553</td>
+      <td>Unlimited emails, AI content features, advanced reporting. SMS as paid add-on:
+      $50/mo ≈ 1,471 messages ($0.034/SMS) — our own Twilio line sends SMS cheaper, so the SMS
+      add-on buys us nothing.</td></tr>
+  <tr><td><b>Custom</b></td><td colspan="2">"Let's talk"</td>
+      <td>Sales conversation; aimed at bigger volumes than ours. Not priced without contact.</td></tr>
+  <tr><td>(promo)</td><td colspan="3">30% off any paid plan for the first 3 months — code
+      <b>SUMMER-SALE-26</b>, ends 31 July. Standard → ≈$168.56/mo, Pro → ≈$265.58/mo for those 3 months.</td></tr>
+</table>
+
+<div class="warn">
+<strong>The cost lever:</strong> Omnisend does <em>not</em> charge for unsubscribed contacts — but it
+does charge for "non-subscribed" ones (never asked). Over half our billable count is exactly that.
+Pruning them (~14–16K billable left) should drop Standard to roughly <b>$150–190/mo ≈ $1,800–2,280/yr</b>
+(estimate, not a quote — the exact tier shows in-app after pruning).
+</div>
+
+<h2>The comparison to keep in mind</h2>
+<table>
+  <tr><th></th><th>Omnisend Standard / Pro</th><th>Shopify's built-in email</th></tr>
+  <tr><td>Billing model</td><td>per contact stored</td><td>per email sent (~10K free/mo, then ~$1/1,000)</td></tr>
+  <tr><td>1 campaign/month to 14K</td><td>$240.80 / $379.40</td><td>≈ $4</td></tr>
+  <tr><td>4 campaigns/month</td><td>$240.80 / $379.40</td><td>≈ $46</td></tr>
+  <tr><td>Yearly at realistic volume</td><td class="big">≈ $2,890 / $4,553</td><td class="big">≈ $50–550</td></tr>
+  <tr><td>Fully automatic sends (no human click)</td><td>Yes — API-triggered workflows</td>
+      <td>Campaigns need a person to press Send; built-in automations (abandoned cart, welcome,
+      win-back) run themselves</td></tr>
+</table>
+
+<div class="note">
+<strong>Bottom line for the decision:</strong> staying on Free means Omnisend effectively can't send
+campaigns at all (500/mo cap). Making it usable costs <b>$2,890–4,553/year</b> as-is, or roughly
+<b>$1,800–2,300/year</b> after pruning the un-emailable contacts — and most of that money pays for
+<em>storing</em> contacts, not sending. The same campaigns through Shopify's built-in email cost
+<b>tens of dollars a year</b>, with the trade-off that a person presses Send (which doubles as a
+safety check). What Omnisend's paid tiers genuinely add: hands-off automated sending and nicer
+built-in reporting.
+</div>
+
+<footer>Prepared 22 July 2026. Omnisend prices read in-app for brand 69394d3da929c7e42620aa30 at
+30,668 billable contacts; Shopify pricing from published Shopify Messaging rates. Estimates marked.</footer>
+
+</body>
+</html>

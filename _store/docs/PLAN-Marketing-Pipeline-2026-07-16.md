@@ -63,6 +63,11 @@ bills for **emails sent**. The exact in-app quote at **30,668 billable contacts*
 | **Pro** | **$379.40/mo** (~$4,553/yr) | Unlimited emails, AI features; SMS add-on $50/mo ≈ 1,471 msgs ($0.034 ea). |
 | (promo) | 30% off first 3 months, code SUMMER-SALE-26, until Jul 31 | |
 
+**Plan state CONFIRMED (user, 22 Jul): the account is on FREE** (user initially thought Standard;
+the in-app "FREE PLAN" reading was right). Client-facing cost one-pager covering **all plans**
+(Free / Standard / Pro / Custom) at the real contact count:
+`DANIEL-OMNISEND-COSTS-2026-07-22.html`.
+
 Key billing rule (verbatim): *"We do not charge for unsubscribed contacts."* → **the lever is billable
 count**: only ~14K of 30.7K are email subscribers; the rest are non-subscribed (no marketing consent →
 can't be emailed anyway, but still billed). Hard-pruning non-subscribed could drop the tier to
