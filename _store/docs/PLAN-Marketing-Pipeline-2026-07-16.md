@@ -55,14 +55,21 @@ on. Core setup off.
 
 Client framed marketing as four levels. **This validates the existing plan** — each level maps onto
 pieces already built or decided — and adds ONE genuinely new build item (the trigger/orchestration
-engine). Mapping:
+engine).
 
-| Client's level | What it is | Where we stand |
-| --- | --- | --- |
-| **L1 Mass broadcasts** (Email/SMS/WA to whole base) | promos, new products, announcements | **Email: ready path** — Shopify Messaging + cleaned segments, human Send (~$4/campaign, decided 22 Jul). **SMS/WA: gated by consent reality** — ~1,993 SMS subscribers (Omnisend count), ~nobody WhatsApp-opted-in yet; broadcast engine deliberately not built until H5 consent gate is enforced on it. |
-| **L2 Segmented automations** (behavior groups → auto messages per channel) | bought X, viewed Y, inactive Nd, brand interest | **Email:** Shopify native automations (E1, decided) + `segmentCreate` API (verified) for campaign targeting. **WA/SMS:** needs the NEW trigger engine (below) + enforced consent gate. Segment substrate exists on both sides (Shopify segments; spine contacts/tags). |
-| **L3 Behavioral funnels** (retarget/win-back off site actions) | visited, viewed product, left, returned → message chains | **The tracking substrate is LIVE** — our web pixel (`web_events`) + link-token identity stitching capture exactly the listed events ("зашёл, посмотрел, ушёл, вернулся"). Client's "cookies in future" is already superseded by first-party capture. **Missing: the trigger engine** that turns event patterns into message chains. |
-| **L4 Ads → AI → Sale** (click ad → WhatsApp → AI sells) | fully automated AI sales funnel | **This IS the CTWA funnel, ~60% built:** ctwa_clid capture live, pixel live, stitching live, CAPI lead reporting built (token-gated), media plumbing done, ads built-but-off. Still blocked on: scenario content, clips, ads-on, CAPI token. Client mentions **Google/TikTok ads too** — extension: non-Meta ads → wa.me links carrying our own click param (UTM/token), attributed by the same spine (no ctwa_clid outside Meta). |
+**✅ BUILD ORDER DECIDED (user, 22 Jul): L4 → L3 → L2 → L1** — reverse of the client's numbering.
+Rationale (accepted): mass WA/SMS is legally bottlenecked by opt-in, and L4 is itself the opt-in
+growth engine — each funnel conversation grows the audience that makes L2/L1 lawful. Email is the
+exception that can run early at any level (consented list exists + Shopify handles it).
+
+The roadmap, in build order:
+
+| # | Level | What it is | Where we stand |
+| --- | --- | --- | --- |
+| **1st — L4** | **Ads → AI → Sale** (click ad → WhatsApp → AI sells) | fully automated AI sales funnel | **IN FLIGHT, ~60% built:** ctwa_clid capture live, pixel live, stitching live, CAPI lead reporting built (token-gated), media plumbing done, ads built-but-off. Blocked on: scenario content, clips, ads-on, CAPI token. Extension: Google/TikTok ads → wa.me links with our own click param (no ctwa_clid outside Meta), same spine attribution. |
+| **2nd — L3** | **Behavioral funnels** (retarget/win-back off site actions) | visited, viewed product, left, returned → message chains | **Tracking substrate LIVE** — web pixel (`web_events`) + link-token stitching capture exactly the listed events; "cookies in future" superseded by first-party capture. **Missing: the trigger engine** (the new build item) that turns event patterns into message chains. |
+| **3rd — L2** | **Segmented automations** (behavior groups → auto messages per channel) | bought X, viewed Y, inactive Nd, brand interest | **Email: can run EARLY** (exception to the order) — Shopify native automations (E1) + `segmentCreate` API (verified). **WA/SMS:** same trigger engine + enforced H5 consent gate, fed by L4-grown opt-ins. |
+| **4th — L1** | **Mass broadcasts** (Email/SMS/WA to whole base) | promos, new products, announcements | **Email: ready now** — Shopify Messaging + cleaned segments, human Send (~$4/campaign). **WA/SMS: LAST deliberately** — needs the consent base L4/L3/L2 build up (~1,993 SMS subs today, ~nobody WA-opted-in) + broadcast engine with enforced consent gate. |
 
 **The unifying idea** ("channels of one system; AI picks what/when/which channel; double up") = the
 CDP direction already recorded in §1b — same vision, now with a maturity ladder.
@@ -80,8 +87,8 @@ WA/SMS; all engine/cost decisions of 22 Jul stand.
 
 **Consent reality check for L1/L2 ambitions:** mass WhatsApp/SMS is legally bottlenecked by opt-in
 (Spam Act + Meta policy), and today's opt-in numbers are tiny. **L4 is also the opt-in growth engine**
-— every funnel conversation is a consent opportunity — so the build order (L4 first, then L3→L2→L1
-on non-email channels) is not just technically convenient, it's what makes the upper levels legal.
+— every funnel conversation is a consent opportunity. (This rationale is what the decided
+L4→L3→L2→L1 order above rests on.)
 
 ## 0c. OMNISEND COST — EXACT QUOTE (22 Jul, from their own upgrade page for THIS account)
 
