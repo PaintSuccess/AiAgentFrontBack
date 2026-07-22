@@ -109,19 +109,33 @@ via the Management API, it's tier-independent, runs at any interval, and Postgre
 secret-guarded `/api/cron/funnels` endpoint over HTTP. One less external dependency, fully in our
 control. Step delays are approximate ("~2h"), which is correct for marketing timing.
 
-### D2 — Email in the engine? *(the real fork — changes scope)*
-**Our engine physically cannot send marketing email** — Shopify has no send API (verified 22 Jul), and
-we chose no paid SaaS. So:
-- **Option A (recommended): WA/SMS engine + Shopify native email automations in parallel.** The engine
-  orchestrates WhatsApp + SMS; email behavioral flows (abandoned cart, browse abandonment, win-back)
-  run as **Shopify's own native automations** (the E1 work). Two rails, coordinated by shared segments,
-  not one engine. No new vendor, ships now.
-- **Option B: add Amazon SES** (usage-billed ~$0.10/1,000 — arguably not "paid SaaS", it's
-  infrastructure) so email becomes a channel *inside* our engine, giving true single-engine
-  cross-channel orchestration and the "double up" the client describes. More build; unifies later.
-- **Recommendation: A now, keep B as the documented upgrade.** It delivers L3's WA/SMS value
-  immediately while Shopify covers email, and B can slot in without redesign (email just becomes
-  another `channels: [...]` option).
+### D2 — Channel delivery is PLUGGABLE (user direction, 22 Jul) — do not bake in who sends what
+The engine **orchestrates** (who enters which chain, when, which channel, consent/timing) — that logic
+is always ours. But **delivery of each channel is a swappable provider**, because who actually sends is
+not settled and may change: email might stay on **Omnisend / another plugin** or move to Shopify-native
+or our own sender; even WhatsApp/SMS *could* later route through a plugin. The architecture must make
+that a config change, not a rewrite.
+
+**Per-channel provider config**, each with a `sequenced` flag:
+
+| Provider | Meaning | Sequenced by our engine? |
+| --- | --- | --- |
+| `internal` | our own `send.js` (WA/SMS today) | ✅ yes — a real step in the chain, we control timing |
+| `external_api` | a plugin we can trigger per-contact via its API (e.g. Omnisend, IF/when its API + plan allow a triggered send) | ✅ yes — engine calls the plugin instead of send.js |
+| `native_parallel` | a tool that runs its OWN flows (Shopify native email automations, an Omnisend workflow) | ❌ no — runs in parallel on its own rails; engine **excludes it from its steps to avoid double-messaging**, just coexists |
+| `off` | channel not used | — |
+
+So the engine only *sequences* a channel whose provider it can trigger; a `native_parallel` channel is
+acknowledged and stepped around. **The default config to start:** WhatsApp/SMS = `internal`; email =
+`native_parallel` (Shopify native automations for now) — but flipping email to `external_api` (Omnisend,
+if usable) or to `internal` (Amazon SES, ~$0.10/1,000 usage-billed) is a one-line provider change, no
+engine redesign. This directly satisfies "remember email might stay on Omnisend, and WA/SMS might move
+too."
+
+**Consequence for chains:** a channel can only be a *sequenced step* if its provider is `internal` or
+`external_api`. A `native_parallel` channel (today: email) runs alongside, coordinated by shared
+segments, not woven into the step timing. True email-in-the-chain arrives the day email's provider
+becomes triggerable (SES or a plugin API) — the engine is already ready for it.
 
 ### D3 — Funnel definitions: code vs DB-builder
 **Code first** (above). A DB-backed visual builder is a real product but a later phase; starting there
@@ -155,16 +169,21 @@ so the guardrails are the feature, not an afterthought:
 
 ---
 
-## 5. The email split, stated plainly
+## 5. How the channels sit today (a snapshot of the D2 provider config)
 
-Because of D2, L3 runs on **two rails**:
-- **WhatsApp + SMS** → our engine (this plan).
-- **Email** → Shopify native automations (abandoned cart / welcome / win-back), configured once in
-  admin, AI-drafted copy. We can't API-trigger them and don't need to — Shopify fires them itself.
+Per the pluggable-provider design, the *starting* config — all changeable later without touching the
+engine:
 
-They coordinate through the shared audience (Shopify segments + our contacts), not through one
-orchestrator. True single-engine email (the client's "one system picks the channel including email")
-requires Option B (SES) and is the documented next step, not the first build.
+| Channel | Provider today | Sequenced in chains? | Could become |
+| --- | --- | --- | --- |
+| WhatsApp | `internal` (send.js + Twilio) | ✅ | a plugin (`external_api`) later, if ever wanted |
+| SMS | `internal` (send.js + Twilio) | ✅ | same |
+| Email | `native_parallel` (Shopify native automations — or Omnisend if kept) | ❌ runs in parallel | `external_api` (Omnisend API) or `internal` (SES) → then it joins the chain |
+
+The engine sequences WA + SMS; email runs on its own rails for now and is coordinated by shared
+audience, not woven into step timing. The moment email's sender becomes something we can trigger
+per-contact, it flips to a sequenced channel with a config line. **Nothing about the engine changes** —
+this is the whole point of the abstraction.
 
 ---
 
@@ -185,7 +204,7 @@ matching or Shopify Protected-Customer-Data approval — explicitly out of scope
 
 | Phase | Scope | Exit criteria |
 | --- | --- | --- |
-| **L3.0 — skeleton** | migration 0009; engine + sweep endpoint; ONE funnel (`browse_abandon`, single WhatsApp step); kill switch ON, `FUNNELS_TEST_ONLY`; scheduler wired | fires one message to an internal_test contact who viewed a product, end-to-end, logged |
+| **L3.0 — skeleton** | migration 0009; engine + sweep endpoint; **all 3 funnel definitions** in config (`browse_abandon`, `cart_abandon`, `win_back`), each starting single-step WhatsApp; pluggable-provider layer; kill switch ON, `FUNNELS_TEST_ONLY`; scheduler wired | each of the 3 fires end-to-end to an internal_test contact who triggers it, logged |
 | **L3.1 — guardrails** | consent gate + frequency cap + quiet hours + WA 24h-window/template logic | a real (non-test) contact gets a compliant send; a non-consented one gets nothing; verified |
 | **L3.2 — chains + conversion** | multi-step chains, exit conditions, `funnel_converted` → fire CAPI Purchase | a 2-step chain runs, exits on purchase, and reports the sale to Meta |
 | **L3.3 — channel ladder** | WA↔SMS fallback per step by consent/engagement | a step with no WA consent falls back to SMS correctly |
@@ -220,13 +239,15 @@ to do exactly this. We build it once and pay only per message.
 
 ---
 
-## 10. Open decisions for the user
+## 10. Decisions — RESOLVED (user, 22 Jul)
 
-1. **Email fork (D2):** WA/SMS engine + Shopify native email automations in parallel *(recommended)*,
-   or add SES now to unify email into the engine?
-2. **First funnel (L3.0):** browse-abandonment (viewed a product, no purchase) *(recommended — highest
-   frequency signal)*, or cart-abandonment, or win-back (inactive N days)?
+1. **Channel delivery (D2):** ✅ **pluggable-provider design** (§3 D2). No channel's sender is baked in
+   — email may stay on Omnisend/a plugin, WA/SMS may move later; all are a config change. Start:
+   WA/SMS `internal`, email `native_parallel`.
+2. **First funnel:** ✅ **all 3** — browse-abandonment, cart-abandonment, win-back. Cheap because
+   funnels are code config; the engine is the work, the 3 defs ride on it. L3.0 ships all three (single
+   WhatsApp step each), then L3.1–L3.4 harden them together.
+3. **Scheduler (D1):** ✅ Supabase pg_cron.
 
-Scheduler (D1) is resolved (Supabase pg_cron). Everything else is decided or has a clear recommendation
-above. Nothing in L3 is blocked on the client except the same L4 dependencies feeding it identified
-contacts.
+Everything is decided. Nothing in L3 is blocked on the client except the same L4 dependencies feeding
+it identified contacts. **Ready to build on the go.**
