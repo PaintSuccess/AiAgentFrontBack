@@ -1,9 +1,12 @@
-/* App shell: compact icon rail + full-bleed content area. */
+/* App shell: compact icon rail + full-bleed content area.
+   On phones (≤760px) the rail becomes a bottom tab bar. */
 html, body, #root { height: 100%; margin: 0; }
+html { -webkit-text-size-adjust: 100%; }
 
 .pa-shell {
   display: flex;
   height: 100vh;
+  height: 100dvh; /* mobile browsers: exclude the collapsing URL bar */
   width: 100%;
   background: #f6f6f8;
   overflow: hidden;
@@ -35,6 +38,8 @@ html, body, #root { height: 100%; margin: 0; }
   color: #6b7280; cursor: pointer;
   font-size: 10.5px; font-weight: 600;
   transition: background 0.12s, color 0.12s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 .pa-rail-btn:hover { background: #f2f2f6; color: #1f2126; }
 .pa-rail-btn.is-active { background: #eef2ff; color: #4f46e5; }
@@ -42,4 +47,27 @@ html, body, #root { height: 100%; margin: 0; }
 .pa-rail-ic svg { width: 24px; height: 24px; display: block; }
 
 /* Content area fills the rest */
-.pa-content { flex: 1; min-width: 0; height: 100vh; overflow: auto; }
+.pa-content { flex: 1; min-width: 0; min-height: 0; overflow: auto; }
+
+/* ── Phones: rail → bottom tab bar ────────────────────────────────── */
+@media (max-width: 760px) {
+  .pa-shell { flex-direction: column; }
+  .pa-rail {
+    order: 2;
+    width: 100%;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: stretch;
+    padding: 4px 6px;
+    padding-bottom: max(4px, env(safe-area-inset-bottom));
+    border-right: none;
+    border-top: 1px solid #e4e4e7;
+    gap: 2px;
+  }
+  .pa-rail-logo { display: none; }
+  .pa-rail-btn { width: auto; flex: 1; min-height: 52px; padding: 5px 2px; gap: 3px; border-radius: 10px; justify-content: center; }
+  .pa-rail-btn:hover { background: transparent; }
+  .pa-rail-btn.is-active { background: transparent; color: #4f46e5; }
+  .pa-rail-ic, .pa-rail-ic svg { width: 22px; height: 22px; }
+  .pa-content { order: 1; }
+}

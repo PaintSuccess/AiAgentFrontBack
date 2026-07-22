@@ -118,7 +118,8 @@
 .pa-mkt .pa-empty-live i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 
 /* ── Ads table ────────────────────────────────────────────────────── */
-.pa-ads { width: 100%; border-collapse: collapse; }
+.pa-ads-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.pa-ads { width: 100%; min-width: 520px; border-collapse: collapse; }
 .pa-ads th {
   text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em;
   color: var(--pa-ink-3); font-weight: 600; padding: 10px 16px; border-bottom: 1px solid var(--pa-border);
@@ -159,7 +160,9 @@
 .pa-mkt-skel { padding: 40px; text-align: center; color: var(--pa-ink-3); }
 .pa-mkt-err { margin-top: 16px; }
 
-@media (max-width: 720px) {
+@media (max-width: 760px) {
+  .pa-mkt-inner { padding: 16px 14px 48px; }
   .pa-reach-row, .pa-map-row { grid-template-columns: 1fr; gap: 8px; }
   .pa-reach-nums { text-align: left; }
+  .pa-mkt-grid { grid-template-columns: 1fr; }
 }

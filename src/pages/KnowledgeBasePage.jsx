@@ -70,7 +70,7 @@ export default function KnowledgeBasePage() {
   const canSave = form && form.name.trim() && form.content.trim();
 
   return (
-    <div className="kb">
+    <div className={`kb${form ? " kb-has-doc" : ""}`}>
       <div className="kb-head">
         <h1>Knowledge Base</h1>
         <span className="sub">{docs.length} document{docs.length === 1 ? "" : "s"} teaching the AI about your products, policies, and FAQs</span>

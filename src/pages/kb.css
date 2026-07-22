@@ -70,3 +70,20 @@
 .kb-banner.ok { background: #e7f6ec; color: #1a7f43; }
 
 @media (max-width: 820px) { .kb-list { width: 240px; } }
+
+/* ≤760px: phones — one pane at a time: the doc list, or (with a doc open via
+   .kb-has-doc) the full-screen editor. The footer "Close" acts as back. */
+@media (max-width: 760px) {
+  .kb-head { flex-wrap: wrap; gap: 8px; padding: 12px 14px; }
+  .kb-head .sub { display: none; }
+  .kb-search { flex: 1; width: auto; min-width: 0; font-size: 16px; }
+  .kb-list { width: 100%; border-right: none; }
+  .kb-editor { display: none; }
+  .kb-has-doc .kb-list { display: none; }
+  .kb-has-doc .kb-editor { display: flex; }
+  .kb-editor-body { padding: 16px 14px; }
+  .kb-editor-foot { padding: 12px 14px; }
+  .kb-modes { flex-direction: column; }
+  .kb-input, .kb-content { font-size: 16px; }
+  .kb-content { min-height: 240px; }
+}

@@ -233,6 +233,7 @@ export default function MarketingPage() {
           </p>
           <div className="pa-mkt-card">
             {attribution?.ads?.length ? (
+              <div className="pa-ads-scroll">
               <table className="pa-ads">
                 <thead>
                   <tr>
@@ -259,6 +260,7 @@ export default function MarketingPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             ) : (
               <div className="pa-empty">
                 <div className="pa-empty-live">

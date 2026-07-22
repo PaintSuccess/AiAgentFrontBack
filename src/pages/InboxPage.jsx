@@ -118,9 +118,13 @@ export default function InboxPage({ target } = {}) {
   const [channel, setChannel] = useState("sms");
   const [sending, setSending] = useState(false);
   const [calling, setCalling] = useState(false);
-  const [openTx, setOpenTx] = useState(() => new Set());
+  // Contact panel visibility on narrow screens, where it renders as a slide-in
+  // drawer instead of a fixed third column. Ignored (always visible) on desktop.
+  const [contactOpen, setContactOpen] = useState(false);
+  // Transcripts render expanded by default; this tracks the ones the user collapsed.
+  const [closedTx, setClosedTx] = useState(() => new Set());
   const [error, setError] = useState(null);
-  const toggleTx = (id) => setOpenTx((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleTx = (id) => setClosedTx((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const [banner, setBanner] = useState(null);
   const [canned, setCanned] = useState([]);
   const [cannedOpen, setCannedOpen] = useState(false);
@@ -136,6 +140,10 @@ export default function InboxPage({ target } = {}) {
   const [newMsg, setNewMsg] = useState(null); // {to, channel, body, contact?, cold?}
   const scrollRef = useRef(null);
   const channelInitFor = useRef(null);
+  // Mirrors selectedId so in-flight thread/contact fetches can detect that the
+  // user navigated away (mobile Back or a new selection) and drop their result
+  // instead of writing stale state.
+  const selectedIdRef = useRef(null);
   // A channel explicitly requested by another page (e.g. the Orders page's WhatsApp
   // button). loadThread otherwise auto-picks the channel, which would overwrite it.
   const pendingChannel = useRef(null);
@@ -159,6 +167,7 @@ export default function InboxPage({ target } = {}) {
     if (!id) return;
     try {
       const data = await dashboardFetch(`/api/comms/thread?id=${encodeURIComponent(id)}`);
+      if (selectedIdRef.current !== id) return; // superseded — user navigated away
       setDetail(data);
       // Default the composer to the channel the customer actually uses (the last
       // SMS/WhatsApp message), not last_channel (which can be chat/voice).
@@ -183,6 +192,7 @@ export default function InboxPage({ target } = {}) {
     setContact(null); setEditingContact(false);
     try {
       const data = await dashboardFetch(`/api/comms/contact?id=${encodeURIComponent(id)}`);
+      if (selectedIdRef.current !== id) return; // superseded — user navigated away
       setContact(data);
       setNotesDraft(data.contact?.notes || "");
     } catch { /* best effort */ }
@@ -218,6 +228,7 @@ export default function InboxPage({ target } = {}) {
   useEffect(() => { dashboardFetch("/api/comms/canned").then((d) => setCanned(d.items || [])).catch(() => {}); }, []);
   useEffect(() => { dashboardFetch("/api/comms/wa-templates").then((d) => setTemplates(d.items || [])).catch(() => {}); }, []);
   useEffect(() => {
+    selectedIdRef.current = selectedId;
     if (!selectedId) return;
     loadThread(selectedId); loadContact(selectedId);
     const t = setInterval(() => loadThread(selectedId), THREAD_POLL_MS);
@@ -225,7 +236,10 @@ export default function InboxPage({ target } = {}) {
   }, [selectedId, loadThread, loadContact]);
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [detail?.messages?.length, selectedId]);
 
-  const handleSelect = (id) => { setSelectedId(id); setDetail(null); setThreads((p) => p.map((t) => (t.id === id ? { ...t, unread_count: 0 } : t))); };
+  const handleSelect = (id) => { setSelectedId(id); setDetail(null); setContactOpen(false); setThreads((p) => p.map((t) => (t.id === id ? { ...t, unread_count: 0 } : t))); };
+
+  // Mobile back: return to the conversation list (single-pane navigation).
+  const handleBack = () => { setSelectedId(null); setDetail(null); setContactOpen(false); };
 
   const patchDetailThread = (patch) => setDetail((p) => (p ? { ...p, thread: { ...p.thread, ...patch } } : p));
 
@@ -400,7 +414,7 @@ export default function InboxPage({ target } = {}) {
   const channelCounts = stats.channels || {};
 
   return (
-    <div className="pa-inbox">
+    <div className={`pa-inbox${selectedId ? " has-thread" : ""}${contactOpen ? " contact-open" : ""}`}>
       <div className="pa-topbar">
         <div className="pa-chan-tabs">
           <button className={`pa-chan-tab ${!channelFilter ? "is-active" : ""}`} onClick={() => setChannelFilter(null)}>All</button>
@@ -471,6 +485,7 @@ export default function InboxPage({ target } = {}) {
           ) : (
             <>
               <div className="pa-thread-header">
+                <button className="pa-back-btn" aria-label="Back to conversations" onClick={handleBack}>←</button>
                 <div className="pa-th-id">
                   <div className="pa-avatar" style={{ background: avatarColor(c?.phone || contactName(c)) }}>{initials(c?.name, c?.phone)}</div>
                   <div style={{ minWidth: 0 }}>
@@ -485,6 +500,7 @@ export default function InboxPage({ target } = {}) {
                   <button className={`pa-icon-btn ${thread.starred ? "is-on" : ""}`} title="Star" onClick={() => threadUpdate({ starred: !thread.starred })}>★</button>
                   <button className={`pa-icon-btn ${thread.pinned ? "is-on" : ""}`} title="Pin" onClick={() => threadUpdate({ pinned: !thread.pinned })}>📌</button>
                   <button className="pa-icon-btn" title="Assign to me / unassign" onClick={() => threadUpdate({ assign: thread.assigned_to ? "none" : "me" })}>{thread.assigned_to ? "👤" : "○"}</button>
+                  <button className="pa-icon-btn pa-info-toggle" title="Customer details" onClick={() => setContactOpen((v) => !v)}>ⓘ</button>
                   <span className={`pa-status-pill ${isHuman ? "pa-status-human" : "pa-status-ai"}`}>{isHuman ? "Human" : "AI"}</span>
                   {c?.phone && <button className="pa-btn" disabled={calling} onClick={handleCall}>{calling ? "Calling…" : "Call"}</button>}
                   {isHuman ? <button className="pa-btn" onClick={() => handleControl("ai")}>Hand to AI</button> : <button className="pa-btn pa-btn-danger" onClick={() => handleControl("human")}>Take over</button>}
@@ -506,7 +522,7 @@ export default function InboxPage({ target } = {}) {
                   if (m.channel === "voice") {
                     const meta = m.metadata || {};
                     const turns = meta.transcript || [];
-                    const open = openTx.has(m.id);
+                    const open = !closedTx.has(m.id);
                     return (
                       <React.Fragment key={m.id || i}>
                         {showDay && <div className="pa-day">{dayLabel(m.sent_at)}</div>}
@@ -516,7 +532,6 @@ export default function InboxPage({ target } = {}) {
                             <span className="pa-call-title">{m.direction === "outbound" ? "Outbound" : "Inbound"} voice call{meta.duration_seconds ? ` · ${formatDur(meta.duration_seconds)}` : ""}</span>
                             <span className="pa-call-time">{clockTime(m.sent_at)}</span>
                           </div>
-                          {m.body && <div className="pa-call-summary">{m.body}</div>}
                           {turns.length > 0 && (
                             <>
                               <button className="pa-call-toggle" onClick={() => toggleTx(m.id)}>{open ? "Hide" : "Show"} transcript ({turns.length})</button>
@@ -531,6 +546,12 @@ export default function InboxPage({ target } = {}) {
                                 </div>
                               )}
                             </>
+                          )}
+                          {m.body && (
+                            <div className={`pa-call-summary${turns.length > 0 ? " has-label" : ""}`}>
+                              {turns.length > 0 && <div className="pa-call-summary-label">Summary</div>}
+                              {m.body}
+                            </div>
                           )}
                         </div>
                       </React.Fragment>
@@ -608,9 +629,11 @@ export default function InboxPage({ target } = {}) {
           )}
         </div>
 
-        {/* Contact panel */}
+        {/* Contact panel — fixed third column on desktop, slide-in drawer below 1120px */}
+        {thread && contactOpen && <div className="pa-drawer-overlay" onClick={() => setContactOpen(false)} />}
         {thread && (
           <div className="pa-col-contact">
+            <button className="pa-drawer-close" aria-label="Close customer details" onClick={() => setContactOpen(false)}>×</button>
             <div className="pa-c-head">
               <div className="pa-c-avatar" style={{ background: avatarColor(c?.phone || contactName(c)) }}>{initials(c?.name, c?.phone)}</div>
               {editingContact ? (
