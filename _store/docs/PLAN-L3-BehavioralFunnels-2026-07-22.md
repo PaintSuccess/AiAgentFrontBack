@@ -204,7 +204,7 @@ matching or Shopify Protected-Customer-Data approval — explicitly out of scope
 
 | Phase | Scope | Exit criteria |
 | --- | --- | --- |
-| **L3.0 — skeleton** | migration 0009; engine + sweep endpoint; **all 3 funnel definitions** in config (`browse_abandon`, `cart_abandon`, `win_back`), each starting single-step WhatsApp; pluggable-provider layer; kill switch ON, `FUNNELS_TEST_ONLY`; scheduler wired | each of the 3 fires end-to-end to an internal_test contact who triggers it, logged |
+| **L3.0 — skeleton** ✅ **BUILT + DEPLOYED DARK 2026-07-22** | migration `0010_funnel_enrollments`; engine (`lib/comms/funnels/{engine,providers,definitions}.js`) + sweep endpoint (`api/cron/funnels.js`); all 3 funnel defs; pluggable providers; **ALL guards included** (kill switch, test-only, consent, freq cap, quiet hours, WA window). `test-funnels.js` 14/14 end-to-end. Scheduler = activation step (`_store/setup/funnels-scheduler.sql`, pg_cron, not yet run — dark). | ✅ proven end-to-end (stubbed delivery). Go-live = set CRON_SECRET + run the scheduler SQL + ENABLE_FUNNELS. |
 | **L3.1 — guardrails** | consent gate + frequency cap + quiet hours + WA 24h-window/template logic | a real (non-test) contact gets a compliant send; a non-consented one gets nothing; verified |
 | **L3.2 — chains + conversion** | multi-step chains, exit conditions, `funnel_converted` → fire CAPI Purchase | a 2-step chain runs, exits on purchase, and reports the sale to Meta |
 | **L3.3 — channel ladder** | WA↔SMS fallback per step by consent/engagement | a step with no WA consent falls back to SMS correctly |
