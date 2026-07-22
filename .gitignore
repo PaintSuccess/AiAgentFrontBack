@@ -38,3 +38,8 @@ _store/setup/*.log
 # original schema; regenerated on first --commit, not meant for the repo).
 _store/setup/lookup-order-identity-backup.json
 _store/setup/voice-stack-backups/
+
+# Any script-generated *-backup*.json under _store/setup (escalate-identity-backup.json,
+# kb-backup-<id>.json, …): local revert artifacts, regenerated on demand — never for the
+# repo, which is PUBLIC.
+_store/setup/*-backup*.json

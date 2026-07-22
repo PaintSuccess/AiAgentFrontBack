@@ -51,6 +51,40 @@ on. Core setup off.
 
 ---
 
+## 0c. OMNISEND COST — EXACT QUOTE (22 Jul, from their own upgrade page for THIS account)
+
+User challenged the earlier "~$400/mo" estimate vs the "$4/campaign" figure. Resolution: **both were
+right — they price different products.** Omnisend bills for **contacts stored**; Shopify Messaging
+bills for **emails sent**. The exact in-app quote at **30,668 billable contacts**:
+
+| Plan | Price | What it buys |
+| --- | --- | --- |
+| **Standard** | **$240.80/mo** (~$2,890/yr) | ~368K emails/mo, web push. No SMS. |
+| **Pro** | **$379.40/mo** (~$4,553/yr) | Unlimited emails, AI features; SMS add-on $50/mo ≈ 1,471 msgs ($0.034 ea). |
+| (promo) | 30% off first 3 months, code SUMMER-SALE-26, until Jul 31 | |
+
+Key billing rule (verbatim): *"We do not charge for unsubscribed contacts."* → **the lever is billable
+count**: only ~14K of 30.7K are email subscribers; the rest are non-subscribed (no marketing consent →
+can't be emailed anyway, but still billed). Hard-pruning non-subscribed could drop the tier to
+~$150–190/mo (est. from tier table — not an in-app quote). Also in-app: **5.26% of contacts are spam
+traps/invalid**.
+
+⚠ **E0 flag:** 89 emails sent this billing cycle on the FREE plan (26 in the last 6 days) — **something
+in Omnisend IS actively sending.** Audit before uninstall is mandatory, as planned.
+
+**vs the planned marketing volume on Shopify Messaging** (10K free/mo, then ~$1/1,000):
+| Sends/mo | Shopify Messaging | Omnisend Standard |
+| --- | --- | --- |
+| 1 campaign to 14K | ~**$4** | $240.80 |
+| 4 campaigns (56K sends) | ~**$46** | $240.80 |
+| + automations (~2-3K/mo) | ~$0–3 | included |
+
+**What Omnisend buys for the difference:** API-triggered automated sends (custom events → workflows =
+no human click), prebuilt flows, forms/popups, push, richer reporting. **What it doesn't:** SMS lane
+(ours regardless), WhatsApp (never had it), and it contradicts "no paid services".
+**Conclusion: the 22 Jul Shopify Messaging decision stands.** If full no-click automation is wanted
+later, the cheap path is a usage-billed sender (SES ~$0.10/1,000) behind our app — not $2.9K+/yr.
+
 ## 0b. ✅ EMAIL DIRECTION DECIDED (22 Jul) — Shopify Messaging, no paid services
 
 **Client decision:** no Brevo, no Omnisend, no paid marketing SaaS. Build what the plugins do,
