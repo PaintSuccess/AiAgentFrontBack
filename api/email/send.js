@@ -33,11 +33,14 @@ module.exports = async function handler(req, res) {
     }
 
     // Idempotency: an "abandoned" tool call still runs server-side and the agent often
-    // retries it — without this the same quote email + a second Shopify draft order would
+    // retries it — without this the same quote email + a second Shopify draft order could
     // be created. A retry with the same to/subject/message inside the window is reported
-    // as sent without re-creating anything. Claim BEFORE the draft (the first side effect);
-    // release only on a TOTAL failure below (a partial success keeps the claim, so a retry
-    // cannot create a duplicate draft). Fail-open (a DB hiccup never blocks a real email).
+    // as sent without re-creating anything. Claim BEFORE the draft (the first side
+    // effect); the claim is kept ONLY when the invoice (the actual customer-facing email)
+    // is CONFIRMED to have sent — every other outcome below releases it, because a
+    // duplicate internal draft note is low-harm but silently blocking a retry that could
+    // still deliver the customer's quote is not. Fail-open (a DB hiccup never blocks a
+    // real email).
     dedupParts = [to, subject, message];
     if ((await claimSend("email", dedupParts)) === "duplicate") {
       return res.status(200).json({ sent: true, deduped: true, message: `Email to ${to} already sent.` });
@@ -91,7 +94,15 @@ module.exports = async function handler(req, res) {
         });
       } catch (invoiceErr) {
         console.error("Failed to send invoice:", invoiceErr);
-        // Draft was created but email failed — still report partial success
+        // The draft note is an internal record only the team sees — a duplicate one is
+        // low-harm. The invoice is the actual customer-facing email, and it did NOT go
+        // out here, so keeping the claim would silently block a retry from ever
+        // delivering the customer's quote (Codex review finding, 2026-07-22: the first
+        // version always kept the claim in this branch). Release when shopifyFetch
+        // confirms Shopify itself rejected the send (err.statusCode set); on a raw
+        // network exception (no statusCode) we can't rule out the invoice having already
+        // gone out, so keep the claim rather than risk a duplicate customer email.
+        if (invoiceErr.statusCode) await releaseSend("email", dedupParts).catch(() => {});
         return res.status(200).json({
           sent: false,
           message: `Request logged (draft #${draftId}) but email delivery failed. The team will follow up manually.`,
@@ -105,9 +116,14 @@ module.exports = async function handler(req, res) {
       message: "The request has been logged. The Paint Access team will be in touch.",
     });
   } catch (err) {
-    // Total failure — no draft order was created, so release the claim to let a genuine
-    // retry try again rather than falsely reporting "already sent".
-    if (dedupParts) await releaseSend("email", dedupParts).catch(() => {});
+    // shopifyFetch sets err.statusCode only when Shopify actually returned an HTTP
+    // response (a confirmed rejection — no draft was created). A raw network exception
+    // (timeout, connection reset) has no statusCode: Shopify may have already created the
+    // draft before the connection dropped, so we do NOT release in that ambiguous case —
+    // a retry within the TTL stays blocked rather than risking an actual duplicate draft
+    // order (Codex review finding, 2026-07-22: the first version released on ANY error
+    // here, including this ambiguous case).
+    if (dedupParts && err.statusCode) await releaseSend("email", dedupParts).catch(() => {});
     console.error("Email send error:", err);
     return res.status(500).json({ error: "Failed to process email request." });
   }

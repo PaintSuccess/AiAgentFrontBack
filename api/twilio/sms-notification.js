@@ -162,7 +162,14 @@ module.exports = async function handler(req, res) {
     try {
       twilioMessage = await sendTwilioSms({ to, body });
     } catch (sendErr) {
-      await releaseSend("sms", dedupParts); // clean failure, nothing sent — let a retry try again
+      // sendTwilioSms sets err.statusCode only when Twilio actually returned an HTTP
+      // response (a confirmed rejection — nothing was queued). A raw fetch() network
+      // exception (timeout, connection reset) has no statusCode: Twilio may have already
+      // received and queued the message before the connection dropped, so we do NOT
+      // release the claim in that ambiguous case — a retry within the TTL stays blocked
+      // rather than risking an actual duplicate text (Codex review finding, 2026-07-22:
+      // the first version released on ANY error here, including this ambiguous case).
+      if (sendErr.statusCode) await releaseSend("sms", dedupParts);
       throw sendErr;
     }
 
