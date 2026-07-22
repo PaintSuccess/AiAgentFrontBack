@@ -1,0 +1,350 @@
+<title>Human Handoff — full flow</title>
+<style>
+  :root{
+    --bg:#eaeef2; --bg2:#e0e6ec; --panel:#ffffff;
+    --ink:#12203c; --muted:#5a6b85; --faint:#8a97ab;
+    --hair:#d6dde5; --wire:#93a2b6;
+    --navy:#14294f; --navy2:#1d3b6b; --blue:#2c6fd1; --blue2:#4a90e2;
+    --cyan:#1fb0d4; --cyan2:#63cbe4; --green:#1a9c50; --amber:#d9822b; --violet:#6f52e6;
+    --sky:#7fbef0;
+    --lane-cust:#1fb0d40f; --lane-sys:#14294f0d; --lane-staff:#2c6fd10f;
+    --sh:0 1px 2px rgba(14,26,52,.10), 0 10px 22px rgba(14,26,52,.10);
+    --sh-sm:0 1px 1px rgba(14,26,52,.08), 0 4px 10px rgba(14,26,52,.08);
+    --mono:ui-monospace,"SF Mono","Cascadia Code","Segoe UI Mono",Consolas,monospace;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0e131b; --bg2:#0a0e15; --panel:#161c26;
+      --ink:#e7ecf3; --muted:#9aa8bd; --faint:#6c7a90;
+      --hair:#28303d; --wire:#5a6b82;
+      --lane-cust:#1fb0d418; --lane-sys:#8fb4ff12; --lane-staff:#2c6fd118;
+      --sh:0 1px 2px rgba(0,0,0,.4), 0 12px 28px rgba(0,0,0,.45);
+      --sh-sm:0 1px 2px rgba(0,0,0,.35), 0 5px 12px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="light"]{--bg:#eaeef2;--bg2:#e0e6ec;--panel:#ffffff;--ink:#12203c;--muted:#5a6b85;--faint:#8a97ab;--hair:#d6dde5;--wire:#93a2b6;--lane-cust:#1fb0d40f;--lane-sys:#14294f0d;--lane-staff:#2c6fd10f;--sh:0 1px 2px rgba(14,26,52,.10),0 10px 22px rgba(14,26,52,.10);--sh-sm:0 1px 1px rgba(14,26,52,.08),0 4px 10px rgba(14,26,52,.08);}
+  :root[data-theme="dark"]{--bg:#0e131b;--bg2:#0a0e15;--panel:#161c26;--ink:#e7ecf3;--muted:#9aa8bd;--faint:#6c7a90;--hair:#28303d;--wire:#5a6b82;--lane-cust:#1fb0d418;--lane-sys:#8fb4ff12;--lane-staff:#2c6fd118;--sh:0 1px 2px rgba(0,0,0,.4),0 12px 28px rgba(0,0,0,.45);--sh-sm:0 1px 2px rgba(0,0,0,.35),0 5px 12px rgba(0,0,0,.4);}
+
+  *{box-sizing:border-box;}
+  body{margin:0;background:radial-gradient(120% 80% at 50% 0%,var(--bg),var(--bg2));color:var(--ink);font-family:var(--font);line-height:1.5;-webkit-font-smoothing:antialiased;}
+  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);}
+  .wrap{max-width:1320px;margin:0 auto;padding:clamp(18px,3.5vw,44px) clamp(12px,3vw,32px) 64px;}
+
+  .head{margin-bottom:30px;}
+  .eyebrow{font-size:12px;font-weight:650;letter-spacing:.15em;text-transform:uppercase;color:var(--blue);margin:0 0 10px;}
+  h1{font-size:clamp(26px,4.4vw,40px);line-height:1.05;letter-spacing:-.02em;margin:0 0 12px;text-wrap:balance;}
+  .lede{font-size:clamp(15px,2vw,18px);color:var(--muted);max-width:70ch;margin:0;}
+  .legend{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:20px;font-size:12.5px;color:var(--muted);}
+  .legend .k{display:inline-flex;align-items:center;gap:7px;}
+  .legend .sw{width:13px;height:13px;border-radius:4px;box-shadow:var(--sh-sm);}
+  .sw.cust{background:var(--cyan);} .sw.sys{background:var(--navy);} .sw.staff{background:var(--blue);} .sw.get{background:var(--sky);}
+
+  .band{margin-top:40px;}
+  .band-title{display:flex;align-items:baseline;gap:12px;margin:0 0 4px;}
+  .band-title .n{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--blue);}
+  .band-title h2{font-size:clamp(18px,2.6vw,23px);letter-spacing:-.01em;margin:0;text-wrap:balance;}
+  .band-sub{color:var(--muted);margin:0 0 18px;font-size:14.5px;max-width:74ch;}
+
+  .scan{overflow-x:auto;overflow-y:hidden;padding:6px 4px 14px;-webkit-overflow-scrolling:touch;}
+  .canvas{position:relative;}
+  .wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:visible;}
+
+  /* nodes */
+  .nd{position:relative;z-index:2;border-radius:12px;padding:12px 14px;box-shadow:var(--sh);color:#fff;}
+  .nd .t{font-weight:700;font-size:12.5px;letter-spacing:.02em;text-transform:uppercase;margin:0 0 5px;line-height:1.2;}
+  .nd .d{font-size:12.5px;line-height:1.4;margin:0;color:rgba(255,255,255,.86);}
+  .nd .d b{color:#fff;font-weight:650;}
+  .nd .say{font-family:var(--mono);font-size:11.5px;color:#fff;background:rgba(255,255,255,.12);border-radius:6px;padding:5px 8px;margin-top:6px;display:block;}
+  .nd--cust{background:linear-gradient(160deg,var(--cyan),var(--cyan) 60%,#199ec0);}
+  .nd--cust .t{color:#eafaff;}
+  .nd--sys{background:linear-gradient(160deg,var(--navy2),var(--navy));}
+  .nd--staff{background:linear-gradient(160deg,var(--blue2),var(--blue));}
+  .nd--get{background:linear-gradient(160deg,var(--sky),#5aa9ea);color:#0a2645;}
+  .nd--get .t{color:#0a2645;} .nd--get .d{color:#123a63;} .nd--get .d b{color:#0a2645;}
+  .nd--get .say{background:rgba(10,38,69,.10);color:#0a2645;}
+  .nd--ghost{background:var(--panel);color:var(--ink);border:1px dashed var(--hair);box-shadow:var(--sh-sm);}
+  .nd--ghost .t{color:var(--blue);} .nd--ghost .d{color:var(--muted);}
+
+  .chip-row{display:flex;flex-direction:column;gap:6px;margin-top:8px;}
+  .chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);border-radius:7px;padding:6px 9px;font-size:11.5px;font-weight:600;}
+  .chip .b{width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,.9);color:var(--navy);display:grid;place-items:center;font-size:10px;flex:none;}
+
+  /* Band A: 4 channel columns */
+  .chanflow{display:grid;grid-template-columns:repeat(4,minmax(240px,1fr));gap:22px;min-width:1060px;}
+  .chan-col{display:flex;flex-direction:column;gap:26px;}
+  .chan-hd{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:11px;background:var(--panel);box-shadow:var(--sh-sm);border:1px solid var(--hair);}
+  .chan-hd .ic{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;color:#fff;flex:none;}
+  .chan-hd .ic svg{width:19px;height:19px;}
+  .chan-hd .nm{font-weight:700;font-size:15px;letter-spacing:-.01em;}
+  .chan-hd .via{font-size:11.5px;color:var(--faint);}
+  .ic.wa{background:var(--green);} .ic.sms{background:var(--blue);} .ic.ph{background:var(--amber);} .ic.wg{background:var(--violet);}
+
+  .converge{margin-top:26px;min-width:1060px;}
+  .converge .bar{background:linear-gradient(160deg,var(--navy2),var(--navy));color:#fff;border-radius:12px;padding:14px 18px;box-shadow:var(--sh);display:flex;align-items:center;gap:12px;justify-content:center;text-align:center;font-weight:600;font-size:14px;flex-wrap:wrap;}
+  .converge .bar .arw{color:var(--cyan2);font-size:18px;}
+
+  /* Band B: swimlane grid */
+  .lane{display:grid;grid-template-columns:132px repeat(3,minmax(230px,1fr));gap:14px 20px;min-width:1080px;align-items:start;}
+  .lane-label{position:sticky;left:0;z-index:3;align-self:stretch;display:flex;align-items:flex-start;padding-top:10px;}
+  .lane-label span{writing-mode:horizontal-tb;font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--panel);border:1px solid var(--hair);border-radius:9px;padding:8px 10px;box-shadow:var(--sh-sm);width:100%;}
+  .lane-label .who{display:block;font-size:10.5px;font-weight:500;color:var(--faint);letter-spacing:.02em;text-transform:none;margin-top:3px;}
+  .laneband{grid-column:2 / -1;border-radius:12px;z-index:0;}
+
+  .step-tag{font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;opacity:.8;display:block;margin-bottom:5px;}
+
+  .loopnote{display:inline-flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--hair);border-radius:999px;padding:6px 13px;font-size:12px;font-weight:600;color:var(--violet);box-shadow:var(--sh-sm);}
+
+  .sidecards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:26px;}
+  .side{background:var(--panel);border:1px solid var(--hair);border-radius:13px;padding:16px 18px;display:flex;gap:13px;box-shadow:var(--sh-sm);}
+  .side .si{flex:none;width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-size:19px;}
+  .side.a .si{background:var(--amber);color:#fff;} .side.b .si{background:var(--green);color:#fff;}
+  .side h3{margin:2px 0 4px;font-size:14.5px;font-weight:660;}
+  .side p{margin:0;font-size:13px;color:var(--muted);}
+
+  .foot{margin-top:44px;padding-top:18px;border-top:1px solid var(--hair);font-size:12px;color:var(--faint);display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;}
+
+  @media (max-width:720px){ .sidecards{grid-template-columns:1fr;} }
+</style>
+
+<h2 class="sr-only">A flowchart of the customer-to-human handoff: how each channel connects, what the customer and staff receive at each step, how replies route between them, and how a handoff closes.</h2>
+
+<div class="wrap">
+  <header class="head">
+    <p class="eyebrow">Paint Access · Customer Support</p>
+    <h1>The human handoff, end to end</h1>
+    <p class="lede">Follow the arrows. The top band shows how a customer on each channel gets connected and exactly what they receive. The bottom band is the live conversation — what lands on your phone, how your replies reach the customer, and how it wraps up.</p>
+    <div class="legend">
+      <span class="k"><span class="sw cust"></span> Customer does / says</span>
+      <span class="k"><span class="sw sys"></span> System (automatic)</span>
+      <span class="k"><span class="sw staff"></span> You &amp; Cris</span>
+      <span class="k"><span class="sw get"></span> Customer receives</span>
+    </div>
+  </header>
+
+  <!-- ============ BAND A ============ -->
+  <section class="band">
+    <div class="band-title"><span class="n">A</span><h2>Getting connected — one lane per channel</h2></div>
+    <p class="band-sub">Different doors, but each ends with the customer connected to a real person. Watch the bottom box of each lane: that&rsquo;s <b>what the customer receives, and when</b>.</p>
+
+    <div class="scan">
+      <div class="canvas" id="cvA">
+        <svg class="wires" id="wiresA" aria-hidden="true"></svg>
+        <div class="chanflow">
+
+          <!-- WhatsApp -->
+          <div class="chan-col">
+            <div class="chan-hd"><span class="ic wa" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 0 0-7.7 13.6L3 21l4.6-1.2A9 9 0 1 0 12 3"/><path d="M8.5 8.6c-.3.6-.2 1.6.4 2.6a8 8 0 0 0 3.5 3.3c1.3.6 2 .4 2.6 0 .3-.2.5-.7.4-1l-.2-.6-1.6-.7c-.2-.1-.5 0-.6.2l-.4.5a5 5 0 0 1-2-1.9c-.2-.3 0-.5.1-.6l.5-.6-.7-1.6c-.1-.3-.4-.4-.7-.3z"/></svg></span><div><div class="nm">WhatsApp</div><div class="via">already in a chat</div></div></div>
+            <div class="nd nd--cust" id="a-wa-1"><p class="t">Customer asks</p><span class="say">&ldquo;I want to talk to a real person&rdquo;</span></div>
+            <div class="nd nd--sys" id="a-wa-2"><p class="t">System · instant</p><p class="d">We detect the request the moment it arrives &mdash; before the AI answers &mdash; and open the handoff.</p></div>
+            <div class="nd nd--get" id="a-wa-3"><p class="t">Customer receives · right away</p><p class="d">In the <b>same chat</b>, no link, nothing to tap:</p><span class="say">&ldquo;You&rsquo;re through to our team now &mdash; a real person will reply right here shortly.&rdquo;</span></div>
+          </div>
+
+          <!-- SMS -->
+          <div class="chan-col">
+            <div class="chan-hd"><span class="ic sms" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-4 4z"/><path d="M8 10h8M8 13h5"/></svg></span><div><div class="nm">SMS</div><div class="via">already texting</div></div></div>
+            <div class="nd nd--cust" id="a-sms-1"><p class="t">Customer asks</p><span class="say">&ldquo;Can I speak to someone?&rdquo;</span></div>
+            <div class="nd nd--sys" id="a-sms-2"><p class="t">System · instant</p><p class="d">Same instant detection; the handoff opens on that thread.</p></div>
+            <div class="nd nd--get" id="a-sms-3"><p class="t">Customer receives · right away</p><p class="d">In the <b>same text thread</b>:</p><span class="say">&ldquo;Our team is with you now &mdash; just keep replying here.&rdquo;</span></div>
+          </div>
+
+          <!-- Phone -->
+          <div class="chan-col">
+            <div class="chan-hd"><span class="ic ph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L16 12l5 2v4a2 2 0 0 1-2.2 2A17 17 0 0 1 4 6.2 2 2 0 0 1 6 4"/></svg></span><div><div class="nm">Phone call</div><div class="via">live voice call</div></div></div>
+            <div class="nd nd--cust" id="a-ph-1"><p class="t">Customer asks</p><span class="say">&ldquo;Put me through to a person&rdquo;</span></div>
+            <div class="nd nd--sys" id="a-ph-2"><p class="t">System</p><p class="d">A call has no screen for a link &mdash; so we open the handoff and <b>send a text</b> instead.</p></div>
+            <div class="nd nd--get" id="a-ph-3"><p class="t">Customer receives · right away</p><p class="d">The AI says aloud &ldquo;I&rsquo;ve just texted you,&rdquo; and an SMS arrives from our number:</p><span class="say">&ldquo;Hi, it&rsquo;s the Paint Access team &mdash; reply any time.&rdquo;</span></div>
+            <div class="nd nd--cust" id="a-ph-4"><p class="t">Customer replies</p><p class="d">They reply to that text &rarr; now they&rsquo;re connected.</p></div>
+          </div>
+
+          <!-- Widget -->
+          <div class="chan-col">
+            <div class="chan-hd"><span class="ic wg" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4M7.5 9.5h9M7.5 12.5h6"/></svg></span><div><div class="nm">Website chat</div><div class="via">chat box on site</div></div></div>
+            <div class="nd nd--cust" id="a-wg-1"><p class="t">Customer asks</p><span class="say">&ldquo;I need a human&rdquo;</span></div>
+            <div class="nd nd--sys" id="a-wg-2"><p class="t">System · offers both at once</p><p class="d"><b>Already know their mobile?</b> We just text them. If not, they get <b>both</b>: a box to drop their mobile (&ldquo;we&rsquo;ll text you&rdquo;) <b>and</b> a green &ldquo;Chat on WhatsApp&rdquo; button.</p></div>
+            <div class="nd nd--get" id="a-wg-3"><p class="t">Customer chooses</p><p class="d">They type their number &rarr; we text them, <b>or</b> tap WhatsApp once &rarr; a chat with our number opens, pre-filled. <span style="opacity:.85;">(Voice chat: button only.)</span></p></div>
+            <div class="nd nd--cust" id="a-wg-4"><p class="t">Customer connected</p><p class="d">From here it behaves just like WhatsApp or SMS.</p></div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="converge">
+        <div class="bar" id="a-converge"><span class="arw">▼</span> However they came in, from this point it is <b>identical</b> &mdash; continues in Band B <span class="arw">▼</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ BAND B ============ -->
+  <section class="band">
+    <div class="band-title"><span class="n">B</span><h2>The live conversation — you, the system, and the customer</h2></div>
+    <p class="band-sub">Read top to bottom. The three columns are the three players; arrows crossing between them are messages. This is what the admin receives and every option you have.</p>
+
+    <div class="scan">
+      <div class="canvas" id="cvB">
+        <svg class="wires" id="wiresB" aria-hidden="true"></svg>
+        <div class="lane">
+          <!-- lane backgrounds -->
+          <!-- headers -->
+          <div class="lane-label" style="grid-column:1;grid-row:1;"><span>Flow<span class="who">top &rarr; bottom</span></span></div>
+          <div class="lane-label" style="grid-column:2;grid-row:1;justify-content:center;"><span style="text-align:center;">Customer<span class="who">on their channel</span></span></div>
+          <div class="lane-label" style="grid-column:3;grid-row:1;justify-content:center;"><span style="text-align:center;">Relay system<span class="who">automatic</span></span></div>
+          <div class="lane-label" style="grid-column:4;grid-row:1;justify-content:center;"><span style="text-align:center;">You &amp; Cris<span class="who">on your own phones</span></span></div>
+
+          <!-- L1: open (system) -->
+          <div class="lane-label" style="grid-column:1;grid-row:2;"><span style="background:transparent;border:none;box-shadow:none;color:var(--faint);">1 · Open</span></div>
+          <div class="nd nd--sys" id="b-open" style="grid-column:3;grid-row:2;"><span class="step-tag">the moment they ask</span><p class="t">Handoff opens</p>
+            <div class="chip-row">
+              <span class="chip"><span class="b">✓</span> AI goes silent (this chat only)</span>
+              <span class="chip"><span class="b">#</span> Ticket #12 created</span>
+              <span class="chip"><span class="b">▤</span> Saved to the Comms Hub</span>
+            </div>
+          </div>
+
+          <!-- L2: alert (staff) -->
+          <div class="lane-label" style="grid-column:1;grid-row:3;"><span style="background:transparent;border:none;box-shadow:none;color:var(--faint);">2 · You&rsquo;re paged</span></div>
+          <div class="nd nd--staff" id="b-alert" style="grid-column:4;grid-row:3;"><span class="step-tag">both of you, on WhatsApp (SMS if it&rsquo;s quiet)</span><p class="t">🆘 Handoff #12 — John Smith</p><p class="d">+61 412 345 678 · WhatsApp · Order #44542</p><span class="say">reason: &ldquo;the sprayer arrived damaged&rdquo;</span>
+            <div class="chip-row"><span class="chip">↩ quote to reply &nbsp;·&nbsp; #done 12 to close &nbsp;·&nbsp; 📋 open in hub</span></div>
+          </div>
+
+          <!-- L3: customer message -> mirror -> staff see -->
+          <div class="lane-label" style="grid-column:1;grid-row:4;"><span style="background:transparent;border:none;box-shadow:none;color:var(--faint);">3 · They write</span></div>
+          <div class="nd nd--cust" id="b-cmsg" style="grid-column:2;grid-row:4;"><p class="t">Customer sends</p><span class="say">&ldquo;Can I get a replacement nozzle instead of a refund?&rdquo;</span></div>
+          <div class="nd nd--sys" id="b-mirror" style="grid-column:3;grid-row:4;"><p class="t">We mirror it</p><p class="d">Copied straight to both your phones.</p></div>
+          <div class="nd nd--staff" id="b-see" style="grid-column:4;grid-row:4;"><p class="t">You both see</p><span class="say">#12 John: Can I get a replacement nozzle?</span></div>
+
+          <!-- L4: staff reply -> route -> customer gets -->
+          <div class="lane-label" style="grid-column:1;grid-row:5;"><span style="background:transparent;border:none;box-shadow:none;color:var(--faint);">4 · You reply</span></div>
+          <div class="nd nd--get" id="b-cget" style="grid-column:2;grid-row:5;"><p class="t">Customer receives</p><p class="d">Your words land in their WhatsApp/SMS, sent by &ldquo;Paint Access.&rdquo;</p></div>
+          <div class="nd nd--sys" id="b-route" style="grid-column:3;grid-row:5;"><p class="t">We route it</p><p class="d">Delivered to the customer on their own channel, from our number.</p></div>
+          <div class="nd nd--staff" id="b-reply" style="grid-column:4;grid-row:5;"><p class="t">You reply — 3 ways</p>
+            <div class="chip-row">
+              <span class="chip"><span class="b">1</span> Just type back</span>
+              <span class="chip"><span class="b">2</span> Quote their message (if several are open)</span>
+              <span class="chip"><span class="b">3</span> Start with #12</span>
+            </div>
+            <span class="say" style="margin-top:8px;">✓ Sent to #12 John &nbsp;|&nbsp; ↪ Cris also sees your reply</span>
+          </div>
+
+          <!-- loop note -->
+          <div style="grid-column:2 / -1;grid-row:6;display:flex;justify-content:center;margin:2px 0;">
+            <span class="loopnote">↺ Steps 3–4 repeat for every message, back and forth</span>
+          </div>
+
+          <!-- L5: hub branch (staff) -->
+          <div class="lane-label" style="grid-column:1;grid-row:7;"><span style="background:transparent;border:none;box-shadow:none;color:var(--faint);">Any time</span></div>
+          <div class="nd nd--ghost" id="b-hub" style="grid-column:4;grid-row:7;"><p class="t">📋 Open in the Hub</p><p class="d">Tap the link for the full conversation, order history, canned replies, and complete take-over — for anything a quick text can&rsquo;t handle.</p></div>
+
+          <!-- L6: close -->
+          <div class="lane-label" style="grid-column:1;grid-row:8;"><span style="background:transparent;border:none;box-shadow:none;color:var(--faint);">5 · Wrap up</span></div>
+          <div class="nd nd--get" id="b-back" style="grid-column:2;grid-row:8;"><p class="t">Customer</p><p class="d">Back with the AI again — until they next ask for a person.</p></div>
+          <div class="nd nd--sys" id="b-resume" style="grid-column:3;grid-row:8;"><p class="t">Closes &amp; resumes</p><p class="d">AI takes back over. You both get a confirmation + a transcript link.</p></div>
+          <div class="nd nd--staff" id="b-done" style="grid-column:4;grid-row:8;"><p class="t">You finish</p><span class="say">send #done &nbsp;(or #done 12)</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidecards">
+      <div class="side a"><div class="si" aria-hidden="true">⏱</div><div><h3>Forgot to close it?</h3><p>Best to send <b>#done</b> when you&rsquo;re finished — but a handoff with no activity for 2 days closes itself and hands the customer back to the AI.</p></div></div>
+      <div class="side b"><div class="si" aria-hidden="true">🛡</div><div><h3>Nobody is ever left waiting</h3><p>If we somehow can&rsquo;t reach you <b>or</b> Cris at all, the customer is automatically given a direct WhatsApp link so they always have a way through.</p></div></div>
+    </div>
+  </section>
+
+  <div class="foot">
+    <span>Replaces the old way: a link straight to a personal WhatsApp number.</span>
+    <span>Paint Access · Human Handoff · updated 22 Jul 2026</span>
+  </div>
+</div>
+
+<script>
+(function(){
+  // Edge lists: {from, fs(side), to, ts(side)}  sides: t,b,l,r
+  var edgesA = [
+    {from:'a-wa-1',fs:'b',to:'a-wa-2',ts:'t'},
+    {from:'a-wa-2',fs:'b',to:'a-wa-3',ts:'t'},
+    {from:'a-sms-1',fs:'b',to:'a-sms-2',ts:'t'},
+    {from:'a-sms-2',fs:'b',to:'a-sms-3',ts:'t'},
+    {from:'a-ph-1',fs:'b',to:'a-ph-2',ts:'t'},
+    {from:'a-ph-2',fs:'b',to:'a-ph-3',ts:'t'},
+    {from:'a-ph-3',fs:'b',to:'a-ph-4',ts:'t'},
+    {from:'a-wg-1',fs:'b',to:'a-wg-2',ts:'t'},
+    {from:'a-wg-2',fs:'b',to:'a-wg-3',ts:'t'},
+    {from:'a-wg-3',fs:'b',to:'a-wg-4',ts:'t'}
+  ];
+  var edgesB = [
+    {from:'b-open',fs:'b',to:'b-alert',ts:'t'},         // open -> paged
+    {from:'b-alert',fs:'b',to:'b-see',ts:'t'},          // staff column down
+    {from:'b-cmsg',fs:'r',to:'b-mirror',ts:'l'},        // customer msg -> mirror
+    {from:'b-mirror',fs:'r',to:'b-see',ts:'l'},         // mirror -> staff see
+    {from:'b-see',fs:'b',to:'b-reply',ts:'t'},          // see -> reply
+    {from:'b-reply',fs:'l',to:'b-route',ts:'r'},        // reply -> route
+    {from:'b-route',fs:'l',to:'b-cget',ts:'r'},         // route -> customer gets
+    {from:'b-cget',fs:'b',to:'b-back',ts:'t',dash:true,loop:true}, // loop-ish downward
+    {from:'b-reply',fs:'b',to:'b-hub',ts:'t'},          // reply -> hub branch
+    {from:'b-hub',fs:'b',to:'b-done',ts:'t'},           // hub -> done
+    {from:'b-done',fs:'l',to:'b-resume',ts:'r'},        // done -> resume
+    {from:'b-resume',fs:'l',to:'b-back',ts:'r'}         // resume -> customer back
+  ];
+
+  function anchor(el, side, host){
+    var c = host.getBoundingClientRect(), r = el.getBoundingClientRect();
+    var x = r.left - c.left, y = r.top - c.top;
+    switch(side){
+      case 't': return {x:x+r.width/2, y:y, dx:0, dy:-1};
+      case 'b': return {x:x+r.width/2, y:y+r.height, dx:0, dy:1};
+      case 'l': return {x:x, y:y+r.height/2, dx:-1, dy:0};
+      case 'r': return {x:x+r.width, y:y+r.height/2, dx:1, dy:0};
+    }
+  }
+  function elbow(s,e){
+    var stub=15;
+    var s2={x:s.x+s.dx*stub, y:s.y+s.dy*stub};
+    var e2={x:e.x+e.dx*stub, y:e.y+e.dy*stub};
+    var pts=[[s.x,s.y],[s2.x,s2.y]];
+    var sV = s.dx===0, eV = e.dx===0;
+    if(sV && eV){ var my=(s2.y+e2.y)/2; pts.push([s2.x,my],[e2.x,my]); }
+    else if(!sV && !eV){ var mx=(s2.x+e2.x)/2; pts.push([mx,s2.y],[mx,e2.y]); }
+    else if(sV && !eV){ pts.push([s2.x,e2.y]); }
+    else { pts.push([e2.x,s2.y]); }
+    pts.push([e2.x,e2.y],[e.x,e.y]);
+    return pts;
+  }
+  function draw(hostId, svgId, edges){
+    var host = document.getElementById(hostId);
+    var svg = document.getElementById(svgId);
+    if(!host || !svg) return;
+    var w = host.scrollWidth, h = host.scrollHeight;
+    svg.setAttribute('width', w); svg.setAttribute('height', h);
+    svg.setAttribute('viewBox', '0 0 '+w+' '+h);
+    var wire = getComputedStyle(document.documentElement).getPropertyValue('--wire').trim() || '#93a2b6';
+    var vio = '#6f52e6';
+    var out = '';
+    edges.forEach(function(ed){
+      var a = document.getElementById(ed.from), b = document.getElementById(ed.to);
+      if(!a||!b) return;
+      var s = anchor(a, ed.fs, host), e = anchor(b, ed.ts, host);
+      var pts = elbow(s,e);
+      var col = ed.loop ? vio : wire;
+      var dd = 'M'+pts.map(function(p){return p[0].toFixed(1)+' '+p[1].toFixed(1);}).join(' L');
+      out += '<path d="'+dd+'" fill="none" stroke="'+col+'" stroke-width="1.6" stroke-dasharray="5 4" stroke-linecap="round" stroke-linejoin="round" opacity="'+(ed.loop?0.85:0.9)+'"/>';
+      // source dot
+      out += '<circle cx="'+s.x.toFixed(1)+'" cy="'+s.y.toFixed(1)+'" r="3.4" fill="'+col+'"/>';
+      // arrowhead at e, pointing into node (opposite of e.dir)
+      var ax=-e.dx, ay=-e.dy, sz=6.5;
+      var tipx=e.x, tipy=e.y;
+      var perpx=-ay, perpy=ax;
+      var bx=tipx-ax*sz, by=tipy-ay*sz;
+      var p1=[bx+perpx*sz*0.62, by+perpy*sz*0.62], p2=[bx-perpx*sz*0.62, by-perpy*sz*0.62];
+      out += '<path d="M'+tipx.toFixed(1)+' '+tipy.toFixed(1)+' L'+p1[0].toFixed(1)+' '+p1[1].toFixed(1)+' L'+p2[0].toFixed(1)+' '+p2[1].toFixed(1)+' Z" fill="'+col+'"/>';
+    });
+    svg.innerHTML = out;
+  }
+  function drawAll(){ draw('cvA','wiresA',edgesA); draw('cvB','wiresB',edgesB); }
+  var raf;
+  function schedule(){ cancelAnimationFrame(raf); raf=requestAnimationFrame(drawAll); }
+  window.addEventListener('load', function(){ drawAll(); setTimeout(drawAll,120); setTimeout(drawAll,400); });
+  window.addEventListener('resize', schedule);
+  if(document.fonts && document.fonts.ready){ document.fonts.ready.then(drawAll); }
+  drawAll();
+})();
+</script>

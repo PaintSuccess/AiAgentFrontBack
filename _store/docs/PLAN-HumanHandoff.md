@@ -304,3 +304,49 @@ appears in Option 1 alerts). 3. Set `ADMIN_DEEP_LINK_BASE`, verify deep link. 4.
 onboarding messages to the business number. 5. Flip `HANDOFF_METHOD=relay`. 6. Live test
 per channel (remember: every escalate pages Daniel for real). 7. Later: `#done` timing,
 media forwarding, staff-initiated relay from the hub UI.
+
+---
+
+## Option C — website-widget phone capture ("offer both at once") — 2026-07-22
+
+Anonymous website-chat visitors used to get only a "Chat on WhatsApp" button (bad on
+desktop, and an app-switch on mobile). Option C offers **both at once**: the WhatsApp
+button AND an inline "leave your mobile and we'll text you" field. Typing a mobile opens
+the SMS relay directly (no app-switch, works on desktop). If we already know their mobile
+(logged-in customer) we skip straight to texting. **Voice widget mode gets the button
+only** — a typed/spoken number mid-call is unreliable (same failure class as the spoken-
+order-number bug).
+
+Chosen over "ask for the phone first, button on refusal" (a sequential gate) because the
+ask lands at the worst moment — the customer just asked for a human. Offering both is the
+same capture rate with no blocking step, and self-solves device differences.
+
+### Flow
+1. Widget escalation with no phone + relay on → `escalateToHuman` returns
+   `open_whatsapp_handoff_payload` with `allow_phone_capture:true` + a signed `handoff_token`.
+2. Widget (`ai-support-widget.liquid` `showHandoff`) renders the button + mobile field
+   (unless voice mode). Submitting posts `{phone, token, reason}` to the callback.
+3. `POST /api/comms/handoff-callback` (public) → `escalateToHuman({channel:"widget", phone})`
+   → SMS relay opens, staff paged, opener SMS to the customer → "we'll text you now".
+
+### Security (public endpoint that pages staff + sends SMS — defended in depth)
+- **Signed token** (`mintHandoffToken`/`verifyHandoffToken`, HMAC-SHA256 over a 15-min
+  expiry with `API_SECRET_TOKEN`): only a real escalation can mint one; strict `exp.sig`.
+- **Single-use**: `checkRateLimit('handoff-tok:'+sig, 1, 900)` — a captured token can't be
+  replayed for many numbers.
+- **Per-phone cap**: `checkRateLimit('handoff-phone:'+phone, 2, 3600)` — the anti-SMS-bomb
+  gate; one number is never texted more than twice an hour, whatever the IP or token count.
+- **Per-IP cap**: `checkRateLimit('handoff-cb:'+ip, 4, 600)`.
+- **AU-mobile only**: `normalizePhone` (AU-aware) then `/^\+614\d{8}$/`.
+- Residual (accepted): a valid token + a real AU mobile can text that number a benign
+  opener even if it isn't the submitter's; the caps make volume abuse impractical.
+
+### Files
+- `lib/comms/handoff.js` — token mint/verify/id; `allow_phone_capture` + token in the
+  widget payload when relay on and no phone.
+- `api/comms/handoff-callback.js` — NEW public endpoint.
+- `../frontend/shopify/snippets/ai-support-widget.liquid` — `showHandoff` renders the
+  field + `wireHandoffPhoneForm` (theme repo, deploy via Shopify CLI).
+- `scripts/test-handoff-relay.js` — token + AU-mobile offline tests (50 total).
+
+No new env: reuses `API_SECRET_TOKEN`. Requires `HANDOFF_METHOD=relay` (already live).

@@ -101,5 +101,34 @@ check(
 );
 check("no thread → no link", relay.adminThreadLink(""), null);
 
+// ---- Option C: widget phone-capture token + validation --------------------
+process.env.API_SECRET_TOKEN = "test-secret-abc";
+const crypto = require("crypto");
+const { mintHandoffToken, verifyHandoffToken, handoffTokenId } = require("../lib/comms/handoff");
+const { normalizePhone } = require("../lib/shopify-customer-context");
+
+const goodToken = mintHandoffToken();
+check("minted token verifies", verifyHandoffToken(goodToken), true);
+check("empty token rejected", verifyHandoffToken(""), false);
+check("garbage token rejected", verifyHandoffToken("not.a.token"), false);
+check("tampered signature rejected", verifyHandoffToken(goodToken.slice(0, -2) + "xx"), false);
+check("tampered expiry rejected", verifyHandoffToken((Date.now() + 999999) + "." + goodToken.split(".")[1]), false);
+check("trailing junk segment rejected", verifyHandoffToken(goodToken + ".extra"), false);
+check("tokenId is the signature segment", handoffTokenId(goodToken), goodToken.split(".")[1]);
+check("token has exp.sig shape", /^\d+\.[A-Za-z0-9_-]+$/.test(goodToken), true);
+
+// An expired-but-correctly-signed token must still be rejected.
+const pastExp = String(Date.now() - 1000);
+const pastSig = crypto.createHmac("sha256", "test-secret-abc").update(pastExp).digest("base64url");
+check("expired token rejected", verifyHandoffToken(pastExp + "." + pastSig), false);
+
+// Endpoint AU-mobile gate: normalizePhone (AU-aware) + /^\+614\d{8}$/.
+const AU_RE = /^\+614\d{8}$/;
+check("04.. local mobile normalises + passes", AU_RE.test(normalizePhone("0412 345 678")), true);
+check("+61 4.. mobile passes", AU_RE.test(normalizePhone("+61 412 345 678")), true);
+check("landline 02.. rejected", AU_RE.test(normalizePhone("02 5838 5959")), false);
+check("too-short rejected", AU_RE.test(normalizePhone("0412 345")), false);
+check("empty rejected", AU_RE.test(normalizePhone("")), false);
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
