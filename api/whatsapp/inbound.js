@@ -9,6 +9,7 @@ const commsConsent = require("../../lib/comms/consent");
 const linkToken = require("../../lib/comms/link-token");
 const metaCapi = require("../../lib/comms/meta-capi");
 const { isStaffNumber } = require("../../lib/comms/handoff");
+const commsRelay = require("../../lib/comms/relay");
 const {
   parseWhatsAppInbound,
   sendWhatsAppMessage,
@@ -137,10 +138,25 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: "Invalid request" });
     }
 
-    // Staff replying to a handoff alert (or messaging the support number) —
-    // never route this through the customer-facing AI or create a customer thread.
+    // Staff messaging the business number — never route through the customer-facing
+    // AI or create a customer thread. The relay router turns their message into a
+    // customer reply / command; a WhatsApp quote-reply carries the mirrored message's
+    // SID (OriginalRepliedMessageSid) which routes it to the right relay even with
+    // several running at once. Fail-safe: a relay error still acks the webhook.
     if (isStaffNumber(inbound.from)) {
-      console.log(`[WhatsApp] Staff number ${inbound.from} — skipping AI.`);
+      console.log(`[WhatsApp] Staff number ${inbound.from} — routing to relay.`);
+      await commsRelay
+        .routeStaffMessage({
+          fromE164: inbound.from,
+          text: inbound.text,
+          quotedSid: inbound.raw?.OriginalRepliedMessageSid || "",
+          channel: "whatsapp",
+          messageSid:
+            inbound.provider === "meta"
+              ? inbound.messageId
+              : inbound.raw?.MessageSid || inbound.raw?.SmsMessageSid || "",
+        })
+        .catch((err) => console.error("[WhatsApp] relay staff routing failed:", err.message));
       if (inbound.provider === "twilio") {
         res.setHeader("Content-Type", "text/xml");
         return res.status(200).send(`<?xml version="1.0" encoding="UTF-8"?>\n<Response></Response>`);
@@ -201,6 +217,20 @@ module.exports = async function handler(req, res) {
     // the same message id. recordInbound already dedupes on (provider, externalId) — if
     // this exact message was already processed, don't call the LLM or send a second reply.
     if (inboundRecord && inboundRecord.isNew === false) {
+      // A redelivery can mean the FIRST attempt timed out mid-work. Mirroring is
+      // idempotent on the message id, so let the retry complete a relay mirror the
+      // first attempt may not have finished; it no-ops when already mirrored.
+      await commsRelay
+        .mirrorCustomerMessage({
+          threadId: inboundRecord?.thread?.id,
+          body: inbound.text,
+          name: inbound.profileName || "",
+          inboundSid:
+            inbound.provider === "meta"
+              ? inbound.messageId
+              : inbound.raw?.MessageSid || inbound.raw?.SmsMessageSid || "",
+        })
+        .catch(() => null);
       console.log(`[WhatsApp] Duplicate delivery — already answered, staying silent.`);
       if (inbound.provider === "twilio") {
         res.setHeader("Content-Type", "text/xml");
@@ -221,6 +251,29 @@ module.exports = async function handler(req, res) {
 
     // Record STOP/START keyword opt-out/in (fail-safe).
     await commsConsent.applyKeywordConsent(inbound.from, "whatsapp", inbound.text);
+
+    // Active relay on this thread → mirror the message to staff phones and stay
+    // silent (the relay, not the 30-min takeover window, is the source of truth
+    // while a human handoff is live). Fail-safe: errors fall through to the AI.
+    const relayed = await commsRelay
+      .mirrorCustomerMessage({
+        threadId: inboundRecord?.thread?.id,
+        body: inbound.text,
+        name: customerContext?.customer_name || inbound.profileName || "",
+        inboundSid:
+          inbound.provider === "meta"
+            ? inbound.messageId
+            : inbound.raw?.MessageSid || inbound.raw?.SmsMessageSid || "",
+      })
+      .catch(() => null);
+    if (relayed) {
+      console.log(`[WhatsApp] Relay #${relayed.tag} — mirrored to staff, AI staying silent.`);
+      if (inbound.provider === "twilio") {
+        res.setHeader("Content-Type", "text/xml");
+        return res.status(200).send(`<?xml version="1.0" encoding="UTF-8"?>\n<Response></Response>`);
+      }
+      return res.status(200).json({ ok: true, relayed: true });
+    }
 
     // AI-control gate: stay silent if a human is actively handling this thread
     // (auto-hands back to the AI once the takeover window lapses).

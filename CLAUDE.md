@@ -127,7 +127,7 @@ Never use `inventoryQuantity > 0` alone as the availability check. For this stor
 | `api/dashboard/knowledge-base.js` | CRUD proxy for ElevenLabs KB |
 | `api/comms/*.js` | Inbox endpoints: threads, thread, contact, send, control, call |
 | `lib/comms/{store,queries,send,call,mcp-tools}.js` | Comms spine: write/read/send/call layers + ChatGPT MCP tools |
-| `lib/comms/handoff.js` | "Connect me to a human" escalation (Option 1: WhatsApp deep-link to Daniel). `escalate_to_human` ElevenLabs server tool at `api/comms/escalate.js`. Exports `isStaffNumber()` — inbound SMS/WhatsApp webhooks must skip the AI for staff numbers (`HUMAN_SUPPORT_NOTIFY_NUMBERS`/`HUMAN_SUPPORT_WA_NUMBER`) or their replies get answered by the customer-facing AI. |
+| `lib/comms/handoff.js` | "Connect me to a human" escalation. `HANDOFF_METHOD` env picks the method: unset/`link` = Option 1 wa.me deep-link; `relay` = Option 3 (`lib/comms/relay.js` mirrors the customer's thread to staff phones, staff reply from their own WhatsApp/SMS, quote-reply or `#tag` routing, `#done` closes; migration `0008_handoff_relay.sql`). `escalate_to_human` ElevenLabs server tool at `api/comms/escalate.js`; admin deep link via `api/comms/open.js` (`/t/<threadId>`, needs `ADMIN_DEEP_LINK_BASE`). Exports `isStaffNumber()` — inbound SMS/WhatsApp webhooks route staff numbers (`HUMAN_SUPPORT_NOTIFY_NUMBERS`/`HUMAN_SUPPORT_WA_NUMBER`) to the relay router, never the customer-facing AI. See `_store/docs/PLAN-HumanHandoff.md`. |
 | `supabase/migrations/` | Comms spine schema (contacts/threads/messages/voice_calls/events) |
 | `lib/dashboard-auth.js` | HMAC/JWT auth helpers for dashboard APIs |
 | `src/pages/InboxPage.jsx` | Unified communications inbox UI (+ `src/pages/inbox.css`) |

@@ -41,11 +41,23 @@ const NAV = [
   { key: "knowledge-base", label: "Knowledge", icon: KbIcon },
 ];
 
+// Staff handoff alerts carry a deep link into a specific thread (?page=inbox&
+// thread=<id>, via /api/comms/open). Read it once at boot; Shopify admin passes
+// its own params (host, shop, …) on the same query string, so only `thread` is ours.
+function bootInboxTarget() {
+  try {
+    const threadId = new URLSearchParams(window.location.search).get("thread");
+    return threadId ? { threadId, token: Date.now() } : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function App() {
   const [page, setPage] = useState("inbox");
   // `token` makes every request distinct so InboxPage re-applies it even when the
   // same thread is opened twice in a row (otherwise the effect wouldn't re-fire).
-  const [inboxTarget, setInboxTarget] = useState(null);
+  const [inboxTarget, setInboxTarget] = useState(bootInboxTarget);
 
   const openInbox = (target) => { setInboxTarget({ ...target, token: Date.now() }); setPage("inbox"); };
   const openThread = (threadId) => openInbox({ threadId });

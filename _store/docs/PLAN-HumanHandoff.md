@@ -4,6 +4,19 @@ _2026-07-14. Cross-channel human escalation: when a customer on any AI channel
 (voice call, WhatsApp, SMS, chat widget) asks for a human/team, hand them off to
 Daniel (+ a manager) correctly — never by transferring a phone call._
 
+> **STATUS 2026-07-22: Option 3 (relay handoff) designed and being built — see the
+> "Option 3" section at the bottom.** Option 2 (Meta Groups API) was investigated in
+> depth 2026-07-22 and is **blocked**: it requires an Official Business Account =
+> the GREEN TICK (Meta "notability", 3–5 organic press articles) — the 2026-07-15
+> "OBA confirmed" note below conflated business-portfolio verification with OBA and
+> is wrong. Also: groups are invite-only (NO silent add of any participant, customer
+> or staff — one-tap `chat.whatsapp.com` link is the best possible), Twilio does not
+> expose the Groups API (its "group messaging" is a Conversations-API virtual relay),
+> and native groups would need a number registered directly on Meta Cloud API.
+> Option 3 delivers the actual goals (Daniel + Cris both in the loop from their own
+> phones, everything logged in the hub, works on every channel) with none of those
+> gates.
+>
 > **STATUS: Option 1 (deep-link) LIVE 2026-07-15, patched same day after first
 > live test.** Code deployed to production, env vars set on Vercel, `escalate_to_human`
 > registered on the live ElevenLabs agent (tool_0501kxhyyx8yfjx9ssx65j71w8cf, alongside
@@ -177,3 +190,117 @@ to the same engine, not a rebuild.
       (pushes toward Option 2)?
 Once these are in, the recommended first build is the escalation engine + Option 1 (est. small,
 mostly one ElevenLabs server tool + `lib/comms/handoff.js` + an endpoint + agent-prompt line).
+
+---
+
+## Option 3 — Relay handoff (mirror the thread to staff phones) — DESIGN 2026-07-22
+
+The customer never leaves the chat they're already in with the business number. Daniel +
+Cris ("staff legs") each get the dialog mirrored to their own WhatsApp (SMS fallback) and
+reply from their phones; replies route back to the customer via the business number. No
+Meta Groups API, no green tick, no provider migration, no second number.
+
+### Why relay beats the alternatives
+| | Relay | Meta group | Twilio Conversations | Comms Hub only |
+|---|---|---|---|---|
+| Green tick / migration / new number | none | all three | none, but pipeline rebuild | none |
+| Customer effort | zero | tap invite | zero | zero |
+| Customer without WhatsApp | ✅ (SMS leg) | ❌ | ✅ | ✅ |
+| Staff concurrent escalations | ✅ (quote/#tag) | ✅ | ❌ 1 active per staff pair | ✅ |
+| Staff reply from own phone | ✅ | ✅ | ✅ | ❌ |
+| Logged in hub | ✅ | ✅ | ✅ | ✅ |
+
+### Flow
+1. Customer asks for a human on any channel → `escalate_to_human` (unchanged trigger:
+   deterministic regex on SMS/WA, agent tool on voice/widget).
+2. `escalateToHuman()` with `HANDOFF_METHOD=relay`: resolves/creates the customer thread,
+   opens a **relay session** (`handoff_relays` row, human-friendly `#tag`), pauses the AI,
+   and alerts each staff leg (WhatsApp first, SMS fallback) with recent context + an
+   **admin deep link** into the Comms Hub thread.
+3. Every subsequent customer message on that thread: recorded as usual → AI stays silent →
+   mirrored to staff legs (`#12 John: ...`). Mirrored-message SIDs are stored in
+   `handoff_relay_mirrors` for quote-reply routing.
+4. Staff reply to the business number → inbound webhook staff branch routes to the relay
+   router instead of dropping: quoted `OriginalRepliedMessageSid` → exact relay; else
+   `#tag` prefix; else single-active; else ambiguity prompt listing active relays.
+   Routed text is sent to the customer via `sendMessage(author:"human")` (logged, refreshes
+   takeover) and cross-mirrored to the other staff leg (`↪ Daniel: ...`).
+5. `#done` (optionally `#done 12`) closes the relay: control back to AI, confirmation +
+   admin transcript link to staff, system marker in the thread. Lazy auto-close after
+   `RELAY_IDLE_HOURS` (default 48) of no activity.
+
+### Per-channel customer experience (relay mode)
+- **WhatsApp / SMS:** "Our team is here with you now — just keep replying in this chat."
+  No link at all.
+- **Phone call:** agent says the team will text; we SMS an opener from the business number
+  ("Hi, it's the Paint Access team — reply here any time") which creates/keeps the thread.
+- **Widget with phone/email:** same as phone (text them).
+- **Widget without phone:** on-screen WhatsApp button now deep-links to the **business
+  number** (not Daniel's personal) with pre-filled handoff text; when their first WhatsApp
+  message arrives, the deterministic handoff regex escalates it → relay opens with their
+  number. (In link mode the button still points at `HUMAN_SUPPORT_WA_NUMBER`.)
+
+### Admin deep link (works in BOTH modes, ships first)
+- `GET /api/comms/open?t=<threadId>` → 302 to `${ADMIN_DEEP_LINK_BASE}?page=inbox&thread=<id>`;
+  vercel rewrite `/t/<id>` keeps it SMS-short. Auth burden is on Shopify admin login.
+- `ADMIN_DEEP_LINK_BASE` env, e.g. `https://admin.shopify.com/store/zgmzge-0d/apps/<app-handle>`.
+  Link omitted if unset.
+- App boot: `App.jsx` reads `?thread=<id>` and opens the inbox on that thread via the
+  existing `openInbox({threadId})` mechanism.
+- Also added to Option 1's staff alert (`notifyStaff`) immediately.
+
+### Guard rails
+- **Feature flag:** `HANDOFF_METHOD` env — unset/`link` = Option 1 exactly as today;
+  `relay` = Option 3. Deploy is a no-op until the env flips. Any relay-open failure falls
+  back to Option 1 behavior (never fail an escalation).
+- **AI silence:** while a relay is ACTIVE the inbound gate skips the AI for that thread
+  regardless of the 30-min takeover window (relay is the source of truth); closing the
+  relay hands control back to `ai`.
+- **No staff-thread pollution:** staff mirrors are sent via the raw senders
+  (`sendWhatsAppMessage`/`twilioSendSms`), NOT `sendMessage`, so no contact/thread rows are
+  created for staff numbers. Customer-bound staff replies use `sendMessage` on purpose
+  (they belong in the customer thread).
+- **Media:** v1 mirrors a `📷 attachment` placeholder (Twilio inbound parser is text-only
+  today); the admin link shows the real thing in the hub.
+- **Staff WhatsApp 24h window:** WA mirror send failure → automatic SMS fallback for that
+  message. One-time onboarding: Daniel + Cris each send one WhatsApp message to the
+  business number.
+- **Webhook-retry idempotency (added after code review):** `handoff_relay_mirrors` is
+  also a message-SID ledger (`kind` = mirror | customer_inbound | staff_inbound). A
+  Twilio redelivery completes an unfinished customer mirror instead of losing it, and can
+  never double-send a staff reply to a customer (ledger row written BEFORE the send;
+  lookup fails closed for staff_inbound).
+- **Misroute protection for plain staff replies (added after code review):** an untagged,
+  unquoted reply only auto-routes to the single active relay when that relay is also the
+  last thing mirrored to that staff phone — otherwise it warns and asks for a quote/#tag.
+  Every routed reply gets a "✓ Sent to #tag <name>" ack naming the recipient, so any
+  residual misroute is visible immediately.
+- **Zero staff reached** on open → the relay closes itself and the escalation falls back
+  to the deep-link method (with the link FORCED to Daniel's number even in relay mode,
+  so a failing relay can't loop the customer back into the same escalation).
+- **SMS webhook signature check now fails closed** when TWILIO_AUTH_TOKEN is unset
+  (matched to the WhatsApp webhook, which was hardened earlier) — a forged staff `From`
+  must never reach the relay router.
+
+### Files
+| File | Change |
+| --- | --- |
+| `supabase/migrations/0008_handoff_relay.sql` | `handoff_relays` + `handoff_relay_mirrors` |
+| `lib/comms/relay.js` | NEW — session lifecycle, mirroring, staff-reply routing (pure routing core, side-effect shell) |
+| `lib/comms/handoff.js` | `method:"relay"` branch, admin link in alerts, relay-aware `buildWaLink` |
+| `api/twilio/sms-inbound.js` | staff branch → relay router; customer branch → relay mirror hook |
+| `api/whatsapp/inbound.js` | same, + pass `OriginalRepliedMessageSid` |
+| `api/comms/open.js` | NEW — admin deep-link redirect |
+| `vercel.json` | `/t/:id` rewrite |
+| `src/App.jsx` | boot-time `?thread=` deep link |
+| `scripts/test-handoff-relay.js` | offline tests (routing core, alert composition) |
+
+### Env additions
+`HANDOFF_METHOD` (unset=link), `ADMIN_DEEP_LINK_BASE`, `RELAY_IDLE_HOURS` (48).
+
+### Rollout
+1. Apply migration 0008 in Supabase. 2. Deploy (flag off — behavior unchanged, admin link
+appears in Option 1 alerts). 3. Set `ADMIN_DEEP_LINK_BASE`, verify deep link. 4. Staff
+onboarding messages to the business number. 5. Flip `HANDOFF_METHOD=relay`. 6. Live test
+per channel (remember: every escalate pages Daniel for real). 7. Later: `#done` timing,
+media forwarding, staff-initiated relay from the hub UI.

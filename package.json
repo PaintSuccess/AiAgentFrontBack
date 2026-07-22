@@ -11,6 +11,7 @@
     "test:text-orders": "node scripts/test-text-channel-orders.js",
     "test:text-agent": "node scripts/test-text-channel-agent.js",
     "test:display-sequence": "node scripts/test-elevenlabs-product-display-sequence.js",
+    "test:handoff-relay": "node scripts/test-handoff-relay.js",
     "test:comms-orders": "node scripts/test-comms-orders.js",
     "deploy": "vercel --prod"
   },
