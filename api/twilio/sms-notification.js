@@ -5,6 +5,7 @@ const {
   sanitizeInput,
   cleanEnv,
 } = require("../../lib/shopify");
+const { claimSend, releaseSend } = require("../../lib/tool-dedup");
 
 const TWILIO_ACCOUNT_SID = cleanEnv("TWILIO_ACCOUNT_SID");
 const TWILIO_AUTH_TOKEN = cleanEnv("TWILIO_AUTH_TOKEN");
@@ -147,7 +148,23 @@ module.exports = async function handler(req, res) {
     const body = message.startsWith("Paint Access:")
       ? message
       : `Paint Access: ${message}`;
-    const twilioMessage = await sendTwilioSms({ to, body });
+
+    // Idempotency: an "abandoned" tool call still runs server-side, and the agent often
+    // retries it — without this the customer would get the same SMS twice. A retry with
+    // the same recipient + body inside the dedup window is reported as sent without
+    // re-sending. Fail-open (a DB hiccup never blocks a real send).
+    const dedupParts = [to, body];
+    if ((await claimSend("sms", dedupParts)) === "duplicate") {
+      return res.status(200).json({ sent: true, deduped: true, to, message: "SMS already sent." });
+    }
+
+    let twilioMessage;
+    try {
+      twilioMessage = await sendTwilioSms({ to, body });
+    } catch (sendErr) {
+      await releaseSend("sms", dedupParts); // clean failure, nothing sent — let a retry try again
+      throw sendErr;
+    }
 
     return res.status(200).json({
       sent: true,

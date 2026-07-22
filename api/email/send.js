@@ -1,4 +1,5 @@
 const { shopifyFetch, verifyAuth, corsHeaders, rateLimit, sanitizeInput } = require("../../lib/shopify");
+const { claimSend, releaseSend } = require("../../lib/tool-dedup");
 
 module.exports = async function handler(req, res) {
   corsHeaders(res, req);
@@ -13,6 +14,7 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  let dedupParts = null;
   try {
     const to = sanitizeInput(req.body.to, 320);
     const subject = sanitizeInput(req.body.subject, 200);
@@ -28,6 +30,17 @@ module.exports = async function handler(req, res) {
     // Basic email validation
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
       return res.status(400).json({ error: "Invalid email address" });
+    }
+
+    // Idempotency: an "abandoned" tool call still runs server-side and the agent often
+    // retries it — without this the same quote email + a second Shopify draft order would
+    // be created. A retry with the same to/subject/message inside the window is reported
+    // as sent without re-creating anything. Claim BEFORE the draft (the first side effect);
+    // release only on a TOTAL failure below (a partial success keeps the claim, so a retry
+    // cannot create a duplicate draft). Fail-open (a DB hiccup never blocks a real email).
+    dedupParts = [to, subject, message];
+    if ((await claimSend("email", dedupParts)) === "duplicate") {
+      return res.status(200).json({ sent: true, deduped: true, message: `Email to ${to} already sent.` });
     }
 
     // Create a Draft Order in Shopify with a note containing the message.
@@ -92,6 +105,9 @@ module.exports = async function handler(req, res) {
       message: "The request has been logged. The Paint Access team will be in touch.",
     });
   } catch (err) {
+    // Total failure — no draft order was created, so release the claim to let a genuine
+    // retry try again rather than falsely reporting "already sent".
+    if (dedupParts) await releaseSend("email", dedupParts).catch(() => {});
     console.error("Email send error:", err);
     return res.status(500).json({ error: "Failed to process email request." });
   }
